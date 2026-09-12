@@ -82,3 +82,11 @@ OmniFlow 对外暴露**三层完全对等的标准接口**，任何 agent 按自
 ## 三、CLI（19 个子命令）
 
 `create / templates / template-save / template-delete / list / read / validate / analyze / layout / export / import / import-af / meta / trash / restore / delete / studio / mcp / doctor` — 见 `of help`。
+
+## 非线性对话（Non-linear conversation）
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | `/api/graph/<id>/convo` | 总览：head / 主线 / 开放分支（叶子）/ 分叉点 / 发言人 |
+| POST | `/api/graph/<id>/convo` | `{ op:"say", text, speaker?, type?, parentId?, edgeType? }` 追加发言（`parentId` = 从该节点开新支）<br>`{ op:"branch", nodeId }` 移动 head<br>`{ op:"merge", sources:[...], label?, text? }` 汇合分支 |
+| GET | `/api/graph/<id>/convo-path?node=<节点id>&format=md|txt` | 根→节点的活跃路径与线性化文本 |
