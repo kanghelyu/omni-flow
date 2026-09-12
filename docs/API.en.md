@@ -95,3 +95,11 @@ Conventions: topology writes are normalized + validated before disk (hard errors
 2. Batch-build: `of_import_mermaid` one shot, then `of_patch_node` / `of_patch_edge` to polish styles.
 3. Customization: every node's `fill/border/textColor`, every edge's `label/color/style/arrow` are writable; `label` is the arrow name.
 4. Insight: `of_analyze` for RACI single-point-of-failure; `trace` for proof chains.
+
+## 非线性对话（Non-linear conversation）
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | `/api/graph/<id>/convo` | 总览：head / 主线 / 开放分支（叶子）/ 分叉点 / 发言人 |
+| POST | `/api/graph/<id>/convo` | `{ op:"say", text, speaker?, type?, parentId?, edgeType? }` 追加发言（`parentId` = 从该节点开新支）<br>`{ op:"branch", nodeId }` 移动 head<br>`{ op:"merge", sources:[...], label?, text? }` 汇合分支 |
+| GET | `/api/graph/<id>/convo-path?node=<节点id>&format=md|txt` | 根→节点的活跃路径与线性化文本 |
