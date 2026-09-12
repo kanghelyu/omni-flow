@@ -11,6 +11,16 @@
 
 <p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a> · 📖 <a href="docs/TUTORIAL.md">Complete tutorial</a> · <a href="docs/API.en.md">API reference</a></p>
 
+<p align="center">
+  <img src="docs/assets/studio-overview.jpg" alt="OmniFlow Studio — infinite canvas with typed nodes, labeled edges, colored group containers and a live inspector" width="100%">
+</p>
+<p align="center"><em>The Studio canvas — 59 typed nodes and 90 labeled edges with colored group containers, per-node Markdown notes and a live inspector. Local-only, zero dependencies.</em></p>
+
+<p align="center">
+  <img src="docs/assets/studio-detail.jpg" alt="Zoomed-in view: every edge carries a semantic label; paper nodes keep DOIs in their notes" width="100%">
+</p>
+<p align="center"><em>Zoomed in: every edge carries a semantic label (uses / confirms / contradicts / required-for); paper nodes keep their DOI and local path in the node note.</em></p>
+
 ## What it gives you
 
 - **10 built-in node types + 18 edge semantics** — theorem/lemma/proposition/definition/paper for math; person/department/task for orgs; R/A/C/I responsibility edges; follows/answers/merges for conversations. Custom types are one JSON block away.
