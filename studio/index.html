@@ -1098,7 +1098,7 @@ $("railSplitter").addEventListener("pointerdown", (event)=>{
   const startH = $("vaultTree").getBoundingClientRect().height;
   const move = (e)=>{
     const h = Math.max(80, Math.min(rail.height - 220, startH + (e.clientY - startY)));
-    $("vaultTree").style.flex = `0 0 ${h}px`;
+    $("vaultTree").style.flex = `0 0 ${h}px`; $("vaultTree").dataset.lastH = h;
   };
   const up = ()=>{ window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
   window.addEventListener("pointermove", move);
@@ -1114,7 +1114,10 @@ $("rightSplitter").addEventListener("pointerdown", (event)=>{
   if (insp.classList.contains("collapsed")) insp.classList.remove("collapsed");
   const startX = event.clientX;
   const startWidth = insp.getBoundingClientRect().width;
-  const move = (e)=>{ insp.style.width = Math.max(240, Math.min(520, startWidth - (e.clientX - startX))) + "px"; };
+  const move = (e)=>{
+    const w = Math.max(240, Math.min(520, startWidth - (e.clientX - startX)));
+    insp.style.width = w + "px"; insp.dataset.lastW = w; insp.classList.remove("collapsed");
+  };
   const up = ()=>{ window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
   window.addEventListener("pointermove", move);
   window.addEventListener("pointerup", up);
@@ -1246,7 +1249,10 @@ function setLeftCollapsed(collapsed){
   $("edgeTabLeft").classList.toggle("show", collapsed);
 }
 function setRightCollapsed(collapsed){
-  $("inspector").classList.toggle("collapsed", collapsed);
+  const insp = $("inspector");
+  insp.classList.toggle("collapsed", collapsed);
+  if (collapsed){ insp.style.width = ""; }                          // 清内联宽度，否则收起失效
+  else if (insp.dataset.lastW){ insp.style.width = insp.dataset.lastW + "px"; }
   $("rightSplitter").style.display = collapsed ? "none" : "";
   $("edgeTabRight").classList.toggle("show", collapsed);
 }
