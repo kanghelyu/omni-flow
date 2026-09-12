@@ -75,7 +75,7 @@ Env: `OF_HOME` (storage root, default `~/.omni-flow`), `AF_HOME` (for AgentFlow 
 | GET | `/api/events` | SSE change stream |
 | GET | `/api/graph/:id` | Full detail |
 | GET | `/api/graph/:id/validate` · `/analyze?trace=` | Validate / analyze |
-| GET | `/api/graph/:id/export?format=` · `/note/:nodeId` | Export / read note |
+| GET | `/api/graph/:id/export?format=html|` · `/note/:nodeId` | Export / read note |
 | POST | `/api/graph/:id/note` · `/meta` · `/node-type-patch` · `/edge-type-patch` | Write note / meta / registries |
 | POST | `/api/graph/:id/node-add` · `node-patch` · `node-delete` | Nodes |
 | POST | `/api/graph/:id/edge-add` · `edge-patch` · `edge-delete` | Edges |
