@@ -149,6 +149,7 @@ main { flex: 1; display: flex; min-width: 0; min-height: 0; }
 
 /* ===== 画布（agent-flow 手感 + 无限延伸背景） ===== */
 #depBar { position: absolute; left: 10px; top: 8px; z-index: 6; }
+#convoBar { position: absolute; left: 10px; right: 10px; top: 8px; z-index: 7; }
 #depBar .dep-legend { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
 #depBar { position: absolute; left: 10px; top: 8px; z-index: 6; }
 #depBar .dep-legend { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
@@ -303,6 +304,7 @@ main { flex: 1; display: flex; min-width: 0; min-height: 0; }
 
     <div id="canvasWrap">
       <div id="depBar"></div>
+      <div id="convoBar" class="convo-bar" hidden></div>
       <div id="viewport">
         <div id="world">
           <svg id="edgeLayer"></svg>
@@ -905,7 +907,10 @@ function render(){
   $("gstat").textContent = current.valid ? `✓ ${current.nodes.length}● / ${current.edges.length}→` : `⚠ ${current.issues.length}`;
   $("gstat").className = "badge " + (current.valid ? (current.warnings.length ? "warn" : "ok") : "err");
   renderDocList(); renderGroups(); renderEdges(); renderNodes();
+  computeConvo();
   applyDepHighlight();
+  applyConvoToCanvas();
+  renderConvoBar();
   renderTypeFilter();
 }
 
@@ -921,6 +926,113 @@ function scheduleLiveFrame(){
   liveFrameQueued = true;
   requestAnimationFrame(()=>{ liveFrameQueued = false; updateEdgesLive(); updateConnLive(); updateGroupsLive(); });
 }
+/* ================= 非线性对话 UI（DAG 会话） ================= */
+let convo = null;                       // { head, mainline:Set, leaves:[], children:Map, parents:Map }
+const isConvo = ()=> !!current?.conversation?.mode;
+
+/** 计算对话视图：head、根→head 主线、开放分支（叶子）、父子索引 */
+function computeConvo(){
+  if (!isConvo()){ convo = null; return; }
+  const children = new Map(), parents = new Map();
+  for (const e of current.edges){
+    if (!children.has(e.source)) children.set(e.source, []);
+    children.get(e.source).push(e.target);
+    if (!parents.has(e.target)) parents.set(e.target, []);
+    parents.get(e.target).push(e.source);
+  }
+  const head = current.conversation.head ?? null;
+  const mainline = new Set();
+  let cur = head; const guard = new Set();
+  while (cur && !guard.has(cur)){ guard.add(cur); mainline.add(cur); cur = (parents.get(cur) ?? [])[0] ?? null; }
+  const leaves = current.nodes.filter((n)=> !(children.get(n.id) ?? []).length).map((n)=> n.id);
+  convo = { head, mainline, leaves, children, parents };
+}
+
+/** 画布视觉：head 绿框、主线高亮、离支变淡、分叉点加兄弟导航 */
+function applyConvoToCanvas(){
+  if (!convo) return;
+  nodesLayer.querySelectorAll(".sibnav").forEach((el)=> el.remove());
+  nodesLayer.querySelectorAll(".node").forEach((el)=>{
+    const id = el.dataset.id;
+    el.classList.toggle("convo-head", id === convo.head);
+    el.classList.toggle("convo-main", convo.mainline.has(id));
+    el.classList.toggle("convo-off", !!convo.head && !convo.mainline.has(id));
+    const kids = convo.children.get(id) ?? [];
+    if (kids.length > 1){
+      const nav = document.createElement("div");
+      nav.className = "sibnav";
+      const label = document.createElement("span");
+      const cur = selected?.kind === "node" && kids.includes(selected.id) ? kids.indexOf(selected.id) : 0;
+      label.textContent = `${cur + 1}/${kids.length}`;
+      const prev = document.createElement("button"); prev.textContent = "‹";
+      const next = document.createElement("button"); next.textContent = "›";
+      let pos = cur;
+      const show = ()=>{ pos = (pos + kids.length) % kids.length; label.textContent = `${pos + 1}/${kids.length}`; select("node", kids[pos]); };
+      prev.onclick = (e)=>{ e.stopPropagation(); pos -= 2; show(); };
+      next.onclick = (e)=>{ e.stopPropagation(); show(); };
+      nav.append(prev, label, next);
+      el.appendChild(nav);
+    }
+  });
+}
+
+/** 画布顶部对话工具条：head / 主线 / 开放分支 / 设为点头 / 合并 / 续说 */
+function renderConvoBar(){
+  const bar = $("convoBar");
+  if (!bar) return;
+  if (!isConvo()){ bar.hidden = true; bar.innerHTML = ""; return; }
+  bar.hidden = false;
+  bar.className = "convo-bar";
+  const headLabel = convo?.head ? (nodeById(convo.head)?.label ?? convo.head).slice(0, 26) : "—";
+  bar.innerHTML = '<span>💬 <b>' + (LANG === "en" ? "head" : "点头") + '</b> ' + escapeHtml(headLabel) + '</span>'
+    + '<span>' + (LANG === "en" ? "mainline" : "主线") + ' ' + (convo?.mainline?.size ?? 0) + '</span>'
+    + '<span>' + (LANG === "en" ? "open" : "开放分支") + ' ' + (convo?.leaves?.length ?? 0) + '</span>'
+    + '<button id="convoHead" class="primary">' + (LANG === "en" ? "Set head" : "设为点头") + '</button>'
+    + '<button id="convoMerge">' + (LANG === "en" ? "Merge" : "合并") + '</button>'
+    + '<button id="convoOpen">' + (LANG === "en" ? "Threads" : "分支") + '</button>'
+    + '<input id="convoSay" placeholder="' + (LANG === "en" ? "say… (Enter) appends at head" : "说点什么…（回车）接在当前点头之后") + '">'
+    + '<button id="convoSayBtn" class="primary">' + (LANG === "en" ? "Say" : "发言") + '</button>';
+  $("convoHead").onclick = async ()=>{
+    if (selected?.kind !== "node"){ toast(LANG === "en" ? "Select a node first" : "请先选中一个节点", true); return; }
+    await api('/api/graph/' + current.id + '/convo', { method: "POST", body: JSON.stringify({ op: "branch", nodeId: selected.id }) });
+    await reload(false); toast(LANG === "en" ? "Head moved" : "已设为当前点头");
+  };
+  $("convoMerge").onclick = async ()=>{
+    const sel = [...nodesLayer.querySelectorAll(".node.sel")].map((el)=> el.dataset.id);
+    const sources = sel.length >= 2 ? sel : (convo?.leaves ?? []);
+    if (sources.length < 2){ toast(LANG === "en" ? "Need 2+ branches" : "至少需要 2 条分支", true); return; }
+    await api('/api/graph/' + current.id + '/convo', { method: "POST", body: JSON.stringify({ op: "merge", sources, label: (LANG === "en" ? "Merge" : "汇合") }) });
+    await reload(false); toast(LANG === "en" ? "Merged" : "已汇合");
+  };
+  $("convoOpen").onclick = ()=>{
+    const list = (convo?.leaves ?? []).map((id)=> "· " + (nodeById(id)?.label ?? id).slice(0, 40) + "  (" + id + ")").join("\n");
+    alert((LANG === "en" ? "Open threads" : "开放分支") + " (" + (convo?.leaves?.length ?? 0) + ")\n\n" + (list || "—"));
+  };
+  const say = async ()=>{
+    const text = $("convoSay").value.trim();
+    if (!text) return;
+    await api('/api/graph/' + current.id + '/convo', { method: "POST", body: JSON.stringify({ op: "say", text, speaker: "user" }) });
+    $("convoSay").value = "";
+    await reload(false);
+  };
+  $("convoSayBtn").onclick = say;
+  $("convoSay").onkeydown = (e)=>{ if (e.key === "Enter") say(); };
+}
+
+/** 键盘导航（TreeGPT 约定）：k=上级 · j=唯一子级 · 1-9=第 n 个子级 */
+function convoKeyNav(e){
+  if (!isConvo() || !convo) return false;
+  const tag = String(e.target?.tagName ?? "").toLowerCase();
+  if (tag === "input" || tag === "textarea" || tag === "select") return false;
+  const cur = selected?.kind === "node" ? selected.id : convo.head;
+  if (!cur) return false;
+  if (e.key === "k"){ const p = (convo.parents.get(cur) ?? [])[0]; if (p){ select("node", p); return true; } }
+  if (e.key === "j"){ const kids = convo.children.get(cur) ?? []; if (kids.length === 1){ select("node", kids[0]); return true; } }
+  if (/^[1-9]$/.test(e.key)){ const kids = convo.children.get(cur) ?? []; const i = Number(e.key) - 1; if (kids[i]){ select("node", kids[i]); return true; } }
+  return false;
+}
+
+
 /* ================= 依赖方向高亮（点击节点：上游蓝 / 下游红 / 其余变暗） ================= */
 let depFocus = null;        // { up:Set, down:Set } | null
 let depEnabled = true;      // 可通过图例关闭
