@@ -174,7 +174,7 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         const body = await readBody(req);
         const name = String(body.name ?? "").trim() || "未命名图";
         const templateId = String(body.template ?? "blank");
-        const graph = await buildTemplateById(root, templateId, name, body.lang === "en" ? "en" : "zh");
+        const graph = await buildTemplateById(root, templateId, name, body.lang === "zh" ? "zh" : "en");
         graph.id = makeGraphId(name);
         if (typeof body.description === "string" && body.description.trim()) graph.description = body.description.trim();
         await saveGraph(graphDirSafe(root, graph.id), graph);
