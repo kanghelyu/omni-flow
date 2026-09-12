@@ -306,6 +306,16 @@ Nilpotent Orbits in Semisimple Lie Algebras
 
 ---
 
+# Standalone HTML canvas export (share without a server)
+
+`of export <graphId> --format html --out canvas.html` (or HTTP `GET /api/graph/<id>/export?format=html`, MCP `of_export { "format": "html" }`)
+
+Produces a **single self-contained HTML file** (≈0.6–0.8 MB): fully offline (KaTeX + fonts inlined), interactive — pan / zoom / drag nodes, click a node to highlight **upstream (blue) / downstream (red)** and dim the rest, type filter chips, full-text search, four layouts (layered / clusters / force / grid), and a detail panel that renders node notes with **compiled formulas** (Markdown + `$inline$` / `$$display$$` / bare LaTeX / `\ce{}` chemistry). Add `--no-embed` for a light file that references `vendor/` instead.
+
+# Formula rendering (KaTeX 0.18.7, offline)
+
+Notes and previews compile: `$…$` · `$$…$$` · `\(…\)` · `\[…]` · **bare LaTeX paragraphs** (no delimiters) · **inline commands in mixed text** (e.g. `化学：\ce{2H2 + O2 -> 2H2O}`). Preamble (`\documentclass`/`\usepackage`), `\label`, `\cite`, `\ref` are stripped/normalised; `\bm→\boldsymbol`, `\SI{}{}`→text units; `align`/`gather` are converted to `aligned`/`gathered` so alignment survives. Unsupported constructs (TikZ, `\includegraphics`) degrade to a visible placeholder — **never an error, never lost content**.
+
 # Report Template (output at end of every graph-related task)
 
 ```
