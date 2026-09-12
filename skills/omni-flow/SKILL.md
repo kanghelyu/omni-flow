@@ -20,11 +20,15 @@ Every "elements + relations" structure deserves a map. OmniFlow is domain-agnost
 
 When creating a new flow graph, determine the label language by this priority:
 
-1. **User's language** — if the user communicates in Chinese, use Chinese labels; if English, use English labels.
+1. **User's language** — if the user communicates in Chinese → `lang: "zh"`; if English → `lang: "en"`.
 2. **Source content language** — if mapping an article/paper/notes, match the source document's language.
-3. **Default: English** — if neither is determinable, use English.
+3. **Default: English** — if neither is determinable, omit `lang` (defaults to `en`).
 
-Never mix languages within a single graph. Node labels, group labels, edge labels, and notes must all use the same language.
+Pass it explicitly: `of_create_graph { "name": "...", "template": "theorem-deps", "lang": "zh" }`
+
+- The Studio canvas passes the UI language automatically; CLI uses `of create "name" --template X --lang zh|en`.
+- Never mix languages within a single graph. Node labels, group labels, edge labels, and notes must all use the same language.
+- Notes must be written in the graph's language (English graph → English notes).
 
 ## Interfaces: three equal layers
 
