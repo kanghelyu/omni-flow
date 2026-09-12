@@ -32,6 +32,7 @@ OmniFlow（`of` CLI）— 万用流程图工具：定理依赖、论文关联、
 - 协议 CC BY-NC 4.0；README 双语；docs 双语教程 + API 参考
 - 已发布功能：无限画布（拖拽/缩放/平移）、Obsidian 文件树、分组（含聚簇布局）、全局搜索、分享导出（Mermaid/DOT/MD/TXT/JSON）、滑出式双侧栏、中英双语、回收站、**可靠写入 + 损坏自愈**
 - 测试：`smoke 17/17` · `mcp-test 全链路通过`
+- 商用宣传素材（2026-09-12 重建）：`promo/index.html` 产品页（kanghelyu.org 同款设计语言、双视频内嵌、中英切换）+ `promo/assets/`（10 张真实图实拍截图、60s 介绍片、23s 实操录屏）；渲染工程在 math-workspace `projects/omniflow_promo_project/`（复用数学科普管线，无片头，素材=人心脏再生中文图）。同日修复 `studio/index.html`：`doLayoutNow` 曾重复定义，第二个声明调用不存在的 `animateToPositions`，导致「一键整理」按钮必炸 ReferenceError——已删坏声明，仓库与 `~/.omni-flow/studio/` 安装副本同步修复（前端改动，刷新即生效）。
 
 ## 四、数据可靠性架构（重要，改动必读）
 
