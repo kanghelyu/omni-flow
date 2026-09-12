@@ -473,9 +473,13 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
 
       sendJson(res, 404, { error: "not found" });
     } catch (error) {
-      // loadFlow 的「不存在（目录）」才算 404；变更内部抛出的引用缺失按 400（客户端可修正）。
-      const notFound = String(error?.message ?? "").includes("不存在（");
-      sendJson(res, notFound ? 404 : 400, { error: String(error?.message ?? error), issues: error?.issues });
+      // 优先用错误码（NOT_FOUND → 404；CORRUPT → 500）；否则回退到消息匹配。
+      const message = String(error?.message ?? error);
+      const status = error?.code === "NOT_FOUND" ? 404
+        : error?.code === "CORRUPT" ? 500
+        : message.includes("不存在（") ? 404
+        : 400;
+      sendJson(res, status, { error: message, issues: error?.issues, code: error?.code ?? null });
     }
   });
 
