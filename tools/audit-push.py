@@ -1,19 +1,19 @@
-#!/usr/bin/python3
-"""OmniFlow 仓库全量审计 + 推送（绝对路径、非空校验、退避重推）。bash 函数版作废。"""
+#!/usr/bin/env python3
+"""OmniFlow repo full audit + push (absolute paths, non-empty check, backoff retry)."""
 import subprocess, os, sys, time
 
-REPO_DIR = "/Users/andylyu/WorkBuddy/2026-09-11-12-31-54/omni-flow"
+REPO_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GH = "/opt/homebrew/bin/gh"
 GIT = "/usr/bin/git"
 FILES = [
-    "LICENSE", "package.json", "README.md", "README.zh-CN.md",
+    "HANDOFF.md", "LICENSE", "package.json", "README.md", "README.zh-CN.md",
     "studio/index.html", "studio/server.mjs",
     "lib/vault.js", "lib/mcp-server.mjs", "lib/converters.js",
     "lib/group-suggest.js", "lib/search.mjs", "lib/templates.js", "lib/graph-service.mjs",
     "lib/graph-core.js", "lib/graph-analysis.js",
     "bin/of.mjs",
     "skills/omni-flow/SKILL.md",
-    "tools/audit-push.py", "HANDOFF.md", "docs/API.md", "docs/API.en.md", "docs/TUTORIAL.md", "docs/TUTORIAL.zh-CN.md",
+    "docs/API.md", "docs/API.en.md", "docs/TUTORIAL.md", "docs/TUTORIAL.zh-CN.md",
 ]
 os.chdir(REPO_DIR)
 
@@ -44,7 +44,7 @@ for f in FILES:
     l = local_sha(f)
     r = remote_info(f)
     if not l:
-        failed.append((f, "本地读取失败")); continue
+        failed.append((f, "local read fail")); continue
     if l == r:
         ok.append(f); continue
     changed.append(f)
@@ -59,11 +59,11 @@ for f in FILES:
     else:
         failed.append((f, info))
 
-print("=== 一致 ===")
+print("=== In sync ===")
 for f in ok: print("✓", f)
-if changed: print("=== 已推送修复 ===")
+if changed: print("=== Pushed ===")
 for f in changed: print("↻", f)
-if failed: print("=== 失败 ===")
+if failed: print("=== Failed ===")
 for f, why in failed: print("✗", f, "——", why)
-print(f"\n总计 {len(FILES)} | 一致 {len(ok)} | 本次修复 {len(changed)} | 失败 {len(failed)}")
+print(f"\nTotal {len(FILES)} | In sync {len(ok)} | Pushed {len(changed)} | Failed {len(failed)}")
 sys.exit(1 if failed else 0)
