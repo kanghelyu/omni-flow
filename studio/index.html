@@ -422,6 +422,12 @@ let expandedFolders = new Set([""]);
 const $ = (id) => document.getElementById(id);
 const edgeLayer = $("edgeLayer"), nodesLayer = $("nodesLayer"), groupsLayer = $("groupsLayer");
 let edgeIndex = new Map();   // nodeId → Set(edge-group)：拖拽时只更新相邻边（O(k)），不遍历全量
+/* O(1) 查找索引：每次 current 变更时重建，取代 Array.find 的 O(n) 线性扫描 */
+let nodeIndex = new Map(), edgeIndexById = new Map();
+function rebuildIndexes(){
+  nodeIndex = new Map((current?.nodes ?? []).map((n)=>[n.id, n]));
+  edgeIndexById = new Map((current?.edges ?? []).map((e)=>[e.id, e]));
+}
 const canvas = $("canvasWrap");
 
 function toast(msg, isErr){
@@ -586,7 +592,7 @@ function edgeTypeLabel(type){
   const def = current?.edgeTypes?.[type];
   return (LANG === "en" ? def?.labelEn : def?.label) ?? "";
 }
-function nodeById(id){ return current?.nodes.find((n)=>n.id === id) ?? null; }
+function nodeById(id){ return nodeIndex.get(id) ?? current?.nodes.find((n)=>n.id === id) ?? null; }
 
 function edgeGeometry(edge){
   const s = nodeById(edge.source), t = nodeById(edge.target);
@@ -608,6 +614,7 @@ function livePos(node){
 
 function render(){
   if (!current) return;
+  rebuildIndexes();
   $("gstat").textContent = current.valid ? `✓ ${current.nodes.length}● / ${current.edges.length}→` : `⚠ ${current.issues.length}`;
   $("gstat").className = "badge " + (current.valid ? (current.warnings.length ? "warn" : "ok") : "err");
   renderDocList(); renderGroups(); renderEdges(); renderNodes();
@@ -650,7 +657,7 @@ function updateEdgesLive(){
   }
   for (const g of groups){
     const hit = g.querySelector(".edge-hit"), vis = g.querySelector(".edge-line");
-    const edge = current.edges.find((x)=>x.id === hit.dataset.edgeId);
+    const edge = edgeIndexById.get(hit.dataset.edgeId);
     if (!edge) continue;
     const geom = edgeGeometry(edge);
     if (!geom) continue;
@@ -727,7 +734,7 @@ function renderEdges(){
   edgeIndex = new Map();
   edgeLayer.querySelectorAll(".edge-group").forEach((g)=>{
     const hit = g.querySelector(".edge-hit");
-    const edge = current.edges.find((x)=>x.id === hit?.dataset.edgeId);
+    const edge = edgeIndexById.get(hit?.dataset.edgeId);
     if (!edge) return;
     for (const nid of [edge.source, edge.target]) {
       if (!edgeIndex.has(nid)) edgeIndex.set(nid, new Set());
@@ -739,7 +746,7 @@ function renderEdges(){
     hit.addEventListener("click", (e)=>{ e.stopPropagation(); select("edge", hit.dataset.edgeId); });
     hit.addEventListener("dblclick", (e)=>{
       e.stopPropagation();
-      const edge = current.edges.find((x)=>x.id === hit.dataset.edgeId);
+      const edge = edgeIndexById.get(hit.dataset.edgeId);
       if (!edge) return;
       const next = prompt(t("edgeLabel"), edge.label || edgeTypeLabel(edge.type));
       if (next !== null) patchEdge(edge.id, { label: next });
@@ -757,6 +764,8 @@ function statusMark(status){
 function renderNodes(){
   if (!current){ nodesLayer.innerHTML = ""; return; }
   nodesLayer.innerHTML = "";
+  const frag = document.createDocumentFragment();   // 批量插入：一次布局而非 52 次
+  const els = [];                                    // 复用引用，避免二次 getElementById
   for (const node of current.nodes){
     const el = document.createElement("div");
     el.className = "node";
@@ -782,17 +791,18 @@ function renderNodes(){
     if (selected?.kind === "node" && selected.id === node.id) el.classList.add("sel");
     if (highlightMembers.includes(node.id)) el.classList.add("search-hit");
     if (pendingLink?.hover === node.id) el.classList.add("hover-target");
-    nodesLayer.appendChild(el);
+    frag.appendChild(el);
+    els.push([node, el]);
   }
-  // 自适应高度：内容多高卡片就多高，绝不裁切（offsetHeight 不受画布缩放影响）；实际高度供连线锚点使用
-  for (const node of current.nodes){
-    const el = $(`node-${CSS.escape(node.id)}`);
-    if (!el) continue;
-    const card = el.querySelector(".card");
-    const needed = Math.max(node.h, card.offsetHeight + 2);
+  nodesLayer.appendChild(frag);
+  // 自适应高度：读写分离——先统一读 offsetHeight，再统一写 height（避免交错强制多轮布局）
+  const pending = [];
+  for (const [node, el] of els){
+    const needed = Math.max(node.h, el.querySelector(".card").offsetHeight + 2);
     node._h = needed;
-    if (needed !== node.h) el.style.height = needed + "px";
+    if (needed !== node.h) pending.push([el, needed]);
   }
+  for (const [el, needed] of pending) el.style.height = needed + "px";
 }
 
 /* --- 分组容器 --- */
