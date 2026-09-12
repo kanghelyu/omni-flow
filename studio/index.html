@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OmniFlow Studio — 万用流程图</title>
+<!-- KaTeX 0.18.7（离线本地资源，零联网）：含 mhchem 化学扩展 / copy-tex / auto-render -->
+<link rel="stylesheet" href="/vendor/katex/katex.min.css">
+<script src="/vendor/katex/katex.min.js" defer></script>
+<script src="/vendor/katex/contrib/mhchem.min.js" defer></script>
+<script src="/vendor/katex/contrib/auto-render.min.js" defer></script>
+<script src="/vendor/katex/contrib/copy-tex.min.js" defer></script>
 <style>
 :root {
   --bg: #0F172A; --bg-soft: #1E293B; --panel: #0B1220; --border: #334155;
@@ -64,6 +70,34 @@ label { font-size: 11px; color: var(--text-dim); display: block; margin: 8px 0 3
 main { flex: 1; display: flex; min-width: 0; min-height: 0; }
 
 /* ===== 左侧文档栏（照抄 agent-flow docrail，含动画） ===== */
+/* ---- KaTeX 公式预览（学术场景） ---- */
+.note-preview {
+  margin-top: 6px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg-soft); max-height: 240px; overflow: auto;
+  font-size: 12.5px; line-height: 1.65; color: var(--text); word-break: break-word;
+}
+.note-preview:empty { display: none; }
+.note-preview h1, .note-preview h2, .note-preview h3 { margin: 6px 0 4px; font-size: 13.5px; color: var(--accent); }
+.note-preview p { margin: 4px 0; }
+.note-preview ul, .note-preview ol { margin: 4px 0 4px 18px; }
+.note-preview code {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 4px;
+  padding: 0 4px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+}
+.note-preview .katex { color: inherit; font-size: 1.02em; }
+.math-fallback { display:inline-block; padding:1px 5px; border-radius:5px;
+  background:rgba(248,113,113,.12); border:1px dashed rgba(248,113,113,.5);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11.5px; }
+.math-fallback-tag { margin-left:6px; font-size:10.5px; color:var(--warn); opacity:.85; }
+.math-block { display:block; margin:6px 0; overflow-x:auto; overflow-y:hidden; text-align:center; }
+.marker { color: var(--accent); font-weight: 700; }
+.note-preview .katex-display { margin: 6px 0; overflow-x: auto; overflow-y: hidden; }
+.note-split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+.note-split textarea { min-height: 300px; }
+.note-split .note-preview { margin-top: 0; max-height: 340px; }
+/* 跳转角标：可双击打开关联图 */
+.node .jump { color: var(--accent); font-weight: 700; margin-left: 4px; }
+.node.has-jump { cursor: zoom-in; }
 .docrail { flex: none; width: 264px; display: flex; flex-direction: column; background: var(--panel); border-right: 1px solid var(--border); min-width: 0; min-height: 0; transition: width .18s ease; }
 .docrail.collapsed { width: 0; min-width: 0; border-right: 0; overflow: hidden; }
 .edge-tab { position: absolute; top: 12px; width: 20px; height: 52px; background: var(--panel); color: var(--text-dim); cursor: pointer; z-index: 26; display: none; align-items: center; justify-content: center; font-size: 12px; }
@@ -310,8 +344,9 @@ main { flex: 1; display: flex; min-width: 0; min-height: 0; }
               <option value="">无</option><option value="todo">待办</option><option value="doing">进行中</option><option value="done">完成</option><option value="blocked">阻塞</option>
             </select></div>
           </div>
-          <label data-i18n="note">备注（首行入图数据，长文存 Markdown）</label>
+          <label data-i18n="note">备注（首行入图数据，长文存 Markdown · 支持 $公式$）</label>
           <textarea id="n-note" rows="3"></textarea>
+          <div id="n-preview" class="note-preview" aria-live="polite"></div>
           <div class="btnrow">
             <button id="n-save" class="primary" data-i18n="save">保存</button>
             <button id="n-note-full" data-i18n="noteMd">备注全文</button>
@@ -468,7 +503,15 @@ $("btnTheme").onclick = () => {
   document.body.classList.toggle("light");
   localStorage.setItem("of-theme", document.body.classList.contains("light") ? "light" : "dark");
 };
-if (localStorage.getItem("of-theme") === "light") document.body.classList.add("light");
+// 主题：显式选择优先；未选过则跟随系统（浅色系统默认浅色）
+(function initTheme(){
+  const saved = localStorage.getItem("of-theme");
+  const wantLight = saved ? saved === "light" : !window.matchMedia("(prefers-color-scheme: dark)").matches;
+  document.body.classList.toggle("light", wantLight);
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  const onChange = (e)=>{ if (!localStorage.getItem("of-theme")) document.body.classList.toggle("light", !e.matches); };
+  mq.addEventListener ? mq.addEventListener("change", onChange) : mq.addListener(onChange);
+})();
 $("btnLang").onclick = async ()=>{
   LANG = LANG === "zh" ? "en" : "zh";
   applyLang();
@@ -557,6 +600,7 @@ function select(kind, id){
       $("n-label").value = node.label; $("n-type").value = node.type; $("n-icon").value = node.icon ?? "";
       $("n-fill").value = node.fill; $("n-border").value = node.border; $("n-text").value = node.textColor;
       $("n-status").value = node.status ?? ""; $("n-note").value = node.note ?? "";
+      renderNotePreview();
     }
   } else {
     $("insp-empty").style.display = "none"; $("insp-node").style.display = "none"; $("insp-edge").style.display = ""; $("insp-meta").style.display = "none";
@@ -592,6 +636,144 @@ function edgeTypeLabel(type){
   const def = current?.edgeTypes?.[type];
   return (LANG === "en" ? def?.labelEn : def?.label) ?? "";
 }
+/* ================= 学术公式渲染（KaTeX 0.18.7，本地离线，含 mhchem） ================= */
+/* 目标：用户从任何来源粘贴的 LaTeX 都要尽力渲染 —— 常见前置处理 + 失败降级不丢内容 */
+
+/** 常用宏：用户常写的简写 */
+const KATEX_MACROS = {
+  "\\RR": "\\mathbb{R}", "\\NN": "\\mathbb{N}", "\\ZZ": "\\mathbb{Z}",
+  "\\QQ": "\\mathbb{Q}", "\\CC": "\\mathbb{C}", "\\FF": "\\mathbb{F}",
+  "\\dd": "\\mathrm{d}", "\\ee": "\\mathrm{e}", "\\ii": "\\mathrm{i}",
+  "\\Tr": "\\operatorname{Tr}", "\\rank": "\\operatorname{rank}",
+  "\\Spec": "\\operatorname{Spec}", "\\id": "\\operatorname{id}",
+  "\\R": "\\mathbb{R}", "\\C": "\\mathbb{C}", "\\Z": "\\mathbb{Z}"
+};
+
+/** siunitx 常见单位 → 文本（不支持 siunitx 时降级） */
+const UNIT_MAP = [
+  [/\\meter/g, "m"], [/\\second/g, "s"], [/\\kilogram/g, "kg"], [/\\gram/g, "g"],
+  [/\\ampere/g, "A"], [/\\kelvin/g, "K"], [/\\mole/g, "mol"], [/\\candela/g, "cd"],
+  [/\\per/g, "/"], [/\\squared/g, "^2"], [/\\cubed/g, "^3"], [/\\milli/g, "m"],
+  [/\\micro/g, "\\mu "], [/\\nano/g, "n"], [/\\kilo/g, "k"], [/\\centi/g, "c"],
+  [/\\joule/g, "J"], [/\\watt/g, "W"], [/\\newton/g, "N"], [/\\pascal/g, "Pa"],
+  [/\\volt/g, "V"], [/\\liter/g, "L"], [/\\litre/g, "L"], [/\\hertz/g, "Hz"],
+  [/\\degree/g, "^\\circ"], [/\\celsius/g, "^\\circ\\mathrm{C}"],
+];
+
+/** LaTeX 归一化：能修的都修成 KaTeX 支持的写法（修不了的原样保留，由渲染层降级） */
+function normalizeLatex(src){
+  let t = String(src ?? "");
+  // 注释（保留转义 \%）
+  t = t.replace(/(^|[^\\])%.*$/gm, "$1");
+  // 导言区 / 文档包裹
+  t = t.replace(/\\(documentclass|usepackage|RequirePackage)(\[[^\]]*\])?\{[^}]*\}/g, "");
+  t = t.replace(/\\(begin|end)\{document\}/g, "");
+  t = t.replace(/\\(setlength|addtolength|pagestyle|thispagestyle|geometry|newpage|clearpage|noindent|centering|hfill|vfill|smallskip|medskip|bigskip|maketitle|tableofcontents)\b(\[[^\]]*\])?(\{[^}]*\})?/g, "");
+  t = t.replace(/\\(label|nonumber|notag|index|glossary)\b(\[[^\]]*\])?(\{[^}]*\})?/g, "");
+  t = t.replace(/\\(vspace|hspace|vskip|hskip)\*?\{[^}]*\}/g, "");
+  // 常见命令等价替换
+  t = t.replace(/\\bm\b/g, "\\boldsymbol");
+  t = t.replace(/\\cite[tp]?\b(\[[^\]]*\])?\{([^}]*)\}/g, "[$2]");
+  t = t.replace(/\\eqref\{([^}]*)\}/g, "($1)");
+  t = t.replace(/\\ref\{([^}]*)\}/g, "$1");
+  t = t.replace(/\\includegraphics(\[[^\]]*\])?\{[^}]*\}/g, "");
+  t = t.replace(/\\sideset\{([^}]*)\}\{([^}]*)\}\s*(\\[a-zA-Z]+)/g, "$3$1$2");
+  // 单位（siunitx 降级）
+  t = t.replace(/\\SI\{([^}]*)\}\{([^}]*)\}/g, (_, val, unit)=>{
+    let u = unit; for (const [re, to] of UNIT_MAP) u = u.replace(re, to);
+    return `${val}\\,\\mathrm{${u}}`;
+  });
+  t = t.replace(/\\si\{([^}]*)\}/g, (_, unit)=>{
+    let u = unit; for (const [re, to] of UNIT_MAP) u = u.replace(re, to);
+    return `\\mathrm{${u}}`;
+  });
+  // 无法在网页渲染的绘图/浮动环境 → 占位（保留可读信息）
+  t = t.replace(/\\begin\{(tikzpicture|figure\*?|table\*?|algorithm\*?|lstlisting)\}[\s\S]*?\\end\{\1\}/g,
+                (_m, env)=> `\\text{[${env}: 网页不支持该环境，此处省略]}`);
+  // 公式环境 → $$ 显示数学（供分段渲染识别）
+  t = t.replace(/\\begin\{(equation\*?|align\*?|gather\*?|multline\*?|displaymath|eqnarray\*?|alignat\*?|flalign\*?)\}/g, "$$")
+       .replace(/\\end\{(equation\*?|align\*?|gather\*?|multline\*?|displaymath|eqnarray\*?|alignat\*?|flalign\*?)\}/g, "$$");
+  return t;
+}
+
+/** 把文本切成 [普通文本 | 数学段] 序列 */
+function splitMathSegments(text){
+  const src = normalizeLatex(text);
+  const out = [];
+  const re = /\$\$([\s\S]*?)\$\$|\\\[([\s\S]*?)\\\]|\\\(([\s\S]*?)\\\)|\$([^$\n]+?)\$/g;
+  let last = 0, m;
+  while ((m = re.exec(src))){
+    if (m.index > last) out.push({ math: false, body: src.slice(last, m.index) });
+    const display = m[1] !== undefined || m[2] !== undefined;
+    const body = m[1] ?? m[2] ?? m[3] ?? m[4] ?? "";
+    out.push({ math: true, body, display, raw: m[0] });
+    last = re.lastIndex;
+  }
+  if (last < src.length) out.push({ math: false, body: src.slice(last) });
+  return out;
+}
+
+/** 渲染单个数学段：成功返回节点；失败降级为「原文 + 提示」，绝不丢内容 */
+function renderMathNode(seg){
+  const host = document.createElement(seg.display ? "div" : "span");
+  host.className = seg.display ? "math-block" : "math-inline";
+  if (!window.katex?.renderToString) { host.textContent = seg.raw; return host; }
+  try {
+    const html = window.katex.renderToString(seg.body, {
+      displayMode: !!seg.display, throwOnError: false, strict: false, trust: false,
+      macros: { ...KATEX_MACROS }, errorColor: "#F87171"
+    });
+    host.innerHTML = html;
+    // KaTeX 以 errorColor 渲染失败片段；检测到 → 降级展示原文，并给出提示
+    const err = host.querySelector(".katex-error");
+    if (err){
+      const box = document.createElement("span");
+      box.className = "math-fallback";
+      box.title = err.getAttribute("title") || "KaTeX 无法解析该片段";
+      box.textContent = seg.raw;
+      const tag = document.createElement("span");
+      tag.className = "math-fallback-tag";
+      tag.textContent = "⚠ LaTeX 未渲染（原文保留）";
+      const wrap = document.createElement("span");
+      wrap.appendChild(box); wrap.appendChild(tag);
+      host.innerHTML = ""; host.appendChild(wrap);
+    }
+  } catch (e){
+    const box = document.createElement("span");
+    box.className = "math-fallback";
+    box.title = String(e?.message ?? e);
+    box.textContent = seg.raw;
+    host.innerHTML = ""; host.appendChild(box);
+  }
+  return host;
+}
+
+/** 整段富文本渲染（Markdown + 公式，带降级） */
+function renderMathIn(el, text){
+  if (!el) return;
+  const source = text ?? el.dataset.src ?? "";
+  el.dataset.src = source;
+  if (!String(source).trim()){ el.innerHTML = ""; return; }
+  const frag = document.createDocumentFragment();
+  for (const seg of splitMathSegments(source)){
+    if (seg.math){ frag.appendChild(renderMathNode(seg)); continue; }
+    const div = document.createElement("div");
+    div.className = "md-plain";
+    div.innerHTML = miniMarkdown(escapeHtml(seg.body));
+    frag.appendChild(div);
+  }
+  el.innerHTML = "";
+  el.appendChild(frag);
+}
+
+/** 检查框实时预览（防抖） */
+let notePreviewTimer = 0;
+function renderNotePreview(){
+  const box = $("n-preview");
+  if (!box) return;
+  renderMathIn(box, $("n-note")?.value ?? "");
+}
+
 function nodeById(id){ return nodeIndex.get(id) ?? current?.nodes.find((n)=>n.id === id) ?? null; }
 
 function edgeGeometry(edge){
@@ -774,8 +956,10 @@ function renderNodes(){
     const lp = livePos(node);
     el.style.cssText = `left:${lp.x}px;top:${lp.y}px;width:${node.w}px;height:${node.h}px;`;
     const note = String(node.note ?? "").trim();
+    const openTag = (node.tags ?? []).map(String).find((tag)=>tag.startsWith("open:"));
+    if (openTag) el.classList.add("has-jump");
     el.innerHTML = `<div class="card" style="--n-fill:${node.fill};--n-border:${node.border};--n-text:${node.textColor}">
-      <div class="kind"><span>${escapeHtml(node.icon ?? "")}</span><span>${escapeHtml(typeLabel(node.type))}</span></div>
+      <div class="kind"><span>${escapeHtml(node.icon ?? "")}</span><span>${escapeHtml(typeLabel(node.type))}</span>${openTag ? `<span class="jump" title="${LANG === "en" ? "Double-click to open the linked map" : "双击打开关联图"}">↗</span>` : ""}</div>
       <div class="nlabel">${escapeHtml(node.label)}</div>
     </div>${statusMark(node.status)}
     <div class="handle t" title="${escapeHtml(t("handleT"))}"></div><div class="handle s" title="${escapeHtml(t("handleS"))}"></div>`;
@@ -784,6 +968,7 @@ function renderNodes(){
     el.querySelector(".handle.t").addEventListener("pointerdown", (e)=>e.stopPropagation());
     el.addEventListener("dblclick", (e)=>{
       e.stopPropagation();
+      if (openTag){ location.hash = openTag.slice(5); return; }   // 双击 ↗ 节点 → 打开它指向的图
       select("node", node.id);
       $("n-label").focus(); $("n-label").select();
     });
@@ -1429,13 +1614,21 @@ $("n-group").onclick = async ()=>{
     await reload(false); toast(LANG === "zh" ? "已建组" : "Grouped");
   } catch (error){ toast(error.message, true); }
 };
+$("n-note")?.addEventListener("input", ()=>{ clearTimeout(notePreviewTimer); notePreviewTimer = setTimeout(renderNotePreview, 120); });
 $("n-note-full").onclick = async ()=>{
   const nodeId = selected.id;
   const note = await api(`/api/graph/${current.id}/note/${encodeURIComponent(nodeId)}`);
   openModal(`
-    <h2>${LANG === "zh" ? "节点备注（Markdown）" : "Node note (Markdown)"}</h2>
-    <textarea id="note-edit" style="min-height:260px">${escapeHtml(note.content ?? "")}</textarea>
+    <h2>${LANG === "zh" ? "节点备注（Markdown · 支持 $公式$）" : "Node note (Markdown · $formulas$ supported)"}</h2>
+    <div class="note-split">
+      <textarea id="note-edit" spellcheck="false">${escapeHtml(note.content ?? "")}</textarea>
+      <div id="note-preview" class="note-preview"></div>
+    </div>
     <div class="btnrow"><button class="primary" id="note-save">${t("save")}</button><button id="note-close">${LANG === "zh" ? "关闭" : "Close"}</button></div>`);
+  const renderBigNote = ()=>{ renderMathIn($("note-preview"), $("note-edit")?.value ?? ""); };
+  renderBigNote();
+  let bigNoteTimer = 0;
+  $("note-edit").addEventListener("input", ()=>{ clearTimeout(bigNoteTimer); bigNoteTimer = setTimeout(renderBigNote, 120); });
   $("note-save").onclick = async ()=>{
     await api(`/api/graph/${current.id}/note`, { method: "POST", body: JSON.stringify({ nodeId, content: $("note-edit").value }) });
     toast(t("saved")); closeModal(); await reload(false);
@@ -1470,10 +1663,22 @@ $("btnLayout").onclick = async ()=>{
   if ((current.groups ?? []).length) {
     openModal(`<h2>${t("layout")}</h2>
       <button class="btn" id="lo-layered">${LANG === "en" ? "Layered by dependency" : "按依赖分层"}</button>
-      <button class="btn" id="lo-clusters">${LANG === "en" ? "Cluster by groups" : "按分组聚簇"}</button>`);
+      <button class="btn" id="lo-clusters">${LANG === "en" ? "Cluster by groups" : "按分组聚簇"}</button>
+      <button class="btn" id="lo-force">${LANG === "en" ? "Force-directed" : "力导向"}</button>
+      <button class="btn" id="lo-grid">${LANG === "en" ? "Compact grid" : "紧凑网格"}</button>`);
+    document.getElementById("lo-force").onclick = ()=>doLayoutNow("force");
+    document.getElementById("lo-grid").onclick = ()=>doLayoutNow("grid");
     document.getElementById("lo-layered").onclick = ()=>doLayoutNow("layered");
     document.getElementById("lo-clusters").onclick = ()=>doLayoutNow("clusters");
-  } else await doLayoutNow("layered");
+  } else {
+    openModal(`<h2>${t("layout")}</h2>
+      <button class="btn" id="lo-layered">${LANG === "en" ? "Layered by dependency" : "按依赖分层"}</button>
+      <button class="btn" id="lo-force">${LANG === "en" ? "Force-directed" : "力导向"}</button>
+      <button class="btn" id="lo-grid">${LANG === "en" ? "Compact grid" : "紧凑网格"}</button>`);
+    document.getElementById("lo-force").onclick = ()=>doLayoutNow("force");
+    document.getElementById("lo-grid").onclick = ()=>doLayoutNow("grid");
+    document.getElementById("lo-layered").onclick = ()=>doLayoutNow("layered");
+  }
 };
 $("btnLegend").onclick = ()=>{
   if (!current) return;
