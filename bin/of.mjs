@@ -7,6 +7,7 @@ import { normalizeGraph, validateGraph } from "../lib/graph-core.js";
 import { layeredLayout, clusterLayout, forceLayout, gridLayout, analyzeGraph } from "../lib/graph-analysis.js";
 import { loadGraph, saveGraph, listGraphs, deleteGraph, makeGraphId } from "../lib/graph-service.mjs";
 import { buildTemplateById, mergedTemplateSummaries, saveCustomTemplate, deleteCustomTemplate } from "../lib/templates.js";
+import { ensureConversationShape, appendTurn, setHead, mergeBranches, pathTo, conversationOverview, linearize } from "../lib/conversation.js";
 import { toMermaid, fromMermaid, toDot, toMarkdownOutline, toPlainText, fromAgentFlow } from "../lib/converters.js";
 
 const VERSION = "0.1.0";
@@ -297,9 +298,75 @@ function cmdHelp() {
 节点/连线一切样式（颜色、形状、箭头、标签）在 Studio 里改，或直接编辑 graph.json。`);
 }
 
+
+/* ---------- 非线性对话（DAG 会话）CLI ---------- */
+async function cmdConvo(){
+  const sub = args[1];
+  const root = rootHome();
+  if (sub === "new"){
+    const topic = args[2];
+    if (!topic){ console.error('用法: of convo new "话题" [--folder 路径] [--lang zh|en]'); process.exit(1); }
+    await ensureRoot(root);
+    const g = ensureConversationShape(normalizeGraph({ name: topic, nodes: [], edges: [], groups: [], notes: {} }), { topic });
+    g.id = makeGraphId(g.name);
+    appendTurn(g, { text: topic, speaker: "system", type: "topic" });
+    await saveGraph(join(root, "graphs", g.id), g);
+    const folder = opt("--folder");
+    if (folder) { try { await moveGraph(root, g.id, folder); } catch { /* 归档失败不阻断 */ } }
+    console.log(`✓ 对话已创建\n  id: ${g.id}\n  存储: ${join(root, "graphs", g.id, "graph.json")}`);
+    return;
+  }
+  const id = args[2];
+  if (!id){ console.error("用法: of convo say|branch|merge|path|open <图id> …"); process.exit(1); }
+  const { graph } = await loadGraph(root, id);
+  let changed = false;
+  if (sub === "say"){
+    const flagNames = new Set(["--speaker", "--type", "--from", "--edge"]);
+    const rawWords = args.slice(3);
+    const textWords = [];
+    for (let i = 0; i < rawWords.length; i++){
+      if (flagNames.has(rawWords[i])){ i++; continue; }   // 跳过 flag 及其值
+      textWords.push(rawWords[i]);
+    }
+    const text = textWords.join(" ");
+    ensureConversationShape(graph);
+    const node = appendTurn(graph, { text, speaker: opt("--speaker", "user"), type: opt("--type", "turn"), parentId: opt("--from"), edgeType: opt("--edge", "follows") });
+    graph.notes = graph.notes ?? {};
+    graph.notes[node.id] = String(text).split("\n")[0].slice(0, 120);
+    changed = true;
+    console.log(`✓ 已追加发言 ${node.id}（head 已移动）`);
+  } else if (sub === "branch"){
+    ensureConversationShape(graph);
+    setHead(graph, args[3]);
+    changed = true;
+    console.log(`✓ head 已移到 ${args[3]}；下次 say 将从这里分出新支`);
+  } else if (sub === "merge"){
+    ensureConversationShape(graph);
+    const sources = String(args[3] ?? "").split(",").map((x)=> x.trim()).filter(Boolean);
+    const node = mergeBranches(graph, { sources, label: opt("--label", "汇合"), text: opt("--text", "") });
+    changed = true;
+    console.log(`✓ 已建立汇合点 ${node.id}`);
+  } else if (sub === "path"){
+    const target = args[3] ?? graph.conversation?.head;
+    console.log(linearize(graph, target, { format: opt("--format", "md") }));
+    return;
+  } else if (sub === "open"){
+    const ov = conversationOverview(ensureConversationShape(graph));
+    console.log(`head: ${ov.head}\n主线长度: ${ov.mainline.length}\n开放分支 ${ov.openThreads.length} 条:`);
+    for (const th of ov.openThreads) console.log(`  · ${th.label}  (${th.id})`);
+    console.log(`分叉点 ${ov.forkCount ?? ov.forks.length} 个: ${ov.forks.map((f)=> f.label).join(" / ") || "—"}`);
+    console.log(`发言人: ${ov.speakers.join(", ") || "—"}`);
+    return;
+  } else {
+    console.error("用法: of convo new|say|branch|merge|path|open …");
+    process.exit(1);
+  }
+  if (changed){ graph.revision += 1; await saveGraph(join(root, "graphs", id), graph); }
+}
+
 const commands = {
   create: cmdCreate, list: cmdList, read: cmdRead, validate: cmdValidate,
-  analyze: cmdAnalyze, layout: cmdLayout, export: cmdExport, import: cmdImport,
+  convo: cmdConvo, analyze: cmdAnalyze, layout: cmdLayout, export: cmdExport, import: cmdImport,
   "import-af": cmdImportAf, templates: cmdTemplates, delete: cmdDelete,
   "template-save": cmdTemplateSave, "template-delete": cmdTemplateDelete,
   meta: cmdMeta, trash: cmdTrash, restore: cmdRestore,
