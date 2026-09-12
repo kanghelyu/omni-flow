@@ -71,7 +71,7 @@ OmniFlow 对外暴露**三层完全对等的标准接口**，任何 agent 按自
 | GET | `/api/events` | SSE 变更流 |
 | GET | `/api/graph/:id` | 全量详情 |
 | GET | `/api/graph/:id/validate` · `/analyze?trace=` | 校验 / 分析 |
-| GET | `/api/graph/:id/export?format=` · `/note/:nodeId` | 导出 / 读备注 |
+| GET | `/api/graph/:id/export?format=html|` · `/note/:nodeId` | 导出 / 读备注 |
 | POST | `/api/graph/:id/note` · `/meta` · `/node-type-patch` · `/edge-type-patch` | 写备注 / 图元 / 类型注册表 |
 | POST | `/api/graph/:id/node-add` · `node-patch` · `node-delete` | 节点 |
 | POST | `/api/graph/:id/edge-add` · `edge-patch` · `edge-delete` | 连线 |
