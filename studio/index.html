@@ -148,6 +148,10 @@ main { flex: 1; display: flex; min-width: 0; min-height: 0; }
 .splitter:hover::before { background: var(--accent); }
 
 /* ===== 画布（agent-flow 手感 + 无限延伸背景） ===== */
+#depBar { position: absolute; left: 10px; top: 8px; z-index: 6; }
+#depBar .dep-legend { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+#depBar { position: absolute; left: 10px; top: 8px; z-index: 6; }
+#depBar .dep-legend { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
 #canvasWrap { flex: 1; min-width: 0; min-height: 0; position: relative; overflow: hidden; user-select: none; background-color: var(--canvas); cursor: grab; touch-action: none;
   background-image: radial-gradient(circle, var(--dot) 1.1px, transparent 1.2px), radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 52%);
   background-size: 24px 24px, 100% 100%; }
@@ -292,11 +296,13 @@ main { flex: 1; display: flex; min-width: 0; min-height: 0; }
         <span class="docrail-title" data-i18n="docTitle">当前图节点</span>
       </div>
       <div class="docrail-search"><input id="nodeSearch" data-ph="searchNodes" /></div>
+      <div id="typeFilterBar" class="typefilter"></div>
       <div class="docrail-list" id="docList"></div>
     </aside>
     <div class="splitter" id="leftSplitter"></div>
 
     <div id="canvasWrap">
+      <div id="depBar"></div>
       <div id="viewport">
         <div id="world">
           <svg id="edgeLayer"></svg>
@@ -585,6 +591,7 @@ $("cvFit").onclick = ()=>fitView({ duration: 560 });
 
 /* ================= 选择 ================= */
 function select(kind, id){
+  if (!kind){ depFocus = null; }
   selected = kind && id ? { kind, id } : null;
   document.querySelectorAll(".node.sel").forEach((el)=>el.classList.remove("sel"));
   document.querySelectorAll(".docitem.active").forEach((el)=>el.classList.remove("active"));
@@ -601,6 +608,7 @@ function select(kind, id){
       $("n-fill").value = node.fill; $("n-border").value = node.border; $("n-text").value = node.textColor;
       $("n-status").value = node.status ?? ""; $("n-note").value = node.note ?? "";
       renderNotePreview();
+      depFocus = depEnabled ? computeDeps(node.id) : null;
     }
   } else {
     $("insp-empty").style.display = "none"; $("insp-node").style.display = "none"; $("insp-edge").style.display = ""; $("insp-meta").style.display = "none";
@@ -897,6 +905,8 @@ function render(){
   $("gstat").textContent = current.valid ? `✓ ${current.nodes.length}● / ${current.edges.length}→` : `⚠ ${current.issues.length}`;
   $("gstat").className = "badge " + (current.valid ? (current.warnings.length ? "warn" : "ok") : "err");
   renderDocList(); renderGroups(); renderEdges(); renderNodes();
+  applyDepHighlight();
+  renderTypeFilter();
 }
 
 /* --- 连线（agent-flow 版式：SVG 分组 + 恒定线宽 + 填充箭头 + SVG 标签） --- */
@@ -911,6 +921,77 @@ function scheduleLiveFrame(){
   liveFrameQueued = true;
   requestAnimationFrame(()=>{ liveFrameQueued = false; updateEdgesLive(); updateConnLive(); updateGroupsLive(); });
 }
+/* ================= 依赖方向高亮（点击节点：上游蓝 / 下游红 / 其余变暗） ================= */
+let depFocus = null;        // { up:Set, down:Set } | null
+let depEnabled = true;      // 可通过图例关闭
+
+/** 以 nodeId 为起点：上游 = 谁支撑它（逆向可达）· 下游 = 它支撑谁（正向可达） */
+function computeDeps(nodeId){
+  const up = new Set(), down = new Set();
+  const upQ = [nodeId], downQ = [nodeId];
+  while (upQ.length){
+    const cur = upQ.pop();
+    for (const e of current.edges){
+      if (e.target === cur && e.source !== nodeId && !up.has(e.source)){ up.add(e.source); upQ.push(e.source); }
+    }
+  }
+  while (downQ.length){
+    const cur = downQ.pop();
+    for (const e of current.edges){
+      if (e.source === cur && e.target !== nodeId && !down.has(e.target)){ down.add(e.target); downQ.push(e.target); }
+    }
+  }
+  return { up, down };
+}
+
+/** 应用/清除高亮：节点 + 连线，并在节点列表上方显示颜色图例 */
+function applyDepHighlight(){
+  if (!nodesLayer || !edgeLayer) return;
+  const nodeEls = nodesLayer.querySelectorAll(".node");
+  const groups = edgeLayer.querySelectorAll(".edge-group");
+  const focusId = depFocus && selected?.kind === "node" ? selected.id : null;
+  if (!depFocus || !focusId){
+    nodeEls.forEach((el)=> el.classList.remove("dep-up", "dep-down", "dep-dim", "dep-self"));
+    groups.forEach((g)=> g.classList.remove("dep-up", "dep-down", "dep-dim"));
+    $("depLegend")?.remove();
+    return;
+  }
+  const { up, down } = depFocus;
+  nodeEls.forEach((el)=>{
+    const id = el.dataset.id;
+    const isSelf = id === focusId, isUp = up.has(id), isDown = down.has(id);
+    el.classList.toggle("dep-self", isSelf);
+    el.classList.toggle("dep-up", !isSelf && isUp);
+    el.classList.toggle("dep-down", !isSelf && isDown);
+    el.classList.toggle("dep-dim", !isSelf && !isUp && !isDown);
+  });
+  groups.forEach((g)=>{
+    const e = edgeIndexById.get(g.querySelector(".edge-hit")?.dataset.edgeId);
+    if (!e){ return; }
+    const isUp = (e.target === focusId) || (up.has(e.target) && up.has(e.source));
+    const isDown = (e.source === focusId) || (down.has(e.source) && down.has(e.target));
+    g.classList.toggle("dep-up", isUp);
+    g.classList.toggle("dep-down", !isUp && isDown);
+    g.classList.toggle("dep-dim", !isUp && !isDown);
+  });
+  renderDepLegend();
+}
+
+/** 颜色图例（可关闭） */
+function renderDepLegend(){
+  $("depLegend")?.remove();
+  const bar = $("depBar");
+  if (!bar || !depFocus) return;
+  const el = document.createElement("div");
+  el.id = "depLegend"; el.className = "dep-legend";
+  el.innerHTML = `<span><i style="background:#38BDF8"></i>${LANG === "en" ? "upstream" : "上游（支撑它）"}</span>
+    <span><i style="background:#F87171"></i>${LANG === "en" ? "downstream" : "下游（它支撑）"}</span>
+    <span><i style="background:#FBBF24"></i>${LANG === "en" ? "selected" : "当前节点"}</span>
+    <button class="mini" id="depOff" style="margin-left:auto;font-size:10px;padding:1px 6px">${LANG === "en" ? "hide" : "关闭"}</button>`;
+  bar.appendChild(el);
+  $("depOff").onclick = ()=>{ depEnabled = false; depFocus = null; applyDepHighlight(); };
+}
+
 /* 组框逐帧跟随成员（拖组内单节点时框自动变形/移动），只改几何不重建 DOM */
 function updateGroupsLive(){
   if (!current) return;
@@ -1515,14 +1596,33 @@ document.addEventListener("click", (e)=>{
   if (!e.target.closest("#gsResults") && !e.target.closest("#globalSearch")) closeGs();
 });
 
+let typeFilter = null;   // 节点列表类型筛选（null = 全部）
+
+/** 序号统计 + 渲染类型筛选 chips */
+function renderTypeFilter(){
+  const bar = $("typeFilterBar");
+  if (!bar) return;
+  if (!current){ bar.innerHTML = ""; return; }
+  const counts = new Map();
+  for (const n of current.nodes) counts.set(n.type, (counts.get(n.type) ?? 0) + 1);
+  const types = [...counts.entries()].sort((a, b)=> b[1] - a[1]);
+  bar.className = "typefilter";
+  bar.innerHTML = `<button data-t="" class="${typeFilter ? "" : "on"}">${LANG === "en" ? "All" : "全部"} ${current.nodes.length}</button>` +
+    types.map(([t, c])=> `<button data-t="${escapeHtml(t)}" class="${typeFilter === t ? "on" : ""}">${escapeHtml(typeLabel(t))} ${c}</button>`).join("");
+  bar.querySelectorAll("button").forEach((b)=>{
+    b.onclick = ()=>{ typeFilter = b.dataset.t || null; renderTypeFilter(); renderDocList(); };
+  });
+}
+
 function renderDocList(){
   const box = $("docList");
   if (!box || !current){ if (box) box.innerHTML = ""; return; }
   const query = $("nodeSearch").value.trim().toLowerCase();
-  const items = current.nodes.filter((node)=>!query
+  const items = current.nodes.filter((node)=> (!typeFilter || node.type === typeFilter)
+    && (!query
     || String(node.label ?? "").toLowerCase().includes(query)
     || String(node.note ?? "").toLowerCase().includes(query)
-    || (node.tags ?? []).some((tag)=>String(tag).toLowerCase().includes(query)));
+    || (node.tags ?? []).some((tag)=>String(tag).toLowerCase().includes(query))));
   box.innerHTML = `<div class="docgroup">${current.nodes.length} ${LANG === "en" ? "NODES" : "节点"}</div>` + (items.map((node)=>
     `<button class="docitem ${selected?.kind === "node" && selected.id === node.id ? "active" : ""}" data-node="${escapeHtml(node.id)}">
       <span class="docitem__icon" style="color:${node.border};background:${node.fill}22">${escapeHtml(node.icon ?? "◆")}</span>
