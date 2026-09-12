@@ -306,6 +306,46 @@ Nilpotent Orbits in Semisimple Lie Algebras
 
 ---
 
+# Live recording protocol — 「开启非线性对话」
+
+**Trigger phrases** (either language): 开启非线性对话 · 开始记录对话 · 开启对话记录 · record this conversation · start non-linear conversation
+
+## When the user says it
+
+1. Call `of_live_start { topic }` **once** (topic = the current subject; omit to auto-name).
+   - If a session is already open it **resumes** it — never create a duplicate.
+2. Tell the user it is on, with the graph name, then **carry on normally**.
+
+## Then, for the rest of the session
+
+**After EVERY turn — the user's and your own — call `of_live_log` once:**
+
+| Who | Call |
+| --- | --- |
+| The user's message | `of_live_log { "role": "user", "text": "<their message>" }` |
+| Your reply | `of_live_log { "role": "agent", "text": "<your reply>" }` |
+| A milestone / decision | `of_live_log { "role": "system", "text": "…" }` |
+| Going off on a tangent | `of_live_log { "role": "agent", "text": "…", "from": "<nodeId>" }` → forks a branch |
+
+Rules:
+
+- **Do not wait to be asked.** Recording is continuous until stopped.
+- **No `id` needed** — the active session pointer (`<root>/live-conversation.json`) resolves it.
+- Record **both sides**; a one-sided log is useless for later review.
+- Keep each `text` faithful and self-contained; it becomes a card plus a note.
+- Summarise long tool output instead of dumping it; put the essentials in `text`.
+- If you branch, pass `from` so the fork is visible in the graph.
+
+## When the user says 停止记录 / 结束记录 / stop recording
+
+`of_live_stop` → the graph is preserved; they can reopen it any time, or say the trigger again to resume.
+
+`of_live_status` reports whether recording is on, how many turns, the head and open threads.
+
+## What the user gets
+
+Every conversation becomes a browsable DAG in the Studio: click any turn to see the full text, right-click to **从这里继续 / 分叉一轮 / 合并 / 标记状态 / 加附件**, use the conversation panel for 调度 · 待办 · 导出路径, and jump between branches with the sibling navigator (`‹ 1/3 ›`) or the keyboard (`k` parent · `j` child · `1-9` child n).
+
 # Multi-agent non-linear conversation (agent runtime)
 
 OmniFlow doubles as the **state + topology ledger for multi-agent sessions** — the layer that LangGraph/CrewAI/AutoGen keep in memory, made durable and inspectable.
