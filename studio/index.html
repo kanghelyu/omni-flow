@@ -689,27 +689,124 @@ function normalizeLatex(src){
   });
   // 无法在网页渲染的绘图/浮动环境 → 占位（保留可读信息）
   t = t.replace(/\\begin\{(tikzpicture|figure\*?|table\*?|algorithm\*?|lstlisting)\}[\s\S]*?\\end\{\1\}/g,
-                (_m, env)=> `\\text{[${env}: 网页不支持该环境，此处省略]}`);
-  // 公式环境 → $$ 显示数学（供分段渲染识别）
-  t = t.replace(/\\begin\{(equation\*?|align\*?|gather\*?|multline\*?|displaymath|eqnarray\*?|alignat\*?|flalign\*?)\}/g, "$$")
-       .replace(/\\end\{(equation\*?|align\*?|gather\*?|multline\*?|displaymath|eqnarray\*?|alignat\*?|flalign\*?)\}/g, "$$");
+                (_m, env)=> `[${env}: 网页不支持该环境，此处省略]`);
+  // 先清理「孤立」的 begin/end（未成对的残留），再转换合法公式环境——顺序不可颠倒
+  t = t.replace(/\\(begin|end)\{(?!equation|align|gather|multline|displaymath|math|alignat|flalign|eqnarray|pmatrix|bmatrix|vmatrix|matrix|cases|array|aligned|gathered|split|smallmatrix)[^}]*\}/g, "");
+  // 公式环境 → $$ 显示数学；align/gather 系列必须保留内部结构（& 与 \\ 在裸数学中非法）
+  t = t.replace(/\\begin\{(align\*?|alignat\*?|flalign\*?|eqnarray\*?)\}([\s\S]*?)\\end\{\1\}/g,
+                (_m, _env, body)=> `$$\\begin{aligned}${body}\\end{aligned}$$`);
+  t = t.replace(/\\begin\{(gather\*?|multline\*?)\}([\s\S]*?)\\end\{\1\}/g,
+                (_m, _env, body)=> `$$\\begin{gathered}${body}\\end{gathered}$$`);
+  t = t.replace(/\\begin\{(equation\*?|displaymath|math)\}([\s\S]*?)\\end\{\1\}/g,
+                (_m, _env, body)=> `$$${body}$$`);
   return t;
 }
 
-/** 把文本切成 [普通文本 | 数学段] 序列 */
+/** 裸 LaTeX 识别：整段像公式（含命令/上下标/环境，且正文无中日韩字）→ 视为数学 */
+const MATH_CMD = /\\(frac|dfrac|tfrac|sqrt|sum|prod|coprod|int|iint|iiint|oint|lim|limsup|liminf|log|ln|lg|exp|sin|cos|tan|cot|sec|csc|arcsin|arccos|arctan|sinh|cosh|tanh|det|dim|ker|deg|gcd|min|max|sup|inf|arg|Pr|alpha|beta|gamma|delta|Delta|epsilon|varepsilon|zeta|eta|theta|vartheta|iota|kappa|lambda|Lambda|mu|nu|xi|Xi|pi|Pi|rho|varrho|sigma|Sigma|tau|upsilon|phi|varphi|Phi|chi|psi|Psi|omega|Omega|Gamma|Theta|mathbb|mathcal|mathfrak|mathbf|mathrm|mathsf|mathtt|mathit|boldsymbol|hat|widehat|bar|overline|underline|vec|dot|ddot|tilde|widetilde|overbrace|underbrace|overset|underset|partial|nabla|infty|cdot|cdots|ldots|dots|times|div|pm|mp|leq|geq|neq|ne|approx|equiv|cong|sim|simeq|propto|ll|gg|to|rightarrow|leftarrow|Rightarrow|Leftarrow|leftrightarrow|Leftrightarrow|mapsto|longmapsto|in|notin|ni|subset|subseteq|supset|supseteq|cup|cap|setminus|emptyset|varnothing|forall|exists|nexists|neg|land|lor|implies|iff|langle|rangle|\|lfloor|rfloor|lceil|rceil|binom|choose|pmatrix|bmatrix|vmatrix|matrix|cases|array|aligned|gathered|operatorname|text|textbf|textit|emph|ce|SI|si|bm|quad|qquad|left|right|big|Big|bigg|Bigg|begin|end|quad|hspace|vspace|label|tag|color|boxed|cancel|overset|underset|xrightarrow|xleftarrow|sideset|limits|nolimits|displaystyle|textstyle|scriptstyle|scriptscriptstyle|substack|sideset|underbrace|overbrace)\b/;
+/** 去掉 \text{} / \mathrm{} 等文本容器后再查中日韩，避免「公式里有中文文本」被误判 */
+function looksLikeMath(block){
+  const t = String(block ?? "").trim();
+  if (!t) return false;
+  // 已经是普通句子（含句号/问号且无命令）→ 不是公式
+  const noTextCJK = t.replace(/\\text\{[^}]*\}|\\mathrm\{[^}]*\}|\\textbf\{[^}]*\}|\\operatorname\{[^}]*\}/g, "");
+  if (/[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]/.test(noTextCJK)) return false;
+  const hasCmd = MATH_CMD.test(t);
+  const hasEnv = /\\begin\{[a-zA-Z*]+\}/.test(t);
+  const hasScript = /[\^_](\{|[A-Za-z0-9])/.test(t);
+  const hasFormulaSymbols = /[=<>]|\\[a-zA-Z]+/.test(t) && /[A-Za-z0-9}]/.test(t);
+  // 判定：有 LaTeX 命令/环境 → 数学；只有上下标且含 = → 数学
+  if (hasCmd || hasEnv) return true;
+  if (hasScript && /[=<>]/.test(t)) return true;
+  return false;
+}
+
+/** 行内裸数学：从混排文本中切出可渲染的数学跨度（\ce{}、x^2+y^2=z^2 等） */
+const INLINE_MATH_RE = /\\ce\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}|\\[a-zA-Z]+(?:\s*(?:\{[^{}]*\}|\[[^\]]*\]|[_^]\{[^{}]*\}|[_^][A-Za-z0-9]))+(?:\s*[=+\-*/<>]\s*[A-Za-z0-9\\{}^_]+)*|[A-Za-z0-9]+\s*[_^]\{[^{}]*\}(?:\s*[=+\-*/<>]\s*[A-Za-z0-9\\{}^_]+)*|[A-Za-z0-9]+\s*[_^][A-Za-z0-9](?:\s*[=+\-*/<>]\s*[A-Za-z0-9\\{}^_]+)*/g;
+
+/** 把一行拆成 [文本 | 数学] 片段；无可渲染数学则整体作文本 */
+function splitLineInline(line){
+  const parts = [];
+  let last = 0, m;
+  INLINE_MATH_RE.lastIndex = 0;
+  while ((m = INLINE_MATH_RE.exec(line))){
+    const hit = m[0];
+    // 过滤：太短或纯单词的不算（避免把普通英文单词当公式）
+    const isCmd = /^\\[a-zA-Z]/.test(hit.trim());
+    if (!isCmd && hit.trim().length < 3) continue;
+    if (!isCmd && !/[=^_]/.test(hit)) continue;
+    if (m.index > last) parts.push({ math: false, body: line.slice(last, m.index) });
+    parts.push({ math: true, body: hit.trim(), display: false, raw: hit.trim() });
+    last = m.index + hit.length;
+  }
+  if (last < line.length) parts.push({ math: false, body: line.slice(last) });
+  return parts;
+}
+
+/** 把普通文本块按空行切段；公式行/行内公式均标记为数学段 */
+function pushPlainBlock(out, block){
+  if (!block.trim()) { out.push({ math: false, body: block }); return; }
+  const paras = block.split(/(\n\s*\n)/);
+  for (const para of paras){
+    if (!para.trim()) { out.push({ math: false, body: para }); continue; }
+    const lines = para.split("\n");
+    let buffer = [];
+    const flush = ()=>{ if (buffer.length){ out.push({ math: false, body: buffer.join("\n") }); buffer = []; } };
+    for (const line of lines){
+      if (looksLikeMath(line)){
+        // 整行是公式 → 显示模式
+        flush();
+        out.push({ math: true, body: line.trim(), display: true, raw: line.trim() });
+        continue;
+      }
+      // 行内混排：切出数学跨度（如「化学：\ce{2H2 + O2 -> 2H2O} 的焓变」）
+      const segs = splitLineInline(line);
+      if (segs.some((x)=> x.math)){
+        flush();
+        for (const sg of segs) out.push(sg);
+      } else buffer.push(line);
+    }
+    flush();
+  }
+}
+
+/** 极简 Markdown → HTML（先转义，防注入）：粗体/斜体/行内代码/标题/列表/链接 */
+function miniMarkdown(src){
+  const inline = (t)=> t
+    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+    .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<i>$2</i>")
+    .replace(/`([^`\n]+)`/g, "<code>$1</code>")
+    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  const out = [];
+  let inList = false;
+  const closeList = ()=>{ if (inList){ out.push("</ul>"); inList = false; } };
+  for (const raw of String(src ?? "").split(/\r?\n/)){
+    const line = raw.trimEnd();
+    const h = line.match(/^(#{1,6})\s+(.*)$/);
+    const li = line.match(/^\s*[-*+]\s+(.*)$/);
+    if (h){ closeList(); const lv = Math.min(3, h[1].length); out.push(`<h${lv}>${inline(h[2])}</h${lv}>`); continue; }
+    if (li){ if (!inList){ out.push("<ul>"); inList = true; } out.push(`<li>${inline(li[1])}</li>`); continue; }
+    closeList();
+    out.push(line.trim() ? `<p>${inline(line)}</p>` : "");
+  }
+  closeList();
+  return out.join("\n");
+}
+
+/** 把文本切成 [普通文本 | 数学段] 序列（定界符 + 裸公式双通道） */
 function splitMathSegments(text){
   const src = normalizeLatex(text);
   const out = [];
   const re = /\$\$([\s\S]*?)\$\$|\\\[([\s\S]*?)\\\]|\\\(([\s\S]*?)\\\)|\$([^$\n]+?)\$/g;
   let last = 0, m;
   while ((m = re.exec(src))){
-    if (m.index > last) out.push({ math: false, body: src.slice(last, m.index) });
+    if (m.index > last) pushPlainBlock(out, src.slice(last, m.index));
     const display = m[1] !== undefined || m[2] !== undefined;
     const body = m[1] ?? m[2] ?? m[3] ?? m[4] ?? "";
     out.push({ math: true, body, display, raw: m[0] });
     last = re.lastIndex;
   }
-  if (last < src.length) out.push({ math: false, body: src.slice(last) });
+  if (last < src.length) pushPlainBlock(out, src.slice(last));
   return out;
 }
 
