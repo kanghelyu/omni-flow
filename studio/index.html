@@ -147,12 +147,103 @@ main { flex: 1; display: flex; min-width: 0; min-height: 0; }
 .splitter::after { content: ""; width: 3px; height: 42px; border-radius: 99px; background: var(--border); box-shadow: 0 -7px 0 var(--border), 0 7px 0 var(--border); }
 .splitter:hover::before { background: var(--accent); }
 
+/* ===== 卡片排版（标题 / 摘要分层 + 类型色条） ===== */
+.card { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 9px 11px 10px 13px; }
+.card .typebar { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 3px 0 0 3px; opacity: .95; }
+.card .kind { font-size: 10px; letter-spacing: .02em; opacity: .85; display: flex; gap: 5px; align-items: center; }
+.card .kind .att { margin-left: auto; opacity: .9; font-size: 10px; }
+.card .nlabel { font-size: 12.8px; font-weight: 650; line-height: 1.35; }
+.card .nexcerpt { font-size: 11px; line-height: 1.45; opacity: .62;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* ===== 检查器：附件区 ===== */
+.insp-sec-head { display: flex; align-items: center; gap: 8px; }
+.insp-sec-head label { flex: 1; margin: 0; }
+.convo-actions-row { display: flex; }
+.convo-actions-row button.full {
+  flex: 1; font-size: 11.5px; padding: 5px 8px; border-radius: 7px;
+  border: 1px solid var(--accent); background: rgba(56,189,248,.10); color: var(--accent); cursor: pointer;
+}
+.convo-actions-row button.full:hover { background: rgba(56,189,248,.20); }
+
+/* ===== 非线性对话（左栏面板 + 画布视觉） ===== */
+.convo-panel { border-bottom: 1px solid var(--border); padding: 8px 10px 10px; background: var(--panel); }
+.convo-panel[hidden] { display: none; }
+.convo-head-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.convo-title { font-size: 11.5px; font-weight: 650; color: var(--text); }
+.convo-stats { font-size: 10.5px; color: var(--text-dim); margin-left: auto; }
+.convo-headline {
+  font-size: 11.5px; line-height: 1.5; color: var(--ok); background: var(--bg-soft);
+  border: 1px solid var(--border); border-radius: 7px; padding: 5px 8px; margin-bottom: 7px;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.convo-headline b { color: var(--text-dim); font-weight: 500; font-size: 10.5px; display: block; margin-bottom: 1px; }
+.convo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 7px; }
+.convo-grid button {
+  font-size: 11px; padding: 4px 2px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--bg-soft); color: var(--text); cursor: pointer; white-space: nowrap; overflow: hidden;
+}
+.convo-grid button:hover { border-color: var(--accent); color: var(--accent); }
+.convo-say-row { display: flex; gap: 5px; }
+.convo-say-row input {
+  flex: 1; min-width: 0; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--bg); color: var(--text); font-size: 11.5px;
+}
+.convo-say-row button {
+  flex: none; font-size: 11px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--accent);
+  background: transparent; color: var(--accent); cursor: pointer; white-space: nowrap;
+}
+/* 画布视觉：head 绿环 / 主线高亮 / 离支变淡 / 兄弟导航 */
+.node.convo-head .card { box-shadow: 0 0 0 2.5px #22C55E, 0 0 16px rgba(34,197,94,.45) !important; }
+.node.convo-main .card { border-color: var(--accent) !important; }
+.node.convo-off { opacity: .55; }
+.sibnav {
+  position: absolute; right: 3px; top: -10px; display: flex; gap: 2px; align-items: center;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 999px; padding: 0 5px;
+  font-size: 10px; z-index: 3; box-shadow: 0 2px 8px rgba(0,0,0,.25);
+}
+.sibnav button { border: 0; background: transparent; color: var(--accent); cursor: pointer; font-size: 11px; padding: 0 2px; }
+.sibnav span { color: var(--text-dim); }
+/* 类型筛选 chips */
+.typefilter { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 10px 4px; }
+.typefilter button {
+  font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--panel); color: var(--text-dim); cursor: pointer; line-height: 1.6;
+}
+.typefilter button.on { border-color: var(--accent); color: var(--accent); background: rgba(56,189,248,.12); }
+/* 依赖图例（画布右下，不遮挡内容） */
+.dep-legend { display: flex; gap: 10px; align-items: center; color: var(--text-dim); }
+.dep-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+/* 附件（原书页面图等） */
+.attach-strip { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.attach-thumb {
+  position: relative; width: 72px; height: 96px; border-radius: 6px; overflow: hidden; cursor: zoom-in;
+  border: 1px solid var(--border); background: var(--bg-soft); flex: none;
+}
+.attach-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.attach-thumb .tag {
+  position: absolute; left: 0; right: 0; bottom: 0; font-size: 9.5px; text-align: center;
+  background: rgba(0,0,0,.55); color: #fff; padding: 1px 0;
+}
+.attach-chip {
+  display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 3px 9px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--bg-soft); color: var(--text); cursor: pointer; max-width: 100%;
+}
+.attach-chip:hover { border-color: var(--accent); color: var(--accent); }
+/* 灯箱（页面图/PDF 大图查看） */
+.lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.86); z-index: 90; display: flex; flex-direction: column; }
+.lightbox .lb-bar { display: flex; gap: 10px; align-items: center; padding: 8px 12px; color: #E2E8F0; font-size: 12px; background: rgba(0,0,0,.35); }
+.lightbox .lb-bar button { font-size: 11.5px; padding: 3px 10px; border-radius: 6px; border: 1px solid #475569; background: #1E293B; color: #E2E8F0; cursor: pointer; }
+.lightbox .lb-stage { flex: 1; overflow: hidden; position: relative; cursor: grab; }
+.lightbox .lb-stage.panning { cursor: grabbing; }
+.lightbox .lb-stage img { position: absolute; left: 0; top: 0; transform-origin: 0 0; user-select: none; }
+.lightbox .lb-cap { padding: 6px 12px; color: #94A3B8; font-size: 11.5px; background: rgba(0,0,0,.35); }
+
 /* ===== 画布（agent-flow 手感 + 无限延伸背景） ===== */
-#depBar { position: absolute; left: 10px; top: 8px; z-index: 6; }
-#convoBar { position: absolute; left: 10px; right: 10px; top: 8px; z-index: 7; }
-#depBar .dep-legend { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
-#depBar { position: absolute; left: 10px; top: 8px; z-index: 6; }
-#depBar .dep-legend { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+#depBar { position: absolute; right: 12px; bottom: 54px; z-index: 5; }
+#depBar .dep-legend { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 3px 8px; box-shadow: 0 4px 14px rgba(0,0,0,.3); font-size: 10.5px; }
+#depBar { position: absolute; right: 12px; bottom: 54px; z-index: 5; }
+#depBar .dep-legend { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 3px 8px; box-shadow: 0 4px 14px rgba(0,0,0,.3); font-size: 10.5px; }
 #canvasWrap { flex: 1; min-width: 0; min-height: 0; position: relative; overflow: hidden; user-select: none; background-color: var(--canvas); cursor: grab; touch-action: none;
   background-image: radial-gradient(circle, var(--dot) 1.1px, transparent 1.2px), radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 52%);
   background-size: 24px 24px, 100% 100%; }
@@ -297,6 +388,24 @@ main { flex: 1; display: flex; min-width: 0; min-height: 0; }
         <span class="docrail-title" data-i18n="docTitle">当前图节点</span>
       </div>
       <div class="docrail-search"><input id="nodeSearch" data-ph="searchNodes" /></div>
+      <section id="convoPanel" class="convo-panel" hidden>
+        <div class="convo-head-row">
+          <span class="convo-title">💬 会话</span>
+          <span class="convo-stats" id="convoStats"></span>
+        </div>
+        <div class="convo-headline" id="convoHeadLine"></div>
+        <div class="convo-grid">
+          <button id="convoHead" title="把选中节点设为当前点头（从这里继续）">设为点头</button>
+          <button id="convoMerge" title="汇合开放分支（或选中的多个节点）">合并</button>
+          <button id="convoThreads" title="列出全部开放分支">开放分支</button>
+          <button id="convoNext" title="下一步该谁产出 + 应发送的上下文">调度</button>
+          <button id="convoPending" title="待办分支（运行中 / 等待人工）">待办</button>
+          <button id="convoLinear" title="把当前路径导出为对话稿">导出路径</button>
+        </div>
+        <div class="convo-actions-row">
+          <button id="convoSayBtn" class="full">＋ 记录一轮发言</button>
+        </div>
+      </section>
       <div id="typeFilterBar" class="typefilter"></div>
       <div class="docrail-list" id="docList"></div>
     </aside>
@@ -304,7 +413,6 @@ main { flex: 1; display: flex; min-width: 0; min-height: 0; }
 
     <div id="canvasWrap">
       <div id="depBar"></div>
-      <div id="convoBar" class="convo-bar" hidden></div>
       <div id="viewport">
         <div id="world">
           <svg id="edgeLayer"></svg>
@@ -352,7 +460,11 @@ main { flex: 1; display: flex; min-width: 0; min-height: 0; }
               <option value="">无</option><option value="todo">待办</option><option value="doing">进行中</option><option value="done">完成</option><option value="blocked">阻塞</option>
             </select></div>
           </div>
-          <label data-i18n="note">备注（首行入图数据，长文存 Markdown · 支持 $公式$）</label>
+          <div class="insp-sec-head">
+            <label data-i18n="note">备注（首行入图数据，长文存 Markdown · 支持 $公式$）</label>
+            <button class="mini" id="attachAdd" title="添加附件：本地文件路径或 URL（本地文件会复制进图资源目录）">＋ 附件</button>
+          </div>
+          <div id="attachBox"></div>
           <textarea id="n-note" rows="3"></textarea>
           <div id="n-preview" class="note-preview" aria-live="polite"></div>
           <div class="btnrow">
@@ -611,6 +723,7 @@ function select(kind, id){
       $("n-status").value = node.status ?? ""; $("n-note").value = node.note ?? "";
       renderNotePreview();
       depFocus = depEnabled ? computeDeps(node.id) : null;
+      renderAttachments(node);
     }
   } else {
     $("insp-empty").style.display = "none"; $("insp-node").style.display = "none"; $("insp-edge").style.display = ""; $("insp-meta").style.display = "none";
@@ -910,7 +1023,7 @@ function render(){
   computeConvo();
   applyDepHighlight();
   applyConvoToCanvas();
-  renderConvoBar();
+  renderConvoPanel();
   renderTypeFilter();
 }
 
@@ -926,6 +1039,113 @@ function scheduleLiveFrame(){
   liveFrameQueued = true;
   requestAnimationFrame(()=>{ liveFrameQueued = false; updateEdgesLive(); updateConnLive(); updateGroupsLive(); });
 }
+
+/* ================= 节点附件（原书页面图 / PDF / 外链） ================= */
+let lbState = null;   // { list, idx, k, x, y }
+
+function openLightbox(list, idx){
+  closeLightbox();
+  const box = document.createElement("div");
+  box.className = "lightbox"; box.id = "lightbox";
+  box.innerHTML = `<div class="lb-bar">
+      <span id="lb-title"></span>
+      <span style="margin-left:auto"></span>
+      <button id="lb-prev">‹ 上一张</button>
+      <button id="lb-next">下一张 ›</button>
+      <button id="lb-zoomout">−</button>
+      <button id="lb-zoomin">+</button>
+      <button id="lb-fit">适应</button>
+      <button id="lb-open">原文件</button>
+      <button id="lb-close">关闭 (Esc)</button>
+    </div>
+    <div class="lb-stage" id="lb-stage"><img id="lb-img" alt=""></div>
+    <div class="lb-cap" id="lb-cap"></div>`;
+  document.body.appendChild(box);
+  lbState = { list, idx, k: 1, x: 0, y: 0 };
+  const stage = $("lb-stage"), img = $("lb-img");
+  const srcOf = (a)=> /^https?:|^data:/i.test(a.src) ? a.src : `/api/graph/${encodeURIComponent(current.id)}/asset/${encodeURIComponent(String(a.src).replace(/^assets\//, ""))}`;
+  const draw = ()=>{
+    const a = lbState.list[lbState.idx];
+    img.src = srcOf(a);
+    img.style.transform = `translate(${lbState.x}px, ${lbState.y}px) scale(${lbState.k})`;
+    $("lb-title").textContent = a.label || a.src;
+    $("lb-cap").textContent = `${lbState.idx + 1}/${lbState.list.length}${a.page ? ` · 第 ${a.page} 页` : ""}${a.caption ? " · " + a.caption : ""}`;
+  };
+  img.onload = ()=>{
+    const r = stage.getBoundingClientRect();
+    lbState.k = Math.min(1, (r.width - 40) / img.naturalWidth, (r.height - 40) / img.naturalHeight);
+    lbState.x = 20; lbState.y = 20;
+    img.style.width = img.naturalWidth + "px";
+    draw();
+  };
+  stage.addEventListener("wheel", (e)=>{
+    e.preventDefault();
+    const r = stage.getBoundingClientRect(), cx = e.clientX - r.left, cy = e.clientY - r.top;
+    const nk = Math.min(6, Math.max(0.1, lbState.k * Math.exp(-e.deltaY * 0.0015)));
+    lbState.x = cx - (cx - lbState.x) * (nk / lbState.k);
+    lbState.y = cy - (cy - lbState.y) * (nk / lbState.k);
+    lbState.k = nk; draw();
+  }, { passive: false });
+  stage.addEventListener("pointerdown", (e)=>{
+    if (e.button !== 0) return;
+    e.preventDefault(); stage.classList.add("panning");
+    const sx = e.clientX, sy = e.clientY, ox = lbState.x, oy = lbState.y;
+    const mv = (ev)=>{ lbState.x = ox + (ev.clientX - sx); lbState.y = oy + (ev.clientY - sy); draw(); };
+    const up = ()=>{ window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", up); stage.classList.remove("panning"); };
+    window.addEventListener("pointermove", mv); window.addEventListener("pointerup", up);
+  });
+  const go = (d)=>{ lbState.idx = (lbState.idx + d + lbState.list.length) % lbState.list.length; lbState.k = 0; img.onload(); };
+  $("lb-prev").onclick = ()=>go(-1);
+  $("lb-next").onclick = ()=>go(1);
+  $("lb-zoomin").onclick = ()=>{ lbState.k = Math.min(6, lbState.k * 1.25); draw(); };
+  $("lb-zoomout").onclick = ()=>{ lbState.k = Math.max(0.1, lbState.k / 1.25); draw(); };
+  $("lb-fit").onclick = ()=>{ lbState.k = 0; img.onload(); };
+  $("lb-open").onclick = ()=>{ const a = lbState.list[lbState.idx]; window.open(srcOf(a), "_blank"); };
+  $("lb-close").onclick = closeLightbox;
+  box.addEventListener("click", (e)=>{ if (e.target === box) closeLightbox(); });
+  draw();
+}
+function closeLightbox(){ $("lightbox")?.remove(); lbState = null; }
+document.addEventListener("keydown", (e)=>{
+  if (!lbState) return;
+  if (e.key === "Escape") closeLightbox();
+  else if (e.key === "ArrowLeft") $("lb-prev").click();
+  else if (e.key === "ArrowRight") $("lb-next").click();
+});
+
+/** 检查器里的附件区：缩略图 + 添加/移除 */
+function renderAttachments(node){
+  const box = $("attachBox");
+  if (!box) return;
+  const list = node?.attachments ?? [];
+  const srcOf = (a)=> /^https?:|^data:/i.test(a.src) ? a.src : `/api/graph/${encodeURIComponent(current.id)}/asset/${encodeURIComponent(String(a.src).replace(/^assets\//, ""))}`;
+  box.innerHTML = list.length ? `<div class="attach-strip">${list.map((a, i)=> {
+    const isImg = a.kind === "image" || a.kind === "page" || /\.(png|jpe?g|gif|webp|svg)$/i.test(a.src);
+    const label = escapeHtml(a.label || a.src.split("/").pop() || "");
+    return isImg
+      ? `<div class="attach-thumb" data-i="${i}" title="${label}"><img src="${srcOf(a)}" alt=""><span class="tag">${a.page ? "p." + a.page : label.slice(0, 10)}</span></div>`
+      : `<span class="attach-chip" data-i="${i}">📄 ${label.slice(0, 22)}</span>`;
+  }).join("")}</div>` : `<div style="font-size:11px;color:var(--text-dim)">（无附件）</div>`;
+  box.querySelectorAll(".attach-thumb,.attach-chip").forEach((el)=>{
+    el.onclick = ()=> openLightbox(list, Number(el.dataset.i));
+  });
+}
+
+/** 添加附件：本地路径或 URL（本地文件由服务端复制进图资源目录） */
+async function addAttachment(nodeId){
+  const src = prompt(LANG === "en" ? "Local file path or URL" : "本地文件路径或 URL（如 ~/book/pages/p024.png）", "");
+  if (!src) return;
+  const label = prompt(LANG === "en" ? "Label (optional)" : "标签（可留空）", "") ?? "";
+  const page = prompt(LANG === "en" ? "Page number (optional)" : "页码（可留空）", "") ?? "";
+  try {
+    await api(`/api/graph/${current.id}/attach`, { method: "POST", body: JSON.stringify({
+      nodeId, src, label, page: page ? Number(page) : null, mode: "append",
+    }) });
+    await reload(false);
+    toast(LANG === "en" ? "Attached" : "已添加附件");
+  } catch (e){ toast(e.message, true); }
+}
+
 /* ================= 非线性对话 UI（DAG 会话） ================= */
 let convo = null;                       // { head, mainline:Set, leaves:[], children:Map, parents:Map }
 const isConvo = ()=> !!current?.conversation?.mode;
@@ -977,46 +1197,94 @@ function applyConvoToCanvas(){
 }
 
 /** 画布顶部对话工具条：head / 主线 / 开放分支 / 设为点头 / 合并 / 续说 */
-function renderConvoBar(){
-  const bar = $("convoBar");
-  if (!bar) return;
-  if (!isConvo()){ bar.hidden = true; bar.innerHTML = ""; return; }
-  bar.hidden = false;
-  bar.className = "convo-bar";
-  const headLabel = convo?.head ? (nodeById(convo.head)?.label ?? convo.head).slice(0, 26) : "—";
-  bar.innerHTML = '<span>💬 <b>' + (LANG === "en" ? "head" : "点头") + '</b> ' + escapeHtml(headLabel) + '</span>'
-    + '<span>' + (LANG === "en" ? "mainline" : "主线") + ' ' + (convo?.mainline?.size ?? 0) + '</span>'
-    + '<span>' + (LANG === "en" ? "open" : "开放分支") + ' ' + (convo?.leaves?.length ?? 0) + '</span>'
-    + '<button id="convoHead" class="primary">' + (LANG === "en" ? "Set head" : "设为点头") + '</button>'
-    + '<button id="convoMerge">' + (LANG === "en" ? "Merge" : "合并") + '</button>'
-    + '<button id="convoOpen">' + (LANG === "en" ? "Threads" : "分支") + '</button>'
-    + '<input id="convoSay" placeholder="' + (LANG === "en" ? "say… (Enter) appends at head" : "说点什么…（回车）接在当前点头之后") + '">'
-    + '<button id="convoSayBtn" class="primary">' + (LANG === "en" ? "Say" : "发言") + '</button>';
-  $("convoHead").onclick = async ()=>{
-    if (selected?.kind !== "node"){ toast(LANG === "en" ? "Select a node first" : "请先选中一个节点", true); return; }
-    await api('/api/graph/' + current.id + '/convo', { method: "POST", body: JSON.stringify({ op: "branch", nodeId: selected.id }) });
-    await reload(false); toast(LANG === "en" ? "Head moved" : "已设为当前点头");
+function renderConvoPanel(){
+  const panel = $("convoPanel");
+  if (!panel) return;
+  if (!isConvo()){ panel.hidden = true; return; }
+  panel.hidden = false;
+  const headNode = convo?.head ? nodeById(convo.head) : null;
+  $("convoStats").textContent = `主线 ${convo?.mainline?.size ?? 0} · 开放 ${convo?.leaves?.length ?? 0} · 待办 ${(current.conversation?.runtime?.awaiting ?? []).length}`;
+  $("convoHeadLine").innerHTML = `<b>当前点头</b>${headNode ? escapeHtml(String(headNode.label).slice(0, 60)) : "—"}`;
+
+  const post = async (body, tip)=>{
+    try {
+      await api(`/api/graph/${current.id}/convo`, { method: "POST", body: JSON.stringify(body) });
+      await reload(false);
+      if (tip) toast(tip);
+    } catch (e){ toast(e.message, true); }
   };
-  $("convoMerge").onclick = async ()=>{
+  $("convoHead").onclick = ()=>{
+    if (selected?.kind !== "node"){ toast(LANG === "en" ? "Select a node first" : "请先选中一个节点", true); return; }
+    post({ op: "branch", nodeId: selected.id }, LANG === "en" ? "Head moved" : "已设为当前点头");
+  };
+  $("convoMerge").onclick = ()=>{
     const sel = [...nodesLayer.querySelectorAll(".node.sel")].map((el)=> el.dataset.id);
     const sources = sel.length >= 2 ? sel : (convo?.leaves ?? []);
     if (sources.length < 2){ toast(LANG === "en" ? "Need 2+ branches" : "至少需要 2 条分支", true); return; }
-    await api('/api/graph/' + current.id + '/convo', { method: "POST", body: JSON.stringify({ op: "merge", sources, label: (LANG === "en" ? "Merge" : "汇合") }) });
-    await reload(false); toast(LANG === "en" ? "Merged" : "已汇合");
+    post({ op: "merge", sources, label: LANG === "en" ? "Merge" : "汇合" }, LANG === "en" ? "Merged" : "已汇合");
   };
-  $("convoOpen").onclick = ()=>{
-    const list = (convo?.leaves ?? []).map((id)=> "· " + (nodeById(id)?.label ?? id).slice(0, 40) + "  (" + id + ")").join("\n");
-    alert((LANG === "en" ? "Open threads" : "开放分支") + " (" + (convo?.leaves?.length ?? 0) + ")\n\n" + (list || "—"));
+  $("convoThreads").onclick = ()=>{
+    const list = (convo?.leaves ?? []).map((id)=> `· ${String(nodeById(id)?.label ?? id).slice(0, 46)}  (${id})`).join("\n");
+    alert(`${LANG === "en" ? "Open threads" : "开放分支"} (${(convo?.leaves ?? []).length})\n\n${list || "—"}`);
   };
-  const say = async ()=>{
-    const text = $("convoSay").value.trim();
-    if (!text) return;
-    await api('/api/graph/' + current.id + '/convo', { method: "POST", body: JSON.stringify({ op: "say", text, speaker: "user" }) });
-    $("convoSay").value = "";
-    await reload(false);
+  $("convoNext").onclick = async ()=>{
+    try {
+      const r = await api(`/api/graph/${current.id}/convo?view=next`);
+      alert(`下一步该谁产出：${r.nextSpeaker ?? "—"}\n理由：${r.reason}\n轮次：${r.round}\n拓扑：${r.topology}\n待办：${(r.awaiting ?? []).join(", ") || "—"}\n\n— 应发送的上下文 —\n${(r.contextText ?? "").slice(0, 900)}`);
+    } catch (e){ toast(e.message, true); }
   };
-  $("convoSayBtn").onclick = say;
-  $("convoSay").onkeydown = (e)=>{ if (e.key === "Enter") say(); };
+  $("convoPending").onclick = async ()=>{
+    try {
+      const r = await api(`/api/graph/${current.id}/convo?view=pending`);
+      const list = (r.pending ?? []).map((x)=> `· [${x.status}] ${x.agent ?? "?"} — ${String(x.label).slice(0, 40)}  (${x.id})`).join("\n");
+      alert(`${LANG === "en" ? "Pending" : "待办分支"} (${(r.pending ?? []).length})\n\n${list || "—"}`);
+    } catch (e){ toast(e.message, true); }
+  };
+  $("convoLinear").onclick = async ()=>{
+    try {
+      const r = await api(`/api/graph/${current.id}/convo-path?format=md`);
+      openModal(`<h2>${LANG === "en" ? "Active path" : "活跃路径（根→点头）"}</h2>
+        <textarea id="convo-text" style="min-height:300px;width:100%" spellcheck="false">${escapeHtml(r.text ?? "")}</textarea>
+        <div class="btnrow"><button class="primary" id="convo-copy">${LANG === "en" ? "Copy" : "复制"}</button><button id="convo-close2">${LANG === "en" ? "Close" : "关闭"}</button></div>`);
+      $("convo-copy").onclick = ()=>{ navigator.clipboard?.writeText(r.text ?? ""); toast(t("saved")); };
+      $("convo-close2").onclick = closeModal;
+    } catch (e){ toast(e.message, true); }
+  };
+  // 记录一轮：这是「台账记录」，不是聊天——OmniFlow 不含 LLM，对话发生在别处
+  $("convoSayBtn").onclick = ()=>{
+    const agents = (current.conversation?.agents ?? []).map((a)=> a.name);
+    openModal(`<h2>记录一轮发言</h2>
+      <label>发言人 / agent</label>
+      <input id="turn-agent" list="turn-agents" placeholder="如 andy / alice / supervisor">
+      <datalist id="turn-agents">${agents.map((n)=> `<option value="${escapeHtml(n)}">`).join("")}</datalist>
+      <label>内容（首行入卡片，全文可写备注）</label>
+      <textarea id="turn-text" style="min-height:120px" placeholder="把这一轮的内容粘进来（支持 $公式$）"></textarea>
+      <div class="row2">
+        <div><label>状态</label><select id="turn-status">
+          <option value="done">done 已完成</option><option value="running">running 进行中</option>
+          <option value="pending">pending 待产出</option><option value="waiting-human">waiting-human 等人工</option>
+          <option value="failed">failed 失败</option></select></div>
+        <div><label>类型</label><select id="turn-type">
+          <option value="turn">发言</option><option value="question">提问</option><option value="answer">回答</option>
+          <option value="idea">想法</option><option value="decision">结论</option></select></div>
+      </div>
+      <div class="row2">
+        <div><label>接在哪之后</label><input id="turn-parent" placeholder="留空 = 当前点头"></div>
+        <div><label>移交控制权给（可选）</label><input id="turn-handoff" placeholder="如 human / bob"></div>
+      </div>
+      <div class="btnrow"><button class="primary" id="turn-save">记录</button><button id="turn-cancel">取消</button></div>`);
+    $("turn-cancel").onclick = closeModal;
+    $("turn-save").onclick = async ()=>{
+      const text = $("turn-text").value;
+      if (!text.trim()){ toast("内容不能为空", true); return; }
+      const parent = $("turn-parent").value.trim();
+      const isAgentMode = (current.conversation?.agents ?? []).length > 0;
+      await post(isAgentMode
+        ? { op: "record", agent: $("turn-agent").value.trim() || "user", text, status: $("turn-status").value, type: $("turn-type").value, handoffTo: $("turn-handoff").value.trim() || null, parentId: parent || null }
+        : { op: "say", text, speaker: $("turn-agent").value.trim() || "user", type: $("turn-type").value, parentId: parent || null });
+      closeModal();
+    };
+  };
 }
 
 /** 键盘导航（TreeGPT 约定）：k=上级 · j=唯一子级 · 1-9=第 n 个子级 */
@@ -1229,10 +1497,22 @@ function renderEdges(){
 /* --- 节点（agent-flow 卡片解剖 + 自定义三色/图标/状态） --- */
 function statusMark(status){
   if (!status) return "";
-  const map = { todo: ["○", "#94A3B8"], doing: ["◐", "#FBBF24"], done: ["✓", "#4ADE80"], blocked: ["✕", "#F87171"] };
+  const map = { todo: ["○", "#94A3B8"], doing: ["◐", "#FBBF24"], done: ["✓", "#4ADE80"], blocked: ["✕", "#F87171"],
+    pending: ["…", "#38BDF8"], running: ["◐", "#A78BFA"], "waiting-human": ["⏸", "#FBBF24"], failed: ["✕", "#F87171"], aborted: ["⊘", "#94A3B8"] };
   const [sym, color] = map[status] ?? ["", ""];
   return `<span class="mark" style="background:${color}">${sym}</span>`;
 }
+/** 摘要清洗：卡片上只显示可读文本，不留 LaTeX 噪声 */
+function cleanExcerpt(text){
+  let t = String(text ?? "");
+  t = t.replace(/\$\$[\s\S]*?\$\$/g, " ⟨公式⟩ ");          // 显示公式
+  t = t.replace(/\$[^$]*?\$/g, " ⟨公式⟩ ");                 // 行内公式
+  t = t.replace(/\\[a-zA-Z]+\s*\{([^{}]*)\}/g, "$1");      // \cmd{内容} → 内容
+  t = t.replace(/\\[a-zA-Z]+/g, " ");                        // 残余命令名
+  t = t.replace(/[{}]/g, "").replace(/\s{2,}/g, " ").trim();
+  return t;
+}
+
 function renderNodes(){
   if (!current){ nodesLayer.innerHTML = ""; return; }
   nodesLayer.innerHTML = "";
@@ -1248,9 +1528,12 @@ function renderNodes(){
     const note = String(node.note ?? "").trim();
     const openTag = (node.tags ?? []).map(String).find((tag)=>tag.startsWith("open:"));
     if (openTag) el.classList.add("has-jump");
+    const excerpt = cleanExcerpt(String(node.note ?? "").split("\n")[0]);
     el.innerHTML = `<div class="card" style="--n-fill:${node.fill};--n-border:${node.border};--n-text:${node.textColor}">
-      <div class="kind"><span>${escapeHtml(node.icon ?? "")}</span><span>${escapeHtml(typeLabel(node.type))}</span>${openTag ? `<span class="jump" title="${LANG === "en" ? "Double-click to open the linked map" : "双击打开关联图"}">↗</span>` : ""}</div>
+      <span class="typebar" style="background:${node.border}"></span>
+      <div class="kind"><span>${escapeHtml(node.icon ?? "")}</span><span>${escapeHtml(typeLabel(node.type))}</span>${(node.attachments ?? []).length ? `<span class="att" title="${(node.attachments ?? []).length} 个附件">📎${(node.attachments ?? []).length}</span>` : ""}${openTag ? `<span class="jump" title="${LANG === "en" ? "Double-click to open the linked map" : "双击打开关联图"}">↗</span>` : ""}</div>
       <div class="nlabel">${escapeHtml(node.label)}</div>
+      ${excerpt ? `<div class="nexcerpt">${escapeHtml(excerpt.slice(0, 90))}</div>` : ""}
     </div>${statusMark(node.status)}
     <div class="handle t" title="${escapeHtml(t("handleT"))}"></div><div class="handle s" title="${escapeHtml(t("handleS"))}"></div>`;
     el.addEventListener("pointerdown", (e)=>beginNodeDrag(node, e));
