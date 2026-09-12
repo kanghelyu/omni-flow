@@ -118,3 +118,25 @@ bash install.sh                        # 同步到 ~/.omni-flow
 - **松手坐标**：组框拖拽用跟踪的 `lastDx/lastDy`，**不用事件坐标**（`pointercancel` 可能是 0,0 → 全组飞散）。
 - **收起侧栏**：右分隔条拖宽写内联 `style.width`，收起必须清内联（`setRightCollapsed` 已处理），展开从 `dataset.lastW` 恢复。
 - **SSE**：`/api/events` 事件驱动；拖拽中 `liveDrag` 非空即跳过 reload；`suppressSSEUntil` 短抑制；禁止轮询与常驻 rAF。
+
+## 十一、公式渲染体系（学术场景，2026-09-12 新增）
+
+| 项 | 实现 |
+| --- | --- |
+| 引擎 | KaTeX **0.18.7**（`studio/vendor/katex/`，完全离线，1.5MB 含 60 字体） |
+| 扩展 | `mhchem`（化学 `\ce{}`）、`auto-render`、`copy-tex`、`mathtex-script-type`（`studio/vendor/katex/contrib/`） |
+| 静态路由 | `server.mjs` 的 `/vendor/*`（带 MIME 映射与 `..` 路径穿越防护） |
+| 识别通道 | ① 定界符 `$..$` `$$..$$` `\(..\)` `\[..\]` ② **裸公式整行** ③ **行内混排**（`\ce{}` 等命令自动切出） |
+| 预处理 | `normalizeLatex()`：剥离导言区/注释/`\label`；`\bm→\boldsymbol`、`\cite→[key]`、`\SI{}{}`→文本单位、`\includegraphics`/TikZ 移除或占位；**align/gather 转为 aligned/gathered 保留对齐结构** |
+| 降级 | 任一段渲染失败 → 显示原文 + `⚠ LaTeX 未渲染（原文保留）`，绝不报错、绝不丢内容 |
+| 实测 | 学术样本 **35/35（100%）**；实机验证：行内/显示/化学/对齐/中文混排/整篇论文源码 全部通过 |
+
+**改动位置**：`studio/index.html`（`renderMathIn` / `splitMathSegments` / `normalizeLatex` / `looksLikeMath` / `splitLineInline` / `miniMarkdown`）+ `studio/server.mjs`（`/vendor` 路由）。
+
+## 十二、界面能力补充（2026-09-12）
+
+- **四种布局**：`layered`（默认）/ `clusters` / `force`（力导向，确定性种子 42，可复现）/ `grid`（按类型排列）；`lib/graph-analysis.js` 的 `forceLayout` / `gridLayout`；HTTP、MCP `of_layout`、CLI `--mode` 三入口同步。
+- **跟随系统主题**：显式选择优先，否则 `prefers-color-scheme`（含运行时 change 监听）。
+- **节点跳转**：节点 `tags` 含 `open:<graphId>` → 卡片显示 ↗ 角标，双击跳转该图。
+- **启动器**：`Start-Studio.command` / `Start-Studio.bat`，自动探测 Node ≥18、从 4319 起找空闲端口。
+- **聚簇间距**：`clusterLayout` 的 `regionGap` 300 → 140（区域不再占满整图宽度）。
