@@ -306,6 +306,28 @@ Nilpotent Orbits in Semisimple Lie Algebras
 
 ---
 
+# Non-linear conversation (DAG sessions)
+
+A conversation is a **DAG**, not a list. Every turn is a node; edges carry the relation (`follows` / `answers` / `challenges` / `refines` / `merges`). A node with several outgoing edges is a **fork**; a node where branches converge is a **merge**. `graph.conversation.head` marks where the next turn appends, and `mainline` is the root→head path (the only history that should enter an LLM context).
+
+**MCP tools**
+
+| Tool | Purpose |
+| --- | --- |
+| `of_convo_new { topic, folder?, lang? }` | Create a conversation graph; the topic becomes the root |
+| `of_convo_say { id, text, speaker?, type?, parentId?, edgeType? }` | Append a turn at head (or fork from `parentId`); head moves to the new turn |
+| `of_convo_branch { id, nodeId }` | Move head back to any node — the next `say` forks there |
+| `of_convo_merge { id, sources[], label?, text? }` | Converge 2+ branches into a merge node |
+| `of_convo_path { id, nodeId? }` | Root→node turns (the branch-specific context) + linearised text |
+| `of_convo_open { id }` | Overview: head, open threads (leaves), forks, deepest path, speakers |
+| `of_convo_linearize { id, nodeId?, format? }` | Export one path as md/txt (share or feed another model) |
+
+**CLI**: `of convo new|say|branch|merge|path|open …` · **HTTP**: `GET/POST /api/graph/<id>/convo`, `GET /api/graph/<id>/convo-path`
+
+**Studio UI**: a conversation bar (head · mainline · open threads · Set head · Merge · Say), green head ring, mainline highlighting, off-branch dimming, `‹ n/m ›` sibling navigation at forks, and keyboard navigation — `k` parent, `j` only child, `1`–`9` child n.
+
+**Why it matters**: regeneration/editing/retry become siblings instead of polluting the thread; a discarded attempt stays in the graph for audit; any branch can be resumed later. This mirrors the msgId/parentId/forkOf model used by Ably ai-transport, TreeGPT and the CMV DAG paper.
+
 # Standalone HTML canvas export (share without a server)
 
 `of export <graphId> --format html --out canvas.html` (or HTTP `GET /api/graph/<id>/export?format=html`, MCP `of_export { "format": "html" }`)
