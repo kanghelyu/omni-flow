@@ -10,6 +10,7 @@ import { layeredLayout, clusterLayout, forceLayout, gridLayout, analyzeGraph } f
 import { searchGraphs } from "../lib/search.mjs";
 import { suggestGroups } from "../lib/group-suggest.js";
 import { ensureConversationShape, appendTurn, setHead, mergeBranches, pathTo, conversationOverview, linearize, registerAgent, recordTurn, resolveTurn, pendingTurns, nextSpeaker, aggregateBranches, scaffoldTopology } from "../lib/conversation.js";
+import { liveStart, liveLog, liveStop, liveStatus } from "../lib/live-conversation.js";
 import { loadGraph, saveGraph, listGraphs, deleteGraph, readNodeNote, writeNodeNote, makeGraphId, readJsonIfPresent } from "../lib/graph-service.mjs";
 import { createFolder, renameFolder, deleteFolder, moveGraph, readTree, updateLedger } from "../lib/vault.js";
 import { buildTemplateById, mergedTemplateSummaries, saveCustomTemplate, deleteCustomTemplate } from "../lib/templates.js";
@@ -324,6 +325,28 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
           return list;
         }, { bump: true });
         sendJson(res, 200, { ok: true, attachments: result?.detail?.nodes?.find((n)=> n.id === nodeId)?.attachments ?? [] });
+        return;
+      }
+      /* 实时对话记录：GET 状态 / POST { op: start|log|stop, … } */
+      if (url.pathname === "/api/live") {
+        if (req.method === "GET"){ sendJson(res, 200, await liveStatus(root)); return; }
+        const body = await readBody(req);
+        const op = String(body.op ?? "status");
+        if (op === "start"){ sendJson(res, 200, await liveStart(root, { topic: body.topic ?? null, folder: body.folder ?? null, lang: body.lang === "en" ? "en" : "zh", reuse: body.reuse !== false })); return; }
+        if (op === "log"){ sendJson(res, 200, await liveLog(root, { role: body.role ?? "agent", text: body.text ?? "", name: body.name ?? null, from: body.from ?? null, status: body.status ?? "done", id: body.id ?? null })); return; }
+        if (op === "stop"){ sendJson(res, 200, await liveStop(root, { id: body.id ?? null })); return; }
+        sendJson(res, 200, await liveStatus(root));
+        return;
+      }
+      /* 实时对话记录：GET 状态 / POST { op: start|log|stop, … } */
+      if (url.pathname === "/api/live") {
+        if (req.method === "GET"){ sendJson(res, 200, await liveStatus(root)); return; }
+        const body = await readBody(req);
+        const op = String(body.op ?? "status");
+        if (op === "start"){ sendJson(res, 200, await liveStart(root, { topic: body.topic ?? null, folder: body.folder ?? null, lang: body.lang === "en" ? "en" : "zh", reuse: body.reuse !== false })); return; }
+        if (op === "log"){ sendJson(res, 200, await liveLog(root, { role: body.role ?? "agent", text: body.text ?? "", name: body.name ?? null, from: body.from ?? null, status: body.status ?? "done", id: body.id ?? null })); return; }
+        if (op === "stop"){ sendJson(res, 200, await liveStop(root, { id: body.id ?? null })); return; }
+        sendJson(res, 200, await liveStatus(root));
         return;
       }
       /* 非线性对话：GET 总览 / POST say|branch|merge */
