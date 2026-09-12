@@ -306,6 +306,38 @@ Nilpotent Orbits in Semisimple Lie Algebras
 
 ---
 
+# Multi-agent non-linear conversation (agent runtime)
+
+OmniFlow doubles as the **state + topology ledger for multi-agent sessions** — the layer that LangGraph/CrewAI/AutoGen keep in memory, made durable and inspectable.
+
+| Concept | OmniFlow |
+| --- | --- |
+| Execution cursor ("who acts next") | `graph.conversation.head` |
+| Branch = candidate explored in parallel | fork (node with several outgoing edges) |
+| Aggregation = vote / judge / weighted | `of_convo_vote` → `decision` node with `aggregates` edges |
+| Context for an agent (branch-isolated) | `of_convo_path` / `of_agent_next.context` |
+| Handoff | `of_agent_record { handoffTo }` (edge type `hands-off`) |
+| Pending work | `of_convo_pending` (running / waiting-human / pending) |
+| Resume / time travel | `of_convo_branch` moves head anywhere |
+
+**Topologies** (`of_convo_scaffold`): `supervisor` · `hierarchical` · `debate` · `map-reduce` · `network` · `custom`. Each registers agents (`{name, role, model?, goal?, tools?}`) and opens one parallel branch per worker (status `pending`).
+
+**Typical agent loop**
+
+```text
+of_convo_new  → of_convo_scaffold (agents + topology)
+repeat:
+  of_agent_next    # who should act + the exact context to send
+  …call the model/tool…
+  of_agent_record  # record the outcome (status running → done, optional handoffTo)
+of_convo_vote      # aggregate branch tips: majority / weighted / judge
+of_convo_branch    # rewind to any turn and explore another path
+```
+
+**Node status vocabulary**: `pending` · `running` · `waiting-human` · `done` · `failed` · `aborted` (plus task states `todo`/`doing`/`done`/`blocked`). Tags carry `agent:<name>` · `status:<s>` · `round:<n>` · `role:<r>` · `handoff:<target>`.
+
+**Studio**: pending/running/failed badges on cards, agent labels in the conversation bar, and the same branch/mainline/sibling-navigation UI used for human conversations.
+
 # Non-linear conversation (DAG sessions)
 
 A conversation is a **DAG**, not a list. Every turn is a node; edges carry the relation (`follows` / `answers` / `challenges` / `refines` / `merges`). A node with several outgoing edges is a **fork**; a node where branches converge is a **merge**. `graph.conversation.head` marks where the next turn appends, and `mainline` is the root→head path (the only history that should enter an LLM context).
