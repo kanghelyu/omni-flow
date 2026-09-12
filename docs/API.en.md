@@ -103,3 +103,13 @@ Conventions: topology writes are normalized + validated before disk (hard errors
 | GET | `/api/graph/<id>/convo` | 总览：head / 主线 / 开放分支（叶子）/ 分叉点 / 发言人 |
 | POST | `/api/graph/<id>/convo` | `{ op:"say", text, speaker?, type?, parentId?, edgeType? }` 追加发言（`parentId` = 从该节点开新支）<br>`{ op:"branch", nodeId }` 移动 head<br>`{ op:"merge", sources:[...], label?, text? }` 汇合分支 |
 | GET | `/api/graph/<id>/convo-path?node=<节点id>&format=md|txt` | 根→节点的活跃路径与线性化文本 |
+
+### 多智能体（agent）扩展
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | `/api/graph/<id>/convo?view=next` | 调度：`nextSpeaker` + 应发送上下文（agent 运行时用） |
+| GET | `/api/graph/<id>/convo?view=pending` | 待办分支（running / waiting-human / pending） |
+| POST | `/api/graph/<id>/convo` | 追加 op：`scaffold`（拓扑骨架）/ `record`（记录产出，支持 `handoffTo`）/ `resolve`（完成分支）/ `vote`（聚合：majority·weighted·judge） |
+
+节点状态扩展：`pending` · `running` · `waiting-human` · `done` · `failed` · `aborted`。
