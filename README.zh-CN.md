@@ -11,6 +11,16 @@
 
 <p align="center"><a href="README.md">English</a> · <strong>简体中文</strong> · 📖 <a href="docs/TUTORIAL.zh-CN.md">完整教程</a> · <a href="docs/API.md">接口参考</a></p>
 
+<p align="center">
+  <img src="docs/assets/studio-overview.jpg" alt="OmniFlow Studio —— 无限画布：类型化节点、带标签的连线、彩色分组容器、实时检查器" width="100%">
+</p>
+<p align="center"><em>Studio 画布 —— 59 个类型化节点、90 条带语义标签的连线，配彩色分组容器、逐节点 Markdown 备注与实时检查器。纯本地运行，零依赖。</em></p>
+
+<p align="center">
+  <img src="docs/assets/studio-detail.jpg" alt="放大视图：每条边都有语义标签；文献节点在备注中保留 DOI 与本地路径" width="100%">
+</p>
+<p align="center"><em>放大细节：每条边都带语义标签（uses / confirms / contradicts / required-for）；文献节点在备注里保留 DOI 与本地路径。</em></p>
+
 ## 核心能力
 
 - **20 种节点类型 + 18 种连线语义**（可再自定义）：数学侧有定义/引理/命题/定理/论文；组织侧有人员/部门/任务；职责边有 R/A/C/I；对话边有接续/回应/汇聚。自定义类型只需在 `graph.json` 加一段 JSON。
