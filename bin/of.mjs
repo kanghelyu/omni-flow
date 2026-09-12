@@ -2,13 +2,14 @@
 // OmniFlow CLI (of) — 万用流程图。graph.json 是唯一拓扑事实来源。
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile, readdir } from "node:fs/promises";
 import { normalizeGraph, validateGraph } from "../lib/graph-core.js";
 import { layeredLayout, clusterLayout, forceLayout, gridLayout, analyzeGraph } from "../lib/graph-analysis.js";
 import { loadGraph, saveGraph, listGraphs, deleteGraph, makeGraphId } from "../lib/graph-service.mjs";
 import { buildTemplateById, mergedTemplateSummaries, saveCustomTemplate, deleteCustomTemplate } from "../lib/templates.js";
-import { ensureConversationShape, appendTurn, setHead, mergeBranches, pathTo, conversationOverview, linearize } from "../lib/conversation.js";
+import { ensureConversationShape, appendTurn, setHead, mergeBranches, pathTo, conversationOverview, linearize, registerAgent, recordTurn, resolveTurn, pendingTurns, nextSpeaker, aggregateBranches, scaffoldTopology } from "../lib/conversation.js";
 import { toMermaid, fromMermaid, toDot, toMarkdownOutline, toPlainText, fromAgentFlow } from "../lib/converters.js";
+import { buildGraphFromMineru, buildGraphFromMarkdown } from "../lib/import-doc.js";
 
 const VERSION = "0.1.0";
 const args = process.argv.slice(2);
@@ -284,6 +285,7 @@ function cmdHelp() {
   layout <id> [--mode layered|clusters]         布局：分层 / 分组聚簇
   export <id> --format mermaid|dot|md|txt|json|html [--out 文件] [--no-embed]
   import <文件> [--format mermaid|json] [--name 新名]
+  import-doc <content_list.json|.md> [--name 名] [--pages 页面图目录] [--folder 路径]  # MinerU/Markdown → 卡片图
   import-af <agent-flow-id>                    导入 agent-flow 工作流为图
   studio [--port N] [--no-open]                本地画布（默认 127.0.0.1:4319）
   mcp                                          MCP 标准服务（stdio，全量 33 个工具）
@@ -347,9 +349,59 @@ async function cmdConvo(){
     changed = true;
     console.log(`✓ 已建立汇合点 ${node.id}`);
   } else if (sub === "path"){
-    const target = args[3] ?? graph.conversation?.head;
+    // 第三个位置参数可能是节点 id，也可能是 flag → 只有非 flag 才当节点
+    const maybeNode = args[3] && !String(args[3]).startsWith("--") ? args[3] : null;
+    const target = maybeNode ?? graph.conversation?.head;
     console.log(linearize(graph, target, { format: opt("--format", "md") }));
     return;
+  } else if (sub === "next"){
+    const n = nextSpeaker(ensureConversationShape(graph));
+    console.log(`下一步该谁产出: ${n.nextSpeaker ?? "—"}\n理由: ${n.reason}\n轮次: ${n.round}\n拓扑: ${n.topology}\n待办: ${n.awaiting.join(", ") || "—"}`);
+    console.log(`\n--- 应发送的上下文（根→head）---\n${n.contextText}`);
+    return;
+  } else if (sub === "pending"){
+    const ps = pendingTurns(ensureConversationShape(graph));
+    console.log(ps.length ? ps.map((x)=> `· [${x.status}] ${x.agent ?? "?"} — ${x.label}  (${x.id})`).join("\n") : "（无待办分支）");
+    return;
+  } else if (sub === "agent"){
+    // of convo agent <id> <名字> [--role worker] [--model gpt-4o] [--goal 目标]
+    ensureConversationShape(graph);
+    const a = registerAgent(graph, { name: args[3], role: opt("--role", "worker"), model: opt("--model", ""), goal: opt("--goal", "") });
+    changed = true;
+    console.log(`✓ 已注册 agent ${a.name}（${a.role}）`);
+  } else if (sub === "record"){
+    // of convo record <id> <agent> "文本" [--status done|running|...] [--from 节点] [--handoff 目标]
+    const agent = args[3];
+    const words = []; const flags = new Set(["--status", "--from", "--handoff", "--type", "--edge"]);
+    const rest = args.slice(4);
+    for (let i = 0; i < rest.length; i++){ if (flags.has(rest[i])){ i++; continue; } words.push(rest[i]); }
+    ensureConversationShape(graph);
+    const node = recordTurn(graph, { agent, text: words.join(" "), status: opt("--status", "done"), parentId: opt("--from"), handoffTo: opt("--handoff"), type: opt("--type", "turn"), edgeType: opt("--edge", "follows") });
+    graph.notes = graph.notes ?? {};
+    graph.notes[node.id] = words.join(" ").split("\n")[0].slice(0, 120);
+    changed = true;
+    console.log(`✓ 已记录 ${agent} 的产出 ${node.id}（${node.status}）`);
+  } else if (sub === "vote"){
+    // of convo vote <id> <节点,节点,...> [--strategy majority|judge] [--text 结论]
+    ensureConversationShape(graph);
+    const sources = String(args[3] ?? "").split(",").map((x)=> x.trim()).filter(Boolean);
+    const r = aggregateBranches(graph, { sources, strategy: opt("--strategy", "majority"), label: opt("--label", null), text: opt("--text", "") });
+    graph.notes = graph.notes ?? {};
+    graph.notes[r.node.id] = String(r.chosen ?? "").slice(0, 120);
+    changed = true;
+    console.log(`✓ 聚合完成：${r.strategy} · ${r.distinct} 种答案 · 共识 ${(r.consensus * 100).toFixed(0)}%\n  票数: ${r.tally.map((t)=> `${t.count}×${t.value.slice(0, 30)}`).join(" | ")}`);
+  } else if (sub === "scaffold"){
+    // of convo scaffold <id> <topology> <名字:角色,名字:角色,...> [--topic 主题]
+    ensureConversationShape(graph);
+    // args = [cmd, "convo", sub, id, topology, "名:角色,..."]
+    const topology = args[3] ?? "supervisor";
+    const agents = String(args[4] ?? "").split(",").map((x)=> x.trim()).filter(Boolean).map((pair)=> {
+      const [name, role] = pair.split(":");
+      return { name, role: role ?? "worker" };
+    });
+    const created = scaffoldTopology(graph, { topology, agents, topic: opt("--topic", null) });
+    changed = true;
+    console.log(`✓ 已生成 ${topology} 骨架：${created.branches.length} 条并行分支（agents: ${created.agents.join(", ")}）`);
   } else if (sub === "open"){
     const ov = conversationOverview(ensureConversationShape(graph));
     console.log(`head: ${ov.head}\n主线长度: ${ov.mainline.length}\n开放分支 ${ov.openThreads.length} 条:`);
@@ -364,10 +416,68 @@ async function cmdConvo(){
   if (changed){ graph.revision += 1; await saveGraph(join(root, "graphs", id), graph); }
 }
 
+
+/* ---------- 文档导入：MinerU 结构化 / Markdown → 卡片图 ---------- */
+async function cmdImportDoc(){
+  const file = args[1];
+  if (!file){ console.error("用法: of import-doc <content_list.json | .md> [--name 图名] [--pages 页面图目录] [--folder 路径] [--lang zh|en]"); process.exit(1); }
+  const root = rootHome();
+  await ensureRoot(root);
+  const raw = await readFile(file, "utf8");
+  const name = opt("--name", file.replace(/^.*\//, "").replace(/\.(json|md)$/i, ""));
+  // 页面图目录：文件名里的数字当作页码（如 p024.png / c2_pdf024_book021.png）
+  const pagesDir = opt("--pages");
+  const pages = [];
+  if (pagesDir){
+    try {
+      const files = (await readdir(pagesDir)).filter((f)=> /\.(png|jpe?g|webp)$/i.test(f)).sort();
+      for (const f of files){
+        const nums = f.match(/(\d{2,4})/g) ?? [];
+        const page = nums.length ? Number(nums[nums.length - 1]) : null;
+        pages.push({ page, src: join(pagesDir, f), label: f });
+      }
+    } catch (e){ console.error(`⚠ 页面图目录不可读：${e.message}`); }
+  }
+  const built = /\.json$/i.test(file)
+    ? buildGraphFromMineru({ contentList: JSON.parse(raw), pages, name, lang: opt("--lang", "zh") })
+    : buildGraphFromMarkdown({ markdown: raw, pages, name });
+  built.graph.id = makeGraphId(built.graph.name);
+  const verdict = validateGraph(built.graph);
+  if (!verdict.ok) console.error(`⚠ 结构校验告警：${verdict.issues.slice(0, 3).join("；")}`);
+  await saveGraph(join(root, "graphs", built.graph.id), built.graph);
+  // 页面图：复制进图资源目录并挂到对应卡片（按页码匹配）
+  let attached = 0;
+  if (pages.length){
+    const { copyFile, mkdir } = await import("node:fs/promises");
+    const assetsDir = join(root, "graphs", built.graph.id, "assets");
+    await mkdir(assetsDir, { recursive: true });
+    for (const node of built.graph.nodes){
+      const pno = Number((node.tags ?? []).map(String).find((t)=> t.startsWith("page:"))?.slice(5));
+      const hit = pages.find((x)=> Number(x.page) === pno);
+      if (!hit) continue;
+      const safe = hit.label.replace(/[^\w.\-\u4e00-\u9fff]/g, "_");
+      try { await copyFile(hit.src, join(assetsDir, safe)); } catch { continue; }
+      node.attachments = [{ kind: "page", src: `assets/${safe}`, label: hit.label, page: pno }];
+      attached++;
+    }
+    const { setNodeAttachments } = await import("../lib/graph-core.js");
+    for (const node of built.graph.nodes) if (node.attachments?.length) setNodeAttachments(built.graph, node.id, node.attachments);
+    await saveGraph(join(root, "graphs", built.graph.id), built.graph);
+  }
+  const folder = opt("--folder");
+  if (folder) { try { await moveGraph(root, built.graph.id, folder); } catch {} }
+  console.log(`✓ 已从 ${file} 建图`);
+  console.log(`  id: ${built.graph.id}`);
+  console.log(`  卡片 ${built.stats.cards} 张（${Object.entries(built.stats.byType).map(([k, v])=> `${k} ${v}`).join(" · ")}）`);
+  console.log(`  自动抽取依赖边 ${built.stats.edges} 条 · 覆盖 ${built.stats.pages} 页`);
+  if (attached) console.log(`  已挂载页面图 ${attached} 张`);
+  console.log(`  存储: ${join(root, "graphs", built.graph.id, "graph.json")}${folder ? `\n  归档: ${folder}` : ""}`);
+}
+
 const commands = {
   create: cmdCreate, list: cmdList, read: cmdRead, validate: cmdValidate,
   convo: cmdConvo, analyze: cmdAnalyze, layout: cmdLayout, export: cmdExport, import: cmdImport,
-  "import-af": cmdImportAf, templates: cmdTemplates, delete: cmdDelete,
+  "import-af": cmdImportAf, "import-doc": cmdImportDoc, templates: cmdTemplates, delete: cmdDelete,
   "template-save": cmdTemplateSave, "template-delete": cmdTemplateDelete,
   meta: cmdMeta, trash: cmdTrash, restore: cmdRestore,
   studio: cmdStudio, mcp: cmdMcp, doctor: cmdDoctor, help: cmdHelp, "--help": cmdHelp,
