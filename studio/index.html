@@ -818,6 +818,7 @@ function renderGroups(){
       const origin = new Map(members.map((n)=>[n.id, { x: n.x, y: n.y }]));
       const move = (ev)=>{
         const dx = (ev.clientX - startX) / view.k, dy = (ev.clientY - startY) / view.k;
+        lastDx = dx; lastDy = dy;
         const map = new Map();
         for (const m of members){
           const p = { x: origin.get(m.id).x + dx, y: origin.get(m.id).y + dy };
@@ -833,11 +834,12 @@ function renderGroups(){
         box.style.left = minX + "px"; box.style.top = minY + "px";
         box.style.width = (maxX - minX) + "px"; box.style.height = (maxY - minY) + "px";
       };
-      const up = async (ev)=>{
+      let lastDx = 0, lastDy = 0;   // 跟踪最后一次有效位移（pointercancel 坐标不可信）
+      const up = async ()=>{
         window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up);
         window.removeEventListener("pointercancel", up);
-        // ① 按最终有效输入（pointerup 坐标）提交全部成员坐标
-        const dx = (ev.clientX - startX) / view.k, dy = (ev.clientY - startY) / view.k;
+        // ① 用最后有效位移提交（不用事件坐标——pointercancel 可能是 0,0）
+        const dx = lastDx, dy = lastDy;
         const moved = Math.abs(dx) >= 2 || Math.abs(dy) >= 2;
         if (moved){ for (const m of members){ m.x = origin.get(m.id).x + dx; m.y = origin.get(m.id).y + dy; } }
         // ② 再清拖拽状态，并按最终数据坐标重绘边与组框——顺序不能反
