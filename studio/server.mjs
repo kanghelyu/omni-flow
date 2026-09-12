@@ -6,7 +6,7 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawn } from "node:child_process";
 import { NODE_TYPES, EDGE_TYPES, normalizeGraph, validateGraph, newId, nodeTypeDef } from "../lib/graph-core.js";
-import { layeredLayout, clusterLayout, analyzeGraph } from "../lib/graph-analysis.js";
+import { layeredLayout, clusterLayout, forceLayout, gridLayout, analyzeGraph } from "../lib/graph-analysis.js";
 import { searchGraphs } from "../lib/search.mjs";
 import { suggestGroups } from "../lib/group-suggest.js";
 import { loadGraph, saveGraph, listGraphs, deleteGraph, readNodeNote, writeNodeNote, makeGraphId, readJsonIfPresent } from "../lib/graph-service.mjs";
@@ -114,6 +114,26 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
       if (req.method === "GET" && url.pathname === "/") {
         res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
         res.end(await readFile(new URL("./index.html", import.meta.url), "utf8"));   // 每请求读盘：改前端无需重启
+        return;
+      }
+      // 本地静态资源（KaTeX 及字体等 vendor 资源）：完全离线，无 CDN 依赖
+      if (req.method === "GET" && url.pathname.startsWith("/vendor/")) {
+        const rel = decodeURIComponent(url.pathname.slice("/vendor/".length));
+        if (!rel || rel.includes("..")) { sendJson(res, 400, { error: "bad asset path" }); return; }
+        const ext = rel.split(".").pop()?.toLowerCase();
+        const mime = {
+          js: "text/javascript; charset=utf-8",
+          css: "text/css; charset=utf-8",
+          woff2: "font/woff2", woff: "font/woff", ttf: "font/ttf", otf: "font/otf",
+          svg: "image/svg+xml", json: "application/json; charset=utf-8", map: "application/json; charset=utf-8",
+        }[ext] ?? "application/octet-stream";
+        try {
+          const data = await readFile(new URL(`./vendor/${rel}`, import.meta.url));
+          res.writeHead(200, { "content-type": mime, "cache-control": "public, max-age=86400" });
+          res.end(data);
+        } catch {
+          sendJson(res, 404, { error: `asset not found: ${rel}` });
+        }
         return;
       }
       if (req.method === "GET" && url.pathname === "/api/graphs") {
@@ -362,8 +382,10 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
       }
       if (req.method === "POST" && action === "layout") {
         const { graph } = await loadGraph(root, id);
-        const positions = body.mode === "clusters"
-          ? clusterLayout(graph)
+        const mode = String(body.mode ?? "layered");
+        const positions = mode === "clusters" ? clusterLayout(graph)
+          : mode === "force" ? forceLayout(graph.nodes, graph.edges)
+          : mode === "grid" ? gridLayout(graph.nodes)
           : layeredLayout(graph.nodes, graph.edges, { direction: graph.direction });
         for (const node of graph.nodes) {
           const position = positions.get(node.id);
