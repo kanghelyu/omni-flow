@@ -147,6 +147,34 @@ main { flex: 1; display: flex; min-width: 0; min-height: 0; }
 .splitter::after { content: ""; width: 3px; height: 42px; border-radius: 99px; background: var(--border); box-shadow: 0 -7px 0 var(--border), 0 7px 0 var(--border); }
 .splitter:hover::before { background: var(--accent); }
 
+/* ===== 右键菜单（点击运行的对话流程） ===== */
+.ctxmenu {
+  position: fixed; z-index: 80; min-width: 176px; padding: 5px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.45); font-size: 12px; color: var(--text);
+}
+.ctxmenu .cm-title { padding: 4px 9px 6px; font-size: 10.5px; color: var(--text-dim); border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.ctxmenu button {
+  display: flex; width: 100%; align-items: center; gap: 8px; text-align: left;
+  padding: 6px 9px; border: 0; border-radius: 7px; background: transparent; color: var(--text);
+  cursor: pointer; font-size: 12px;
+}
+.ctxmenu button:hover { background: var(--bg-soft); color: var(--accent); }
+.ctxmenu button kbd { margin-left: auto; font-size: 10px; color: var(--text-dim); font-family: inherit; }
+.ctxmenu hr { border: 0; border-top: 1px solid var(--border); margin: 4px 0; }
+.ctxmenu .cm-sub { padding: 3px 9px 2px; font-size: 10.5px; color: var(--text-dim); }
+.ctxmenu .cm-row { display: flex; flex-wrap: wrap; gap: 3px; padding: 2px 6px 5px; }
+.ctxmenu .cm-row button { width: auto; padding: 3px 8px; border: 1px solid var(--border); border-radius: 999px; font-size: 11px; }
+/* 检查器：会话操作条 */
+.convo-actions { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0 2px; }
+.convo-actions button {
+  font-size: 11px; padding: 4px 9px; border-radius: 7px; border: 1px solid var(--border);
+  background: var(--bg-soft); color: var(--text); cursor: pointer;
+}
+.convo-actions button:hover { border-color: var(--accent); color: var(--accent); }
+.convo-actions button.primary { border-color: var(--accent); color: var(--accent); background: rgba(56,189,248,.10); }
+.convo-meta { font-size: 11px; color: var(--text-dim); margin: 4px 0 2px; display: flex; gap: 8px; flex-wrap: wrap; }
+
 /* ===== 卡片排版（标题 / 摘要分层 + 类型色条） ===== */
 .card { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 9px 11px 10px 13px; }
 .card .typebar { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 3px 0 0 3px; opacity: .95; }
@@ -461,7 +489,11 @@ main { flex: 1; display: flex; min-width: 0; min-height: 0; }
             </select></div>
           </div>
           <div class="insp-sec-head">
-            <label data-i18n="note">备注（首行入图数据，长文存 Markdown · 支持 $公式$）</label>
+            <div id="convoActions" hidden>
+            <div class="convo-meta" id="convoMeta"></div>
+            <div class="convo-actions" id="convoActionsRow"></div>
+          </div>
+          <label data-i18n="note">备注（首行入图数据，长文存 Markdown · 支持 $公式$）</label>
             <button class="mini" id="attachAdd" title="添加附件：本地文件路径或 URL（本地文件会复制进图资源目录）">＋ 附件</button>
           </div>
           <div id="attachBox"></div>
@@ -724,6 +756,7 @@ function select(kind, id){
       renderNotePreview();
       depFocus = depEnabled ? computeDeps(node.id) : null;
       renderAttachments(node);
+      renderConvoActions(node);
     }
   } else {
     $("insp-empty").style.display = "none"; $("insp-node").style.display = "none"; $("insp-edge").style.display = ""; $("insp-meta").style.display = "none";
@@ -1144,6 +1177,152 @@ async function addAttachment(nodeId){
     await reload(false);
     toast(LANG === "en" ? "Attached" : "已添加附件");
   } catch (e){ toast(e.message, true); }
+}
+
+
+/* ================= 点击运行的对话流程（右键菜单 + 会话操作） ================= */
+function closeCtxMenu(){ document.getElementById("ctxmenu")?.remove(); }
+
+/** 节点右键菜单：会话操作 + 通用操作，全部点击完成 */
+function openNodeMenu(node, x, y){
+  closeCtxMenu();
+  const menu = document.createElement("div");
+  menu.className = "ctxmenu"; menu.id = "ctxmenu";
+  const isConvoNode = isConvo();
+  const statuses = [["done", "已完成"], ["running", "进行中"], ["pending", "待产出"], ["waiting-human", "等人工"], ["failed", "失败"]];
+  menu.innerHTML = `
+    <div class="cm-title">${escapeHtml(String(node.label).slice(0, 34))}</div>
+    ${isConvoNode ? `
+      <button data-a="continue">▶ 从这里继续（设为点头）<kbd>Enter</kbd></button>
+      <button data-a="branch">⑂ 从此外推一轮（分叉）</button>
+      <button data-a="merge">⋈ 合并选中的分支</button>
+      <div class="cm-sub">标记状态</div>
+      <div class="cm-row">${statuses.map(([v, l])=> `<button data-s="${v}">${l}</button>`).join("")}</div>
+      <hr>` : ""}
+    <button data-a="attach">📎 加附件（页面图 / PDF）</button>
+    <button data-a="rename">✎ 改标题</button>
+    <button data-a="branchFrom">＋ 在此后插入一轮</button>
+    <button data-a="trace">◎ 依赖追踪</button>
+    <hr>
+    <button data-a="delete" style="color:var(--danger)">✕ 删除节点</button>`;
+  document.body.appendChild(menu);
+  // 边界收敛
+  const r = menu.getBoundingClientRect();
+  menu.style.left = Math.min(x, window.innerWidth - r.width - 8) + "px";
+  menu.style.top = Math.min(y, window.innerHeight - r.height - 8) + "px";
+
+  const post = async (body)=>{
+    try { await api(`/api/graph/${current.id}/convo`, { method: "POST", body: JSON.stringify(body) }); await reload(false); }
+    catch (e){ toast(e.message, true); }
+  };
+  menu.querySelectorAll("button").forEach((b)=>{
+    b.onclick = async ()=>{
+      const a = b.dataset.a, st = b.dataset.s;
+      closeCtxMenu();
+      if (st){ await post({ op: "resolve", nodeId: node.id, status: st }); toast("状态已更新"); return; }
+      if (a === "continue"){ await post({ op: "branch", nodeId: node.id }); toast("已设为当前点头"); return; }
+      if (a === "branch" || a === "branchFrom"){ recordTurnAt(node.id, a === "branch"); return; }
+      if (a === "merge"){
+        const sel = [...nodesLayer.querySelectorAll(".node.sel")].map((el)=> el.dataset.id);
+        const sources = sel.length >= 2 ? sel : (convo?.leaves ?? []);
+        if (sources.length < 2){ toast("至少需要 2 条分支", true); return; }
+        await post({ op: "merge", sources, label: "汇合" }); toast("已汇合"); return;
+      }
+      if (a === "attach"){ addAttachment(node.id); return; }
+      if (a === "rename"){
+        const v = prompt("新标题", node.label);
+        if (v != null){ await api(`/api/graph/${current.id}/node`, { method: "POST", body: JSON.stringify({ nodeId: node.id, patch: { label: v } }) }).catch(()=>{}); await reload(false); }
+        return;
+      }
+      if (a === "trace"){ runAnalysis(node.id); return; }
+      if (a === "delete"){ removeNode(node.id); return; }
+    };
+  });
+  setTimeout(()=>{
+    const off = (e)=>{ if (!menu.contains(e.target)){ closeCtxMenu(); document.removeEventListener("pointerdown", off, true); } };
+    document.addEventListener("pointerdown", off, true);
+  }, 0);
+}
+
+/** 在指定节点之后记录一轮（分叉 or 顺接） */
+function recordTurnAt(parentId, fork){
+  const agents = (current.conversation?.agents ?? []).map((a)=> a.name);
+  openModal(`<h2>${fork ? "从此外推一轮（分叉）" : "在此后插入一轮"}</h2>
+    <label>发言人 / agent</label>
+    <input id="turn-agent" list="turn-agents" placeholder="如 me / agent / alice">
+    <datalist id="turn-agents">${agents.map((n)=> `<option value="${escapeHtml(n)}">`).join("")}</datalist>
+    <label>内容</label>
+    <textarea id="turn-text" style="min-height:130px" placeholder="粘进来即可（支持 $公式$）"></textarea>
+    <div class="btnrow"><button class="primary" id="turn-save">记录</button><button id="turn-cancel">取消</button></div>`);
+  $("turn-cancel").onclick = closeModal;
+  $("turn-save").onclick = async ()=>{
+    const text = $("turn-text").value;
+    if (!text.trim()){ toast("内容不能为空", true); return; }
+    const speaker = $("turn-agent").value.trim() || "user";
+    try {
+      await api(`/api/graph/${current.id}/convo`, { method: "POST", body: JSON.stringify({
+        op: "record", agent: speaker, text, status: "done", type: "turn", parentId,
+        edgeType: fork ? "branches" : "follows",
+      }) });
+      closeModal(); await reload(false); toast(fork ? "已分叉出一支" : "已插入一轮");
+    } catch (e){ toast(e.message, true); }
+  };
+}
+
+/** 检查器里的会话操作条（选中会话节点时出现） */
+function renderConvoActions(node){
+  const wrap = $("convoActions"), row = $("convoActionsRow"), meta = $("convoMeta");
+  if (!wrap) return;
+  if (!isConvo() || !node){ wrap.hidden = true; return; }
+  wrap.hidden = false;
+  const tags = (node.tags ?? []).map(String);
+  const pick = (p)=> tags.find((t)=> t.startsWith(p))?.slice(p.length) ?? "";
+  const role = pick("role:") || pick("speaker:") || "—";
+  const status = pick("status:") || node.status || "—";
+  const turn = pick("turn:") || "—";
+  const isHead = convo?.head === node.id;
+  const onMain = convo?.mainline?.has(node.id);
+  meta.innerHTML = `<span>角色 <b>${escapeHtml(role)}</b></span><span>状态 <b>${escapeHtml(status)}</b></span><span>轮次 <b>${escapeHtml(turn)}</b></span>${isHead ? '<span style="color:var(--ok)">● 当前点头</span>' : onMain ? '<span>主线</span>' : '<span style="color:var(--warn)">离支</span>'}`;
+  row.innerHTML = `
+    <button data-a="continue" class="primary">▶ 从这里继续</button>
+    <button data-a="branch">⑂ 分叉一轮</button>
+    <button data-a="merge">⋈ 合并</button>
+    <button data-a="done">✓ 标完成</button>
+    <button data-a="attach">📎 附件</button>
+    <button data-a="locate">⊙ 定位</button>`;
+  const post = async (body)=>{ try { await api(`/api/graph/${current.id}/convo`, { method: "POST", body: JSON.stringify(body) }); await reload(false); } catch (e){ toast(e.message, true); } };
+  row.querySelectorAll("button").forEach((b)=>{
+    b.onclick = async ()=>{
+      const a = b.dataset.a;
+      if (a === "continue"){ await post({ op: "branch", nodeId: node.id }); toast("已设为当前点头"); }
+      else if (a === "branch"){ recordTurnAt(node.id, true); }
+      else if (a === "merge"){
+        const sel = [...nodesLayer.querySelectorAll(".node.sel")].map((el)=> el.dataset.id);
+        const sources = sel.length >= 2 ? sel : (convo?.leaves ?? []);
+        if (sources.length < 2){ toast("至少需要 2 条分支", true); return; }
+        await post({ op: "merge", sources, label: "汇合" }); toast("已汇合");
+      }
+      else if (a === "done"){ await post({ op: "resolve", nodeId: node.id, status: "done" }); toast("已标完成"); }
+      else if (a === "attach"){ addAttachment(node.id); }
+      else if (a === "locate"){ fitNode(node); }
+    };
+  });
+}
+
+/** 右键绑定（在 renderNodes 里已创建卡片，这里统一事件委托） */
+if (!window.__ctxBound){
+  window.__ctxBound = true;
+  document.addEventListener("contextmenu", (e)=>{
+    const card = e.target.closest?.(".node");
+    if (!card) return;
+    e.preventDefault();
+    const id = card.dataset.id;
+    const node = current?.nodes.find((n)=> n.id === id);
+    if (!node) return;
+    select("node", id);
+    openNodeMenu(node, e.clientX, e.clientY);
+  });
+  document.addEventListener("keydown", (e)=>{ if (e.key === "Escape") closeCtxMenu(); });
 }
 
 /* ================= 非线性对话 UI（DAG 会话） ================= */
