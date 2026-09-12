@@ -192,8 +192,8 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
             root,
             graph: join(root, "graphs", graph.id, "graph.json"),
             notesDir: join(root, "graphs", graph.id, "notes"),
-            ledger: join(root, "工作记录.txt"),
-            ledger: join(root, "工作记录.txt")
+            ledger: join(root, "WORKLOG.txt"),
+            ledger: join(root, "WORKLOG.txt")
           },
           nodes: graph.nodes.length, edges: graph.edges.length, groups: (graph.groups ?? []).length,
           template: templateId
