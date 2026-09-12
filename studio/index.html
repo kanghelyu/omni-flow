@@ -1465,14 +1465,6 @@ async function doLayoutNow(mode){
   for (const n of current.nodes){ const t = target.get(n.id); if (t){ n.x = t.x; n.y = t.y; } }
   closeModal(); render(); toast(t("layoutDone"));
 }
-async function doLayoutNow(mode){
-  const j = await api(`/api/graph/${current.id}/layout`, { method: "POST", body: JSON.stringify({ mode }) });
-  const target = new Map((j.detail?.nodes ?? []).map((n) => [n.id, n]));
-  if (!target.size) { await reload(false); toast(t("layoutDone")); return; }
-  closeModal();
-  animateToPositions(target);
-  toast(t("layoutDone"));
-}
 $("btnLayout").onclick = async ()=>{
   if (!current) return;
   if ((current.groups ?? []).length) {
