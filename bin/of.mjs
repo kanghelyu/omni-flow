@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { normalizeGraph, validateGraph } from "../lib/graph-core.js";
-import { layeredLayout, clusterLayout, analyzeGraph } from "../lib/graph-analysis.js";
+import { layeredLayout, clusterLayout, forceLayout, gridLayout, analyzeGraph } from "../lib/graph-analysis.js";
 import { loadGraph, saveGraph, listGraphs, deleteGraph, makeGraphId } from "../lib/graph-service.mjs";
 import { buildTemplateById, mergedTemplateSummaries, saveCustomTemplate, deleteCustomTemplate } from "../lib/templates.js";
 import { toMermaid, fromMermaid, toDot, toMarkdownOutline, toPlainText, fromAgentFlow } from "../lib/converters.js";
@@ -74,7 +74,11 @@ async function cmdLayout() {
   const id = args[1];
   const root = rootHome();
   const { graph } = await loadGraph(root, id);
-  const positions = opt("--mode", "layered") === "clusters" ? clusterLayout(graph) : layeredLayout(graph.nodes, graph.edges, { direction: graph.direction });
+  const mode = opt("--mode", "layered");
+  const positions = mode === "clusters" ? clusterLayout(graph)
+    : mode === "force" ? forceLayout(graph.nodes, graph.edges)
+    : mode === "grid" ? gridLayout(graph.nodes)
+    : layeredLayout(graph.nodes, graph.edges, { direction: graph.direction });
   for (const node of graph.nodes) {
     const position = positions.get(node.id);
     if (position) { node.x = position.x; node.y = position.y; }
