@@ -36,7 +36,7 @@ async function cmdCreate() {
   const template = opt("--template", "blank");
   const root = rootHome();
   await ensureRoot(root);
-  const graph = await buildTemplateById(root, template, nameArg);
+  const graph = await buildTemplateById(root, template, nameArg, opt("--lang", "en") === "zh" ? "zh" : "en");
   graph.id = makeGraphId(graph.name);
   if (opt("--desc")) graph.description = opt("--desc");
   await saveGraph(join(root, "graphs", graph.id), graph);
