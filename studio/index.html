@@ -762,7 +762,8 @@ function renderNodes(){
     el.className = "node";
     el.id = `node-${node.id}`;
     el.dataset.id = node.id;
-    el.style.cssText = `left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px;`;
+    const lp = livePos(node);
+    el.style.cssText = `left:${lp.x}px;top:${lp.y}px;width:${node.w}px;height:${node.h}px;`;
     const note = String(node.note ?? "").trim();
     el.innerHTML = `<div class="card" style="--n-fill:${node.fill};--n-border:${node.border};--n-text:${node.textColor}">
       <div class="kind"><span>${escapeHtml(node.icon ?? "")}</span><span>${escapeHtml(typeLabel(node.type))}</span></div>
@@ -862,6 +863,7 @@ function beginNodeDrag(node, event){
   if (event.button !== 0 || event.target.closest(".handle")) return;
   cancelViewAnimation();
   event.preventDefault(); event.stopPropagation();
+  suppressSSEUntil = Date.now() + 60000;   // 拖拽期间抑制 SSE
   select("node", node.id);
   liveDrag = { map: new Map([[node.id, { x: node.x, y: node.y }]]) };
   $(`node-${CSS.escape(node.id)}`)?.classList.add("dragging");
@@ -1622,7 +1624,7 @@ $("btnExport").onclick = async ()=>{
   const es = new EventSource("/api/events");
   let reloadTimer = null;
   es.addEventListener("change", ()=>{
-    if (Date.now() < suppressSSEUntil) return;   // 布局动画期间抑制（避免与插值打架造成瞬移）
+    if (liveDrag || Date.now() < suppressSSEUntil) return;   // 拖拽中 + 布局动画期间抑制
     clearTimeout(reloadTimer);
     reloadTimer = setTimeout(()=>{ if (!document.querySelector(".modal-bg.show")) reload(false); }, 300);
   });
