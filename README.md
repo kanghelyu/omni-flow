@@ -30,6 +30,11 @@
 - **agent-flow bridge** — `of import-af <id>` turns any [AgentFlow](https://github.com/kanghelyu/agent-flow) workflow into a diagram (gates become Yes/No labeled edges). OmniFlow maps; AgentFlow executes.
 - **Groups, notes, search, legend** — colored subgraph containers, per-node Markdown notes, instant search with highlight, auto legend from the type registry.
 - **Bilingual light/dark Studio** — local-only canvas at `127.0.0.1:4319`, zh/en UI.
+- **Academic-ready math rendering** — offline KaTeX 0.18.7 with the mhchem chemistry extension. Notes and previews compile `$inline$`, `$$display$$`, `\(..\)`, `\[..\]`, **bare LaTeX paragraphs without delimiters**, and even a full paper source (preamble stripped automatically). Unsupported constructs degrade to visible source with a hint — nothing is ever lost.
+- **Four layouts** — layered by dependency · cluster by groups · force-directed · compact grid. Also available via `of_layout { mode }`.
+- **Follows your system theme** — light/dark auto-detected on first run; explicit choice wins and is remembered.
+- **Deep links & map jumping** — `#<graphId>` opens a map, `#<graphId>/<nodeId>` focuses a node; tag a node `open:<otherGraphId>` and double-click the ↗ badge to jump between maps.
+- **Double-click launchers** — `Start-Studio.command` (macOS/Linux) and `Start-Studio.bat` (Windows) find Node, pick a free port and open the browser.
 
 ## Recommended install: give this repository to your agent
 
