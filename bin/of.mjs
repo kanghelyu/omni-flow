@@ -108,9 +108,18 @@ async function cmdExport() {
   const id = args[1];
   const format = opt("--format", "mermaid");
   const out = opt("--out");
-  const { graph } = await loadGraph(rootHome(), id);
+  const { graph, root } = await loadGraph(rootHome(), id);
   let text;
-  if (format === "json") text = JSON.stringify(graph, null, 2);
+  if (format === "html") {
+    const { toStandaloneHtml } = await import("../lib/export-html.js");
+    const { readNodeNote } = await import("../lib/graph-service.mjs");
+    const notes = {};
+    for (const n of graph.nodes){
+      try { const r = await readNodeNote(root, id, n.id); if (r?.exists) notes[n.id] = { content: r.content }; } catch { /* 无备注 */ }
+    }
+    text = await toStandaloneHtml(graph, notes, { embed: opt("--no-embed") ? false : true });
+  }
+  else if (format === "json") text = JSON.stringify(graph, null, 2);
   else if (format === "dot") text = toDot(graph);
   else if (format === "md") text = toMarkdownOutline(graph);
   else if (format === "txt") text = toPlainText(graph);
@@ -272,7 +281,7 @@ function cmdHelp() {
   validate <id>                                结构校验（硬错误 + 软警告）
   analyze <id> [--trace nodeId]                环 / 瓶颈 / 孤立点 / 依赖追踪
   layout <id> [--mode layered|clusters]         布局：分层 / 分组聚簇
-  export <id> --format mermaid|dot|md|txt|json [--out 文件]
+  export <id> --format mermaid|dot|md|txt|json|html [--out 文件] [--no-embed]
   import <文件> [--format mermaid|json] [--name 新名]
   import-af <agent-flow-id>                    导入 agent-flow 工作流为图
   studio [--port N] [--no-open]                本地画布（默认 127.0.0.1:4319）
