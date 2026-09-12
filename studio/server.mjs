@@ -1,15 +1,15 @@
 // OmniFlow Studio 本地服务 — 零依赖 HTTP + SSE，只绑定 127.0.0.1。
 // 所有拓扑变更先在内存 normalize + validate，硬错误不落盘。
 import { createServer } from "node:http";
-import { readFile, readdir, stat } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { join, resolve, extname, basename } from "node:path";
 import { spawn } from "node:child_process";
-import { NODE_TYPES, EDGE_TYPES, normalizeGraph, validateGraph, newId, nodeTypeDef } from "../lib/graph-core.js";
+import { readFile, copyFile, mkdir, readdir, unlink, stat } from "node:fs/promises";
+import { NODE_TYPES, EDGE_TYPES, normalizeGraph, validateGraph, newId, nodeTypeDef, setNodeAttachments } from "../lib/graph-core.js";
 import { layeredLayout, clusterLayout, forceLayout, gridLayout, analyzeGraph } from "../lib/graph-analysis.js";
 import { searchGraphs } from "../lib/search.mjs";
 import { suggestGroups } from "../lib/group-suggest.js";
-import { ensureConversationShape, appendTurn, setHead, mergeBranches, pathTo, conversationOverview, linearize } from "../lib/conversation.js";
+import { ensureConversationShape, appendTurn, setHead, mergeBranches, pathTo, conversationOverview, linearize, registerAgent, recordTurn, resolveTurn, pendingTurns, nextSpeaker, aggregateBranches, scaffoldTopology } from "../lib/conversation.js";
 import { loadGraph, saveGraph, listGraphs, deleteGraph, readNodeNote, writeNodeNote, makeGraphId, readJsonIfPresent } from "../lib/graph-service.mjs";
 import { createFolder, renameFolder, deleteFolder, moveGraph, readTree, updateLedger } from "../lib/vault.js";
 import { buildTemplateById, mergedTemplateSummaries, saveCustomTemplate, deleteCustomTemplate } from "../lib/templates.js";
@@ -118,6 +118,23 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
         res.end(await readFile(new URL("./index.html", import.meta.url), "utf8"));   // 每请求读盘：改前端无需重启
         return;
+      }
+      // 图附件资源（原书页面图 / PDF 等）：<root>/graphs/<图id>/assets/<文件>
+      {
+        const m = url.pathname.match(/^\/api\/graph\/([^/]+)\/asset\/(.+)$/);
+        if (m && req.method === "GET") {
+          const gid = decodeURIComponent(m[1]);
+          const name = decodeURIComponent(m[2]);
+          if (!gid || name.includes("..") || name.includes("/")) { sendJson(res, 400, { error: "bad asset path" }); return; }
+          const ext = extname(name).slice(1).toLowerCase();
+          const mime = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp", svg: "image/svg+xml", pdf: "application/pdf" }[ext] ?? "application/octet-stream";
+          try {
+            const data = await readFile(join(root, "graphs", gid, "assets", name));
+            res.writeHead(200, { "content-type": mime, "cache-control": "public, max-age=3600" });
+            res.end(data);
+          } catch { sendJson(res, 404, { error: `asset not found: ${name}` }); }
+          return;
+        }
       }
       // 本地静态资源（KaTeX 及字体等 vendor 资源）：完全离线，无 CDN 依赖
       if (req.method === "GET" && url.pathname.startsWith("/vendor/")) {
@@ -274,11 +291,50 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         sendJson(res, 200, graphDetail(graph, notesSummary));
         return;
       }
+      /* 节点附件：POST { nodeId, src, kind?, label?, caption?, page?, mode? } —— 本地文件自动复制进图资源目录 */
+      if (action === "attach" && req.method === "POST") {
+        const body = await readBody(req);
+        const rawSrc = String(body.src ?? "").trim();
+        if (!rawSrc) { sendJson(res, 400, { error: "缺少 src" }); return; }
+        const nodeId = String(body.nodeId ?? "");
+        let finalSrc = rawSrc, kind = body.kind ?? "image";
+        const assetsDir = join(root, "graphs", id, "assets");
+        if (!/^https?:\/\//i.test(rawSrc)) {
+          // 本地文件 → 复制进图资源目录，保证可移植
+          const abs = resolve(rawSrc.replace(/^file:\/\//, ""));
+          try {
+            const info = await stat(abs);
+            if (!info.isFile()) throw new Error("不是文件");
+            await mkdir(assetsDir, { recursive: true });
+            const safeName = basename(abs).replace(/[^\w.\-\u4e00-\u9fff]/g, "_");
+            const target = join(assetsDir, safeName);
+            await copyFile(abs, target);
+            finalSrc = `assets/${safeName}`;
+            if (/pdf$/i.test(safeName)) kind = "pdf";
+            else if (/page|p\d{3}|book/i.test(safeName)) kind = "page";
+          } catch (error) {
+            sendJson(res, 400, { error: `无法读取本地文件：${error.message}` });
+            return;
+          }
+        } else if (body.kind) kind = body.kind;
+        const result = await mutateGraph(root, id, (draft) => {
+          const list = setNodeAttachments(draft, nodeId, [{
+            kind, src: finalSrc, label: body.label ?? basename(finalSrc), page: body.page ?? null, caption: body.caption ?? "",
+          }], { mode: body.mode === "append" ? "append" : "replace" });
+          return list;
+        }, { bump: true });
+        sendJson(res, 200, { ok: true, attachments: result?.detail?.nodes?.find((n)=> n.id === nodeId)?.attachments ?? [] });
+        return;
+      }
       /* 非线性对话：GET 总览 / POST say|branch|merge */
       if (action === "convo") {
         if (req.method === "GET") {
           const { graph } = await loadGraph(root, id);
-          sendJson(res, 200, conversationOverview(ensureConversationShape(graph)));
+          const g = ensureConversationShape(graph);
+          const want = url.searchParams.get("view") ?? "overview";
+          if (want === "next"){ sendJson(res, 200, nextSpeaker(g)); return; }
+          if (want === "pending"){ sendJson(res, 200, { pending: pendingTurns(g) }); return; }
+          sendJson(res, 200, { ...conversationOverview(g), pending: pendingTurns(g), agents: g.conversation.agents, runtime: g.conversation.runtime });
           return;
         }
         const body = await readBody(req);
@@ -292,6 +348,20 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
             return node.id;
           }
           if (op === "branch"){ setHead(draft, body.nodeId); return body.nodeId; }
+          if (op === "scaffold"){ return scaffoldTopology(draft, { topology: body.topology ?? "supervisor", agents: body.agents ?? [], topic: body.topic ?? null }); }
+          if (op === "record"){
+            const node = recordTurn(draft, { agent: body.agent ?? "agent", text: body.text ?? "", type: body.type ?? "turn", status: body.status ?? "done", handoffTo: body.handoffTo ?? null, parentId: body.parentId ?? null, edgeType: body.edgeType ?? "follows", role: body.role ?? null });
+            draft.notes = draft.notes ?? {};
+            draft.notes[node.id] = String(body.text ?? "").split("\n")[0].slice(0, 120);
+            return { nodeId: node.id, status: node.status };
+          }
+          if (op === "resolve"){ const node = resolveTurn(draft, body.nodeId, { status: body.status ?? "done", text: body.text ?? null }); return { nodeId: node.id, status: node.status }; }
+          if (op === "vote"){
+            const r = aggregateBranches(draft, { sources: body.sources ?? [], strategy: body.strategy ?? "majority", label: body.label ?? null, text: body.text ?? "", winner: body.winner ?? null, agent: body.agent ?? "judge" });
+            draft.notes = draft.notes ?? {};
+            draft.notes[r.node.id] = String(r.chosen ?? "").slice(0, 120);
+            return { nodeId: r.node.id, strategy: r.strategy, tally: r.tally, consensus: Number(r.consensus.toFixed(3)), chosen: r.chosen };
+          }
           if (op === "merge"){
             const node = mergeBranches(draft, { sources: body.sources ?? [], label: body.label ?? "汇合", text: body.text ?? "", speaker: body.speaker ?? "user" });
             if (body.text) draft.notes[node.id] = String(body.text).split("\n")[0].slice(0, 120);
