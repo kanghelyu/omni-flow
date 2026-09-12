@@ -218,6 +218,8 @@ Theorem 4.1 --depends-on--> Lemma 3.2    ← result points to premise ✗
 
 - `of_layout { "id": "<graph-id>" }` — layered by dependency (default).
 - `of_layout { "id": "<graph-id>", "mode": "clusters" }` — **cluster by groups**: same-group nodes are spatially clustered, group regions laid left-to-right. Use this for graphs with groups; layered layout will destroy spatial clusters.
+- `of_layout { "id": "<graph-id>", "mode": "force" }` — **force-directed**: reveals overall structure/clusters when no grouping exists.
+- `of_layout { "id": "<graph-id>", "mode": "grid" }` — **compact grid**: nodes sorted by type, ideal for scanning card-like content.
 - Studio: click "⌗ Tidy up" → choose mode.
 
 # SOP-F: Grouping (functional clustering)
