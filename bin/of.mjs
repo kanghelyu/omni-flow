@@ -3,7 +3,7 @@
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { normalizeGraph, validateGraph, NODE_TYPES, EDGE_TYPES } from "../lib/graph-core.js";
+import { normalizeGraph, validateGraph } from "../lib/graph-core.js";
 import { layeredLayout, clusterLayout, analyzeGraph } from "../lib/graph-analysis.js";
 import { loadGraph, saveGraph, listGraphs, deleteGraph, makeGraphId } from "../lib/graph-service.mjs";
 import { buildTemplateById, mergedTemplateSummaries, saveCustomTemplate, deleteCustomTemplate } from "../lib/templates.js";
