@@ -9,6 +9,7 @@ import { NODE_TYPES, EDGE_TYPES, normalizeGraph, validateGraph, newId, nodeTypeD
 import { layeredLayout, clusterLayout, forceLayout, gridLayout, analyzeGraph } from "../lib/graph-analysis.js";
 import { searchGraphs } from "../lib/search.mjs";
 import { suggestGroups } from "../lib/group-suggest.js";
+import { ensureConversationShape, appendTurn, setHead, mergeBranches, pathTo, conversationOverview, linearize } from "../lib/conversation.js";
 import { loadGraph, saveGraph, listGraphs, deleteGraph, readNodeNote, writeNodeNote, makeGraphId, readJsonIfPresent } from "../lib/graph-service.mjs";
 import { createFolder, renameFolder, deleteFolder, moveGraph, readTree, updateLedger } from "../lib/vault.js";
 import { buildTemplateById, mergedTemplateSummaries, saveCustomTemplate, deleteCustomTemplate } from "../lib/templates.js";
@@ -56,7 +57,9 @@ function graphDetail(graph, notesSummary = {}) {
     nodes: graph.nodes,
     edges: graph.edges,
     groups: graph.groups,
-    notes: { ...graph.notes, ...notesSummary }
+    notes: { ...graph.notes, ...notesSummary },
+    // 非线性对话元数据（head / speakers / mode）：透传给前端
+    ...(graph.conversation ? { conversation: graph.conversation } : {})
   };
 }
 
@@ -269,6 +272,41 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
           if (graph.notes[node.id]) notesSummary[node.id] = graph.notes[node.id];
         }
         sendJson(res, 200, graphDetail(graph, notesSummary));
+        return;
+      }
+      /* 非线性对话：GET 总览 / POST say|branch|merge */
+      if (action === "convo") {
+        if (req.method === "GET") {
+          const { graph } = await loadGraph(root, id);
+          sendJson(res, 200, conversationOverview(ensureConversationShape(graph)));
+          return;
+        }
+        const body = await readBody(req);
+        const op = String(body.op ?? "");
+        const result = await mutateGraph(root, id, (draft) => {
+          ensureConversationShape(draft);
+          draft.notes = draft.notes ?? {};
+          if (op === "say"){
+            const node = appendTurn(draft, { text: body.text ?? "", speaker: body.speaker ?? "user", type: body.type ?? "turn", parentId: body.parentId ?? null, edgeType: body.edgeType ?? "follows" });
+            draft.notes[node.id] = String(body.text ?? "").split("\n")[0].slice(0, 120);
+            return node.id;
+          }
+          if (op === "branch"){ setHead(draft, body.nodeId); return body.nodeId; }
+          if (op === "merge"){
+            const node = mergeBranches(draft, { sources: body.sources ?? [], label: body.label ?? "汇合", text: body.text ?? "", speaker: body.speaker ?? "user" });
+            if (body.text) draft.notes[node.id] = String(body.text).split("\n")[0].slice(0, 120);
+            return node.id;
+          }
+          throw new Error(`不支持的对话操作：${op}`);
+        });
+        sendJson(res, 200, result);
+        return;
+      }
+      /* 活跃路径（根→节点）与线性化文本 */
+      if (action === "convo-path" && req.method === "GET") {
+        const { graph } = await loadGraph(root, id);
+        const target = url.searchParams.get("node") ?? graph.conversation?.head ?? null;
+        sendJson(res, 200, { target, path: target ? pathTo(graph, target) : [], text: linearize(graph, target, { format: url.searchParams.get("format") ?? "md" }) });
         return;
       }
       if (req.method === "GET" && action === "validate") {
