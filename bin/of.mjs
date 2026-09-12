@@ -10,6 +10,7 @@ import { buildTemplateById, mergedTemplateSummaries, saveCustomTemplate, deleteC
 import { ensureConversationShape, appendTurn, setHead, mergeBranches, pathTo, conversationOverview, linearize, registerAgent, recordTurn, resolveTurn, pendingTurns, nextSpeaker, aggregateBranches, scaffoldTopology } from "../lib/conversation.js";
 import { toMermaid, fromMermaid, toDot, toMarkdownOutline, toPlainText, fromAgentFlow } from "../lib/converters.js";
 import { buildGraphFromMineru, buildGraphFromMarkdown } from "../lib/import-doc.js";
+import { liveStart, liveLog, liveStop, liveStatus } from "../lib/live-conversation.js";
 
 const VERSION = "0.1.0";
 const args = process.argv.slice(2);
@@ -474,9 +475,45 @@ async function cmdImportDoc(){
   console.log(`  存储: ${join(root, "graphs", built.graph.id, "graph.json")}${folder ? `\n  归档: ${folder}` : ""}`);
 }
 
+
+/* ---------- 实时对话记录 CLI ----------
+   of live start [--topic 主题] [--folder 路径]    开启（已有则续记）
+   of live log "内容" [--role user|agent]          记一轮（无需 id）
+   of live stop                                     停止
+   of live status                                   状态
+*/
+async function cmdLive(){
+  const sub = args[1] ?? "status";
+  const root = rootHome();
+  if (sub === "start"){
+    const r = await liveStart(root, { topic: opt("--topic", null), folder: opt("--folder", null), lang: opt("--lang", "zh") === "en" ? "en" : "zh" });
+    console.log(`${r.resumed ? "✓ 已续记" : "✓ 已开启记录"}：${r.name}\n  id: ${r.id}\n  主题: ${r.topic}\n  当前轮数: ${r.turns}`);
+    return;
+  }
+  if (sub === "log"){
+    const words = []; const flags = new Set(["--role", "--name", "--from", "--type", "--status", "--handoff"]);
+    const rest = args.slice(2);
+    for (let i = 0; i < rest.length; i++){ if (flags.has(rest[i])){ i++; continue; } words.push(rest[i]); }
+    const r = await liveLog(root, { role: opt("--role", "agent"), text: words.join(" "), name: opt("--name", null), from: opt("--from", null), type: opt("--type", null), status: opt("--status", "done"), handoffTo: opt("--handoff", null) });
+    console.log(`✓ 已记录 ${r.role} 一轮 → ${r.nodeId}（主线 ${r.mainline} · 总计 ${r.total}）`);
+    return;
+  }
+  if (sub === "stop"){ console.log(JSON.stringify(await liveStop(root), null, 2)); return; }
+  const st = await liveStatus(root);
+  console.log(st.on ? `● 记录中：${st.name}\n  已记 ${st.turns} 轮 · 主线 ${st.mainline} · 开放分支 ${st.openThreads}\n  id: ${st.id}` : `○ 未在记录${st.id ? `（上次：${st.name ?? st.id}，${st.turns} 轮）` : ""}`);
+}
+
+
+/* ---------- 实时对话记录 CLI ----------
+   of live start [--topic 主题] [--folder 路径]    开启（已有则续记）
+   of live log "内容" [--role user|agent]          记一轮（无需 id）
+   of live stop                                     停止
+   of live status                                   状态
+*/
+
 const commands = {
   create: cmdCreate, list: cmdList, read: cmdRead, validate: cmdValidate,
-  convo: cmdConvo, analyze: cmdAnalyze, layout: cmdLayout, export: cmdExport, import: cmdImport,
+  convo: cmdConvo, live: cmdLive, live: cmdLive, analyze: cmdAnalyze, layout: cmdLayout, export: cmdExport, import: cmdImport,
   "import-af": cmdImportAf, "import-doc": cmdImportDoc, templates: cmdTemplates, delete: cmdDelete,
   "template-save": cmdTemplateSave, "template-delete": cmdTemplateDelete,
   meta: cmdMeta, trash: cmdTrash, restore: cmdRestore,
