@@ -1,5 +1,5 @@
-// LaTeX 防线端到端测试：验证「非法公式必须被拒、合法公式必须通过、简写必须自动规范化」。
-// 这是 R1 红线的可执行版本——任何让校验失效的改动都会在此暴露。
+// End-to-end LaTeX gate: invalid math must be rejected, valid math accepted, shorthands normalised.
+// This is the executable form of hard rule R1: any change that weakens the gate fails here.
 import { startStudioServer } from "../studio/server.mjs";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -21,32 +21,40 @@ const nid = g.data.nodes[0].id;
 const results = [];
 const t = (name, pass, extra = "") => results.push({ name, pass: !!pass, extra });
 
-// ① 非法 LaTeX 备注 → 必须被拒
+// (1) invalid LaTeX note → must be rejected
 const bad = await j(`/api/graph/${id}/note`, { method: "POST", body: JSON.stringify({ nodeId: nid, content: "定理 $\\frac{a}{b$ 不闭合" }) });
-t("非法公式备注被拒绝", bad.status >= 400, `status=${bad.status} ${String(bad.data.error ?? "").slice(0, 60)}`);
+t("invalid note rejected", bad.status >= 400, `status=${bad.status} ${String(bad.data.error ?? "").slice(0, 60)}`);
 
-// ② 合法 LaTeX 备注 → 通过
+// (2) valid LaTeX note → accepted
 const good = await j(`/api/graph/${id}/note`, { method: "POST", body: JSON.stringify({ nodeId: nid, content: "定理 $$\\int_0^1 x^2 dx=\\frac13$$ 成立" }) });
-t("合法公式备注写入成功", good.status === 200, `status=${good.status}`);
+t("valid note accepted", good.status === 200, `status=${good.status}`);
 
-// ③ 自定义宏 → 拒绝并给出修法
+// (3) self-defined macro → rejected with a fix hint
 const macro = await j(`/api/graph/${id}/node-patch`, { method: "POST", body: JSON.stringify({ nodeId: nid, patch: { label: "设 $\\myVec{v}$ 为向量" } }) });
-t("自定义宏被拒绝", macro.status >= 400, String(macro.data.error ?? "").replace(/\s+/g, " ").slice(0, 80));
+t("self-defined macro rejected", macro.status >= 400, String(macro.data.error ?? "").replace(/\s+/g, " ").slice(0, 80));
 
-// ④ 简写（\RR）→ 自动规范化后通过
+// (4) shorthand (\RR) → normalised, then accepted
 const short = await j(`/api/graph/${id}/node-patch`, { method: "POST", body: JSON.stringify({ nodeId: nid, patch: { label: "设 $\\RR^n \\to \\ZZ$" } }) });
-t("简写自动规范化后通过", short.status === 200, `status=${short.status}`);
+t("shorthand normalised then accepted", short.status === 200, `status=${short.status}`);
 const after = await j("/api/graph/" + id);
 const lbl = after.data.nodes.find((n) => n.id === nid).label;
-t("落库内容已转为标准命令", lbl.includes("\\mathbb{R}") && !lbl.includes("\\RR"), lbl.slice(0, 40));
+t("stored text uses standard commands", lbl.includes("\\mathbb{R}") && !lbl.includes("\\RR"), lbl.slice(0, 40));
 
-// ⑤ 代码围栏里的示例源码 → 豁免（正当出口）
+// (5) code-fenced sample source → exempt (the legitimate escape hatch)
 const fenced = await j(`/api/graph/${id}/note`, { method: "POST", body: JSON.stringify({ nodeId: nid, content: "示例：\n```\n\\begin{tikzpicture}\\draw (0,0);\\end{tikzpicture}\n```\n以上是原始源码。" }) });
-t("代码围栏内示例源码豁免", fenced.status === 200, `status=${fenced.status}`);
+t("code-fenced source exempt", fenced.status === 200, `status=${fenced.status}`);
 
-// ⑥ tag 自动转换（行内也能编译）
+// (6) \tag auto-converted (works inline too)
 const tagRes = await j(`/api/graph/${id}/note`, { method: "POST", body: JSON.stringify({ nodeId: nid, content: "$\\operatorname{Tr}(z)=-1 \\tag{2.7}$" }) });
-t("行内 \\tag 自动转文本后通过", tagRes.status === 200, `status=${tagRes.status}`);
+t("inline \\tag converted to text", tagRes.status === 200, `status=${tagRes.status}`);
+
+// (7) unclosed delimiter: previously silent plain text, now must be blocked
+const unclosed = await j(`/api/graph/${id}/node-patch`, { method: "POST", body: JSON.stringify({ nodeId: nid, patch: { label: "等价 (7) · Minimal polynomial irreducible $\\iff$ $" } }) });
+t("unclosed $ rejected", unclosed.status >= 400, `status=${unclosed.status} ${String(unclosed.data.error ?? "").slice(0, 70)}`);
+
+// (8) an escaped dollar is legitimate and must not be flagged
+const escaped = await j(`/api/graph/${id}/node-patch`, { method: "POST", body: JSON.stringify({ nodeId: nid, patch: { label: "价格 \\$5 与 $x>0$ 无关" } }) });
+t("escaped \\$ not flagged", escaped.status === 200, `status=${escaped.status}`);
 
 if (studio.close) await studio.close(); else if (studio.server) studio.server.close();
 let ok = 0;
@@ -54,5 +62,5 @@ for (const r of results){
   if (r.pass) ok++;
   console.log(`${r.pass ? "  ✓" : "  ✗"} ${r.name.padEnd(24)} ${r.extra}`);
 }
-console.log(`\n${ok}/${results.length} 通过`);
+console.log(`\n${ok}/${results.length} passed`);
 process.exit(ok === results.length ? 0 : 1);
