@@ -69,6 +69,39 @@ async function api(p, opt) {
     return !!b && !b.hidden && b.offsetParent !== null;
   });
 
+  // 5) exactly ONE rendering surface may be visible (DOM cards or the canvas, never both)
+  const surfaces = await page.evaluate(async () => {
+    const visible = (id) => { const el = document.getElementById(id); return !!el && el.offsetParent !== null && getComputedStyle(el).display !== 'none'; };
+    const off = { dom: visible('world'), canvas: visible('scene') };
+    document.getElementById('btnCanvas').click();          // switch to canvas mode
+    await new Promise((r) => setTimeout(r, 500));
+    const on = { dom: visible('world'), canvas: visible('scene') };
+    document.getElementById('btnCanvas').click();          // back to DOM mode
+    await new Promise((r) => setTimeout(r, 500));
+    const back = { dom: visible('world'), canvas: visible('scene') };
+    return { off, on, back };
+  });
+
+  // 6) toolbar tidy-up: no duplicate-function buttons, thumbs only when the graph has images,
+  //    every button carries a tooltip, and the status badge opens validation
+  const toolbar = await page.evaluate(async () => {
+    const ids = [...document.querySelectorAll('.topbar button[id], .docrail-toggle[id]')].map((b) => b.id);
+    const titles = ids.map((id) => ({ id, title: (document.getElementById(id).getAttribute('title') || '').trim() }));
+    const badge = document.getElementById('gstat');
+    badge.click();
+    await new Promise((r) => setTimeout(r, 600));
+    const modalOpen = !!document.querySelector('.modal-bg.show, .modal-bg[style*="flex"]');
+    const modalText = (document.querySelector('.modal')?.textContent || '').slice(0, 40);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    return {
+      hasValidate: ids.includes('btnValidate'),
+      hasLegend: ids.includes('btnLegend'),
+      thumbsHidden: document.getElementById('btnThumbs').hidden,
+      missingTitle: titles.filter((t) => !t.title).map((t) => t.id),
+      badgeOpensValidation: modalOpen && /validation|Structure|结构/i.test(modalText),
+    };
+  });
+
   await browser.close();
 
   const results = [
@@ -78,6 +111,14 @@ async function api(p, opt) {
     ['dimmed cards are actually dimmed', hl.dimOpacity !== null && Number(hl.dimOpacity) < 0.9, `opacity=${hl.dimOpacity}`],
     ['related cards get a ring', !!hl.upShadow, String(hl.upShadow)],
     ['attach button is visible', attachWired, String(attachWired)],
+    ['DOM mode shows only the DOM layer', surfaces.off.dom && !surfaces.off.canvas, JSON.stringify(surfaces.off)],
+    ['canvas mode shows only the canvas', !surfaces.on.dom && surfaces.on.canvas, JSON.stringify(surfaces.on)],
+    ['switching back leaves one surface', surfaces.back.dom && !surfaces.back.canvas, JSON.stringify(surfaces.back)],
+    ['no duplicate 校验 button', !toolbar.hasValidate, 'btnValidate'],
+    ['no duplicate 图例 button', !toolbar.hasLegend, 'btnLegend'],
+    ['thumbs button hidden without images', toolbar.thumbsHidden, String(toolbar.thumbsHidden)],
+    ['every toolbar button has a tooltip', toolbar.missingTitle.length === 0, toolbar.missingTitle.join(',') || 'all titled'],
+    ['status badge opens validation', toolbar.badgeOpensValidation, 'badge click'],
     ['no uncaught exception', errs.length === 0, errs.slice(0, 2).join(' | ')],
   ];
   let ok = 0;
