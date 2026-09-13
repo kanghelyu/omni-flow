@@ -11,7 +11,7 @@ description: Use OmniFlow (of CLI) to create and edit universal flow maps — th
 
 Before touching anything, state the following in your first reply:
 
-1. **You have read R1–R4 and the 📕 Failure library** (read, not "about to read").
+1. **You have read R0–R9 and the 📕 Failure library** (read, not "about to read").
 2. **How you will verify**: which `of_*` tools you will use (e.g. `of_latex_check` → write → `of_get_graph` for counts → `of_get_note` for read-back → `of_validate`).
 3. **If a rule cannot be satisfied** (e.g. the user explicitly asks to skip validation) → **MUST** stop and surface the conflict for the user to decide; **MUST NOT** silently downgrade, and **MUST NOT** "do it first and patch later".
 
@@ -23,9 +23,12 @@ Before touching anything, state the following in your first reply:
 - **MUST NOT** define macros with `\newcommand`. The legal set is KaTeX built-ins plus official `mhchem` `\ce{}`.
 - **MUST** wrap anything needing `\tag{...}`, `aligned` or matrices in `$$…$$` (`\tag` is illegal inline; the system auto-converts it to a text number, but never rely on that).
 - **MUST** keep braces, brackets and `\left`/`\right` balanced — one unclosed pair fails the **whole** fragment.
+- **MUST** close every delimiter. An unclosed `$`, `$$`, `\(` or `\[` turns the rest of the text into plain
+  prose, so it renders un-warned and reaches the user broken. The gate now rejects it and tells you which
+  delimiter is missing. To print a literal dollar sign, write `\$`.
 - **MUST NOT** nest `$` inside a formula. Put Chinese (or any prose) inside `\text{…}`.
 - To **show LaTeX source itself**, **MUST** put it in a code fence ```` ```…``` ```` (fenced content is exempt from validation).
-- Every OmniFlow write channel (`of_set_note`, `of_add_node`, `of_patch_node`, `of_import_doc`, Studio editing) **normalises and hard-validates**: an invalid formula is **rejected** with per-fragment `hint`s. This is an interceptor, not a warning — **do not** try to slip content in first.
+- Every OmniFlow write channel goes through **one shared pipeline** (`lib/graph-service.mjs`: normalise → formula gate → structure validation → persist), so nothing can bypass it: the MCP tools, the HTTP API, the CLI (`of create` / `of meta` / `of convo …` / `of import*` / `of project …`) and Studio editing all end up on the same path. It **normalises and hard-validates**: an invalid formula is **rejected** with per-fragment `hint`s. This is an interceptor, not a warning — **do not** try to slip content in first.
 
 ## R2. Semantic ids: the prerequisite for cross-graph links
 
@@ -45,6 +48,41 @@ Before touching anything, state the following in your first reply:
 - Deletion **MUST** go through OmniFlow's own tools (`of_delete_node` / `of_delete_edge` / `of_delete_graph`, all recoverable from trash). **MUST NOT** hand-delete `graph.json`, `notes/` or graph directories under `~/.omni-flow/`.
 - **MUST NOT** recursively delete the storage root or any user directory.
 - If a graph "seems to have disappeared", **MUST** check the read path and the server first (storage self-heals on read) — **do not** delete files.
+
+## R5. No skipping, no merging steps
+
+Every numbered step in an SOP is a separate action. Combining two of them is a violation. Do not
+compress "create → add node → add edge → set note → validate" into one call.
+
+## R6. Ids and read-backs: never guess, never trust a 200
+
+- **MUST** take every node/edge/group id from the actual return value of `of_add_node` /
+  `of_add_edge` / `of_get_graph`; build a "label → real id" map before referencing them.
+  **MUST NOT** fabricate or guess an id.
+- **MUST** read back after every write (`of_get_graph` for counts, `of_get_note` for note text) and
+  compare against what you intended. A bare HTTP/MCP success is not evidence.
+- Folder paths **MUST** come from `of_tree` or the user's exact words — never invent a path.
+
+## R7. Filing: check the ledger before creating anything
+
+Read `of_tree` (or `<root>/WORKLOG.txt`) before creating any graph, then:
+
+1. The user named a folder → use it exactly as given.
+2. Otherwise, reuse an existing same-topic folder — **never** create a parallel one.
+3. Genuinely new domain → create a semantic folder and tell the user.
+4. Never dump everything at the root.
+
+## R8. User-supplied material must be processed to the end
+
+Any image, PDF, archive, LaTeX source or export the user drops in **MUST** be unpacked, understood
+and actually used (mapped, imported or implemented) in the same task — never summarised away and
+never left half-done. If part of it cannot be processed, say which part and why.
+
+## R9. Deliver with the verification output
+
+End every task with the Report Template at the bottom, filled from **actual tool returns** (never
+hand-written paths), plus the Pre-delivery self-check results. State plainly what you did *not*
+verify.
 
 ## Language policy (MUST)
 
@@ -69,6 +107,8 @@ Every "elements + relations" structure deserves a map. OmniFlow is domain-agnost
 
 ## Language Rules for Graph Creation
 
+> This section is about the **language of graph content**. For the language of the skill and docs themselves, see "Language policy" above.
+
 When creating a new flow graph, determine the label language by this priority:
 
 1. **User's language** — if the user communicates in Chinese → `lang: "zh"`; if English → `lang: "en"`.
@@ -88,22 +128,6 @@ Pass it explicitly: `of_create_graph { "name": "...", "template": "theorem-deps"
 3. **CLI**: see "Core Commands" section.
 
 > This skill and the plugin are one unit: installing the plugin auto-deploys this skill; invoking this skill IS using OmniFlow.
-
----
-
-# ⛔ Iron Rules: MUST follow for ANY task using this skill
-
-> Equivalent in force to the Hard rules R0–R4 above: violating one = task failed (not a "minor flaw").
-> **Declare first** (R0); **self-check before delivery** (see "✅ Pre-delivery self-check" at the end).
-
-1. **No skipping, no merging steps** — every numbered step in an SOP is a separate action. Combining two steps is a violation.
-2. **Never guess parameters** — node IDs must come from `of_get_graph`'s actual return; folder paths must come from `of_tree` or the user's exact words. Look up one more time rather than fabricate.
-3. **After every write (add/patch/move/set_note/replace), verify with `of_get_graph` or `of_get_note`** — node count, edge count and content must match expectations. Mismatch = fix immediately; never proceed on top of an error.
-4. **Check the work log before filing** (`~/.omni-flow/WORKLOG.txt` or `of_tree`): user-specified folder → use exactly as given; existing same-topic folder → reuse it, never create a parallel one; genuinely new domain → create a semantic folder and inform the user.
-5. **Formula content is gated by `of_latex_check`** (see R1): a non-empty `failed` means you MUST NOT commit; fix per `hint` and re-check.
-6. **Any image/PDF/LaTeX source the user drops in MUST be processed to the end** (unpack → understand → implement or map), never summarised away or left half-done.
-7. **Never destroy data**: before any bulk replace / clear / batch delete, record the before/after node & edge counts via `of_get_graph`, and delete only through OmniFlow's own tools (trash-recoverable). Never hand-delete files under the storage root (see R4).
-8. **At task end, report using the Report Template** (see bottom) together with the self-check results. Paths must be actual `of_*` return values, never hand-written.
 
 ---
 
@@ -532,17 +556,19 @@ Produces a **single self-contained HTML file** (≈0.6–0.8 MB): fully offline 
 | Cross-graph links "unusable" | Only a corner badge is shown, with no way to create a link | Use the right-click menu (🔗 Cross-graph dependency…) or `of_xlink_add`; the inspector has a "＋ Add" button |
 | A cross-graph link cannot be opened | The target graph or node no longer exists | The inspector marks it "Target node no longer exists" — delete it with ✕ or recreate it |
 | Formulas garbled after import | MinerU v1/v2 mixed up, or `--pages` missing | Prefer v2's `content_list_v2.json`; supply page images with `--pages <dir>` |
+| Dragging stops by itself mid-gesture, and a half-way position gets recorded | The browser cancels the pointer (`pointercancel`) when it decides the gesture is a scroll, and the old code treated a cancel as "commit" | Canvas sets `touch-action: none` and captures the pointer; `pointerup` commits, `pointercancel` aborts and restores. If you ship a client, copy that split — never let a cancel write geometry |
+| The English UI still shows Chinese | Text is hard-coded in the markup (or an i18n key exists twice, and the later one silently wins) | Route every visible string through `data-i18n` / `data-i18n-title`; `node test/smoke.mjs` now asserts key parity, no duplicate keys, and no hard-coded Chinese |
 | Layout collapsed into one long line | Layered layout with TD semantics on a wide graph | Use `packedLayeredLayout` (already the import default) |
 
 # ✅ Pre-delivery self-check (MUST · every item uses OmniFlow's own tools, so it is reproducible anywhere)
 
 Before finishing any graph task, do all of the following in order and put the results in your report:
 
-1. **Formulas** — when the content contains math, `of_latex_check` first; `failed` must be empty (R1).
-2. **Read back every write** — after each write, use `of_get_graph` (or `of_get_note`) to confirm node/edge counts and content. **MUST NOT** trust a bare 200 response.
+1. **Formulas** — see R1 (`of_latex_check` green before every write).
+2. **Read back every write** — see R6.
 3. **Structure** — `of_validate` reports no hard errors (cycles and orphan nodes are warnings and are allowed).
-4. **Scale and location** — take the path and counts from the **actual return value** of `of_get_graph` / `of_tree` and put them in the Report Template. **MUST NOT** hand-write paths.
-5. **Data-affecting changes** — report the before/after node and edge counts; delete only through OmniFlow's tools (trash-recoverable).
+4. **Scale and location** — path and counts come from the **actual return value** of `of_get_graph` / `of_tree` (see R9).
+5. **Data-affecting changes** — report the before/after node and edge counts; delete only through OmniFlow's tools (trash-recoverable, see R4).
 
 - **MUST NOT** claim completion without these checks; **MUST NOT** replace read-back results with "looks fine".
 - **MUST** honestly list anything you did **not** verify, so it is not mistaken for full coverage.
@@ -580,13 +606,3 @@ of tree                               # folder tree
 
 
 ---
-
-# Lessons learned (battle-tested)
-
-1. **IDs always come from return values**: of_add_node / of_add_edge auto-generate IDs (n-xxxx/e-xxxx). Scripts must build a "label → real ID" map before referencing; never fabricate or guess IDs.
-2. **Always read back notes**: after of_set_note, use of_get_note to verify line count/formulas/bilingual content. Lazy notes ("see paper") will be rejected by users.
-3. **Direction before connection**: determine "who is source, who is result" before calling of_add_edge; run of_analyze after to verify direction semantics.
-4. **Check work log before filing**: reuse existing same-topic folders; create new only when genuinely new domain; user-specified paths always win.
-5. **Use clusters mode for grouped graphs**: layered layout destroys spatial clusters.
-6. **Double verification**: after every write/push, use readback API or contents sha comparison to confirm. Never trust a 200 return alone (empty-string comparisons create false positives).
-7. **If a graph seems to have disappeared, check the read path first — never delete files**: storage self-heals on read and keeps recent snapshots. Before assuming data loss, verify the graph through the API and make sure the Studio process is the current one; **never** delete graph directories by hand.
