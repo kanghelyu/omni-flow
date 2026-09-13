@@ -147,6 +147,31 @@ main { flex: 1; display: flex; min-width: 0; min-height: 0; }
 .splitter::after { content: ""; width: 3px; height: 42px; border-radius: 99px; background: var(--border); box-shadow: 0 -7px 0 var(--border), 0 7px 0 var(--border); }
 .splitter:hover::before { background: var(--accent); }
 
+/* ===== 公式规则帮助 ===== */
+.fx-help { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow: auto; }
+.fx-row { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 7px 10px; background: var(--surface-2); }
+.fx-row b { display: block; font-size: 12px; font-weight: 620; color: var(--text); margin-bottom: 3px; }
+.fx-row span { font-size: 12px; color: var(--text-dim); line-height: 1.65; word-break: break-word; }
+
+/* ===== 跨图依赖（可点/可删/失效） ===== */
+.xlink-list { display: flex; flex-direction: column; gap: 6px; }
+.xlink-item { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 8px; background: var(--surface-2); cursor: pointer; }
+.xlink-item:hover { border-color: var(--accent); }
+.xlink-item.broken { border-color: var(--danger); opacity: .85; cursor: default; }
+.xlink-item .h { display: flex; align-items: center; gap: 6px; font-size: 11.5px; }
+.xlink-item .h b { font-weight: 600; color: var(--text); }
+.xlink-item .h .xdel { margin-left: auto; color: var(--text-3); font-size: 11px; padding: 0 4px; }
+.xlink-item .h .xdel:hover { color: var(--danger); }
+.xlink-item .t { font-size: 11.5px; color: var(--text-dim); margin-top: 3px; }
+.xlink-item .why { font-size: 10.5px; color: var(--text-3); margin-top: 4px; line-height: 1.5; }
+.xl-nodes { max-height: 220px; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); margin: 4px 0 8px; }
+.xl-node { display: flex; flex-direction: column; gap: 1px; padding: 6px 9px; cursor: pointer; border-bottom: 1px solid var(--border); }
+.xl-node:last-child { border-bottom: 0; }
+.xl-node:hover { background: var(--surface-3); }
+.xl-node.on { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.xl-node b { font-weight: 500; font-size: 12px; }
+.xl-node i { font-style: normal; font-size: 10px; color: var(--text-3); }
+
 /* ===== 只读模式 ===== */
 .hidden-input { display: none !important; }
 body.readonly #inspector input,
@@ -289,7 +314,7 @@ body.lean .card > u.thumbs { display: none; }
 /* ===== 性能：向 canvas 方案看齐（少合成、少重绘、只算可见） ===== */
 /* contain：让浏览器把每个卡片/组框当独立渲染单元，屏外自动跳过绘制与布局 */
 .node { contain: layout style paint; }
-.group-box { contain: layout style paint; }
+.group-box { contain: layout style; }   /* 不能用 paint：会裁剪浮在框上方的标签 */
 #world { will-change: transform; }
 #edgeLayer { will-change: transform; }
 /* 交互期（平移/缩放/拖拽）：关掉阴影、过渡、类型色条——它们是最贵的合成操作 */
@@ -307,7 +332,7 @@ body.lean .group-box { opacity: .6; }
 /* ===== 性能：向 canvas 方案看齐（少合成、少重绘、只算可见） ===== */
 /* contain：让浏览器把每个卡片/组框当独立渲染单元，屏外自动跳过绘制与布局 */
 .node { contain: layout style paint; }
-.group-box { contain: layout style paint; }
+.group-box { contain: layout style; }   /* 不能用 paint：会裁剪浮在框上方的标签 */
 #world { will-change: transform; }
 #edgeLayer { will-change: transform; }
 /* 交互期（平移/缩放/拖拽）：关掉阴影、过渡、类型色条——它们是最贵的合成操作 */
@@ -538,7 +563,7 @@ body.lean .group-box { opacity: .6; }
 .group-box.needs-refit { border-style: dashed; }
 .group-box.needs-refit .glabel::after { content: " · 可右键重新贴合"; opacity: .75; }
 .group-box { position: absolute; border-radius: 16px; border: 1.5px dashed; z-index: 1; opacity: .8; pointer-events: auto; cursor: move; }
-.group-box .glabel { position: absolute; top: -9px; left: 12px; font-size: 10px; padding: 0 7px; border-radius: 999px; font-weight: 700; }
+.group-box .glabel { position: absolute; top: -11px; left: 12px; font-size: 11px; padding: 1px 8px; border-radius: 999px; font-weight: 600; line-height: 1.5; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
 
 .handle { position: absolute; top: 50%; width: 13px; height: 13px; padding: 0; border: 2px solid var(--canvas); border-radius: 50%;
   background: var(--accent); transform: translateY(-50%); cursor: crosshair; z-index: 3; opacity: 0;
@@ -933,6 +958,7 @@ body { background: var(--bg); }
     <button id="btnExport" data-i18n="share">📤 分享</button>
     <span class="sep"></span>
     <button id="btnValidate" data-i18n="validate">校验</button>
+    <button id="btnFxHelp" title="公式书写规则（编译不出来时看这个）">? 公式规则</button>
     <button id="btnCanvas" title="大图加速档：改用 canvas 绘制（节点多时更顺，样式较简）">⚡ 加速</button>
     <button id="btnThumbs" title="在卡片上显示原书缩略图（默认关闭，与参考一致）">🖼 缩略图</button>
     <button id="btnReader" title="阅读模式：按章节列卡片，可折叠、带依赖跳转">📖 阅读</button>
@@ -1022,6 +1048,16 @@ body { background: var(--bg); }
           <div class="hint" data-i18n="hintKeys">拖拽画布平移 · ⌘/Ctrl+滚轮缩放 · 滚轮平移 · 从节点右侧圆点拖出连线 · Delete 删除选中</div>
         </div>
         <div id="insp-node" style="display:none">
+          <div class="card-head">
+            <span class="badge" id="n-typeBadge">节点</span>
+            <span class="card-title" id="n-titleText"></span>
+          </div>
+
+          <div id="convoActions" hidden>
+            <div class="convo-meta" id="convoMeta"></div>
+            <div class="convo-actions" id="convoActionsRow"></div>
+          </div>
+
           <h3 data-i18n="nodeProps">节点属性</h3>
           <label data-i18n="label">文字</label><input id="n-label" />
           <label data-i18n="type">类型</label><select id="n-type"></select>
@@ -1036,30 +1072,28 @@ body { background: var(--bg); }
               <option value="">无</option><option value="todo">待办</option><option value="doing">进行中</option><option value="done">完成</option><option value="blocked">阻塞</option>
             </select></div>
           </div>
+
           <div class="insp-sec-head">
-            <div id="convoActions" hidden>
-            <div class="convo-meta" id="convoMeta"></div>
-            <div class="convo-actions" id="convoActionsRow"></div>
+            <label data-i18n="note">详情（只读 · 渲染公式）</label>
+            <button class="mini" id="noteCopy" title="复制详情原文">⧉</button>
+            <button class="mini" id="attachAdd" title="添加附件：选择图片或 PDF（也可直接拖到附件区）">＋ 附件</button>
           </div>
-          <div class="card-head" style="margin:2px 0 6px"><span class="badge" id="n-typeBadge">节点</span><span class="card-title" id="n-titleText"></span></div>
-          <label data-i18n="note">备注（只读 · 渲染公式）</label>
-            <button class="mini" id="noteCopy" title="复制内容">⧉</button>
-            <button class="mini" id="attachAdd" title="添加附件：选择图片或 PDF（也可直接拖文件到附件区）">＋ 附件</button>
-          </div>
+          <div id="n-preview" class="note-preview" aria-live="polite"></div>
+          <textarea id="n-note" aria-hidden="true" tabindex="-1" style="display:none"></textarea>
+
           <div id="attachBox"></div>
           <div id="xlinkBox" hidden></div>
-                    <div id="depBox" hidden></div>
           <div id="depBox" hidden></div>
-          <textarea id="n-note" rows="4" placeholder="在此写内容…（支持 Markdown 与 $公式$）"></textarea>
-          <div id="n-preview" class="card-note" class="note-preview" aria-live="polite"></div>
+
           <div class="btnrow">
             <button id="n-save" class="primary" data-i18n="save">保存</button>
-            <button id="n-note-full" data-i18n="noteMd">备注全文</button>
-            <button id="n-trace" data-i18n="trace">依赖追踪</button>
-            <button id="n-group" data-i18n="makeGroup">从选中建组</button>
+            <button id="n-note-full" data-i18n="noteMd" data-i18n="noteFull"><//button>
+            <button id="n-trace" data-i18n="trace" data-i18n="traceBtn"><//button>
+            <button id="n-group" data-i18n="makeGroup" data-i18n="makeGroupBtn"><//button>
             <button id="n-delete" class="danger" data-i18n="delete">删除</button>
           </div>
         </div>
+
         <div id="insp-edge" style="display:none">
           <h3 data-i18n="edgeProps">连线属性</h3>
           <label data-i18n="edgeLabel">标签（箭头命名）</label><input id="e-label" />
@@ -1103,7 +1137,7 @@ body { background: var(--bg); }
 "use strict";
 /* ================= i18n ================= */
 const I18N = {
-  zh: { newGraph:"＋ 新建", templates:"模板", import:"📥 导入", share:"📤 分享", export:"📤 导出", validate:"✓ 校验", analyze:"◎ 分析", layout:"⌗ 一键整理", legend:"☰ 图例", fit:"适应", deleteGraph:"删除图", folderOpt:"文件夹（可选，a/b 可嵌套）",
+  zh: { xlinkBadgeProvides:"本卡支撑了其他图的 {n} 个结论（点击前往）", xlinkBadgeUses:"本卡依赖其他图的 {n} 个结论（点击前往）", xlinkDelTitle:"删除此链接", xlinkWhyLabel:"为什么相关（数学理由，写清依据）", sectionLabel:"小节", cardsCount:"{n} 张", edgeDeps:"依赖", edgeUses:"被用于", readerPage:"第 {n} 页", reader:"阅读模式", readerOpen:"📖 阅读", readerExpandAll:"全部展开", readerCollapseAll:"全部折叠", readerClose:"关闭 (Esc)", readerSearch:"搜索卡片…", readerNoGraph:"没有打开的图", readerNoMatch:"没有匹配的卡片", readerDeps:"依赖", readerUses:"被用于", pageN:"第 {n} 页", note:"详情（只读 · 渲染公式）", noteCopy:"复制详情原文", attachAdd:"＋ 附件", attachAddTip:"添加附件：选择图片或 PDF（也可直接拖到附件区）", attachNoAttach:"（无附件）", attachAdding:"正在添加 {n} 个附件…", attachAdded:"附件已添加（点击缩略图可放大）", attachFailed:"{name} 添加失败：{msg}", xlinkSection:"跨图依赖（{n}）", xlinkAdd:"＋ 添加", xlinkDirUses:"依赖对方", xlinkDirProvides:"对方依赖我", xlinkBroken:"目标节点已不存在", xlinkNone:"尚未与其他图建立依赖。点「＋ 添加」可跨图关联。", xlinkBrokenHint:"目标已不存在，可点 ✕ 删除该链接", xlinkDialogTitle:"链接到其他图", xlinkSource:"源节点", xlinkTargetGraph:"目标图", xlinkSearchNode:"搜索目标节点", xlinkFilterPh:"输入标题关键字过滤…", xlinkWhy:"为什么相关（数学理由，写清依据）", xlinkWhyPh:"例：本卡给出可操作判据 f 与 f′ 互素，正好补上对方缺的判别步骤", xlinkDirection:"方向", xlinkDirTo:"我依赖对方（对方是依据）", xlinkDirFrom:"对方依赖我（我提供依据）", xlinkCreate:"建立链接", xlinkCreated:"已建立跨图链接", xlinkRemoved:"已删除链接", xlinkPickNode:"请先选择一个目标节点", xlinkNeedWhy:"请写明理由（这是跨图依赖最关键的信息）", xlinkNoMatch:"该图没有匹配的节点", cancel:"取消", depUpstream:"上游（谁支撑它）", depDownstream:"下游（它支撑谁）", depMore:"+{n} 展开", depLess:"收起", depNone:"— 无", multiHint:"已选中 {n} 个节点 · 右键可合并 / Delete 删除 / Esc 取消", selNodes:"已选中 {n} 个节点", selNone:"未选中节点", deletedNodes:"已删除 {n} 个节点", groupPinned:"已固定分组位置", groupRefit:"已取消固定，按内容自动贴合", groupPinNow:"已固定当前几何", groupFocus:"聚焦到该组", linkCanceled:"未落到节点上，已取消", undoEmpty:"没有可撤销的操作", undoDone:"已撤销", redoEmpty:"没有可重做的操作", redoDone:"已重做", opFailed:"操作失败：{msg}", blockedWipe:"已阻止一次会清空内容的操作", snapCorrupt:"快照损坏，已忽略", canvasMode:"⚡ 加速", canvasModeTip:"大图加速档：改用 canvas 绘制（节点多时更顺，样式较简）", thumbsToggle:"🖼 缩略图", thumbsToggleTip:"在卡片上显示原书缩略图（默认关闭）", noteFull:"详情全文", traceBtn:"依赖追踪", makeGroupBtn:"从选中建组", convoTitle:"会话", convoSay:"＋ 记录一轮发言", convoHead:"当前点头", convoSetHead:"设为点头", convoMerge:"合并", convoThreads:"开放分支", convoNext:"调度", convoPending:"待办", convoLinear:"导出路径", latexUnsupported:"网页不支持该环境，此处省略", latexUnparsed:"KaTeX 无法解析该片段", latexKept:"⚠ LaTeX 未渲染（原文保留）", unsectioned:"（未分节）", newGraph:"＋ 新建", templates:"模板", import:"📥 导入", share:"📤 分享", export:"📤 导出", validate:"✓ 校验", analyze:"◎ 分析", layout:"⌗ 一键整理", legend:"☰ 图例", fit:"适应", deleteGraph:"删除图", folderOpt:"文件夹（可选，a/b 可嵌套）",
     vaultTitle:"文件树", docTitle:"当前图节点", nodesWord:"节点", newFolder:"新建文件夹", rootName:"根目录（未归档）",
     globalSearchPh:"搜索图 / 节点 / 备注…（⌘K）", treeSearchPh:"搜索标题…", collapseInspector:"收起/展开检查器", groupsTitle:"分组",
     searchNodes:"搜索名称/备注/标签…", inspector:"检查器",
@@ -1119,7 +1153,7 @@ const I18N = {
     addHint:"从节点右侧圆点拖到目标框连线；Delete 删除选中；双击箭头改标签",
     universal:"万用流程图", noGraph:"先选择或创建一张图", edgeAdded:"箭头已连接，双击箭头可改标签", nodeAdded:"节点已添加",
     layoutDone:"已自动布局", saved:"已保存", confirmDeleteGraph:"删除这张图（移入 trash，可恢复）？" },
-  en: { newGraph:"＋ New", templates:"Templates", import:"📥 Import", share:"📤 Share", export:"📤 Export", validate:"✓ Validate", analyze:"◎ Analyze", layout:"⌗ Tidy up", legend:"☰ Legend", fit:"Fit", deleteGraph:"Delete graph", folderOpt:"Folder (optional, a/b nests)",
+  en: { xlinkBadgeProvides:"This card supports {n} conclusion(s) in other maps (click to go)", xlinkBadgeUses:"This card depends on {n} conclusion(s) in other maps (click to go)", xlinkDelTitle:"Remove this link", xlinkWhyLabel:"Why related (state the mathematical reason)", sectionLabel:"Section", cardsCount:"{n} cards", edgeDeps:"Depends on", edgeUses:"Used by", readerPage:"p. {n}", reader:"Reader", readerOpen:"📖 Read", readerExpandAll:"Expand all", readerCollapseAll:"Collapse all", readerClose:"Close (Esc)", readerSearch:"Search cards…", readerNoGraph:"No graph open", readerNoMatch:"No matching cards", readerDeps:"Depends on", readerUses:"Used by", pageN:"p. {n}", note:"Details (read-only · formulas rendered)", noteCopy:"Copy raw text", attachAdd:"＋ Attach", attachAddTip:"Add attachment: pick images/PDF (or drop into the box)", attachNoAttach:"(no attachments)", attachAdding:"Adding {n} attachment(s)…", attachAdded:"Added (click a thumbnail to zoom)", attachFailed:"Failed to add {name}: {msg}", xlinkSection:"Cross-graph links ({n})", xlinkAdd:"＋ Add", xlinkDirUses:"depends on", xlinkDirProvides:"is used by", xlinkBroken:"Target node no longer exists", xlinkNone:"No cross-graph links yet. Click “＋ Add” to relate nodes across maps.", xlinkBrokenHint:"Target is gone — click ✕ to remove this link", xlinkDialogTitle:"Link to another map", xlinkSource:"Source node", xlinkTargetGraph:"Target map", xlinkSearchNode:"Search target node", xlinkFilterPh:"Filter by title…", xlinkWhy:"Why related (state the mathematical reason)", xlinkWhyPh:"e.g. this card gives the operational criterion (f coprime to f′), filling the missing step", xlinkDirection:"Direction", xlinkDirTo:"I depend on it (it is the basis)", xlinkDirFrom:"It depends on me (I am the basis)", xlinkCreate:"Create link", xlinkCreated:"Cross-graph link created", xlinkRemoved:"Link removed", xlinkPickNode:"Pick a target node first", xlinkNeedWhy:"Please state the reason (the key part of a cross-graph link)", xlinkNoMatch:"No matching nodes in that map", cancel:"Cancel", depUpstream:"Upstream (what supports it)", depDownstream:"Downstream (what it supports)", depMore:"+{n} more", depLess:"Collapse", depNone:"— none", multiHint:"{n} nodes selected · right-click to merge / Delete to remove / Esc to cancel", selNodes:"{n} nodes selected", selNone:"No node selected", deletedNodes:"Deleted {n} node(s)", groupPinned:"Group position pinned", groupRefit:"Unpinned — snapping back to content", groupPinNow:"Current geometry pinned", groupFocus:"Focus this group", linkCanceled:"Dropped on empty space — cancelled", undoEmpty:"Nothing to undo", undoDone:"Undone", redoEmpty:"Nothing to redo", redoDone:"Redone", opFailed:"Failed: {msg}", blockedWipe:"Blocked an operation that would have erased content", snapCorrupt:"Snapshot corrupted — ignored", canvasMode:"⚡ Turbo", canvasModeTip:"Turbo mode for big maps: canvas rendering (smoother with many nodes, simpler styling)", thumbsToggle:"🖼 Thumbs", thumbsToggleTip:"Show source-page thumbnails on cards (off by default)", noteFull:"Full details", traceBtn:"Trace", makeGroupBtn:"Group selection", convoTitle:"Conversation", convoSay:"＋ Record a turn", convoHead:"Current head", convoSetHead:"Set head", convoMerge:"Merge", convoThreads:"Open threads", convoNext:"Schedule", convoPending:"Pending", convoLinear:"Export path", latexUnsupported:"not supported in the browser — omitted", latexUnparsed:"KaTeX could not parse this fragment", latexKept:"⚠ LaTeX not rendered (source kept)", unsectioned:"(no section)", newGraph:"＋ New", templates:"Templates", import:"📥 Import", share:"📤 Share", export:"📤 Export", validate:"✓ Validate", analyze:"◎ Analyze", layout:"⌗ Tidy up", legend:"☰ Legend", fit:"Fit", deleteGraph:"Delete graph", folderOpt:"Folder (optional, a/b nests)",
     vaultTitle:"Files", docTitle:"Nodes", nodesWord:"NODES", newFolder:"New folder", rootName:"Root (unfiled)",
     globalSearchPh:"Search graphs / nodes / notes… (⌘K)", treeSearchPh:"Search titles…", collapseInspector:"Collapse / expand inspector", groupsTitle:"Groups",
     searchNodes:"Search label / note / tag…", inspector:"Inspector",
@@ -1230,7 +1264,8 @@ function cancelViewAnimation(){
   if (viewAnimation){ cancelAnimationFrame(viewAnimation.frame); viewAnimation = null; }
 }
 function applyView(){
-  beginViewportMove(); endViewportMoveSoon();
+  // 只有大图才需要“拖动期降级”（隐藏边层/卡片文字）——小图直渲更快且无闪烁
+  if ((current?.nodes?.length ?? 0) >= 150){ beginViewportMove(); endViewportMoveSoon(); }
   if (typeof CV !== "undefined" && CV.on){ if (typeof cvDraw === "function") cvDraw(); }
   beginInteract(); requestAnimationFrame(()=> endInteract());
   $("world").style.transform = `translate(${view.x}px,${view.y}px) scale(${view.k})`;
@@ -1362,15 +1397,22 @@ function edgeTypeLabel(type){
 /* ================= 学术公式渲染（KaTeX 0.18.7，本地离线，含 mhchem） ================= */
 /* 目标：用户从任何来源粘贴的 LaTeX 都要尽力渲染 —— 常见前置处理 + 失败降级不丢内容 */
 
-/** 常用宏：用户常写的简写 */
-const KATEX_MACROS = {
-  "\\RR": "\\mathbb{R}", "\\NN": "\\mathbb{N}", "\\ZZ": "\\mathbb{Z}",
-  "\\QQ": "\\mathbb{Q}", "\\CC": "\\mathbb{C}", "\\FF": "\\mathbb{F}",
-  "\\dd": "\\mathrm{d}", "\\ee": "\\mathrm{e}", "\\ii": "\\mathrm{i}",
-  "\\Tr": "\\operatorname{Tr}", "\\rank": "\\operatorname{rank}",
-  "\\Spec": "\\operatorname{Spec}", "\\id": "\\operatorname{id}",
-  "\\R": "\\mathbb{R}", "\\C": "\\mathbb{C}", "\\Z": "\\mathbb{Z}"
-};
+/**
+ * 不定义任何自定义宏（避免依赖库外命令）。
+ * 这里把常见简写**重写**为 KaTeX 标准命令，保证渲染的 LaTeX 是纯标准写法。
+ */
+const SHORTHAND = [
+  [/\\RR\b/g, "\\mathbb{R}"], [/\\NN\b/g, "\\mathbb{N}"], [/\\ZZ\b/g, "\\mathbb{Z}"],
+  [/\\QQ\b/g, "\\mathbb{Q}"], [/\\CC\b/g, "\\mathbb{C}"], [/\\FF\b/g, "\\mathbb{F}"],
+  [/\\dd\b/g, "\\mathrm{d}"], [/\\ee\b/g, "\\mathrm{e}"], [/\\ii\b/g, "\\mathrm{i}"],
+  [/\\Tr\b/g, "\\operatorname{Tr}"], [/\\rank\b/g, "\\operatorname{rank}"],
+  [/\\Spec\b/g, "\\operatorname{Spec}"], [/\\id\b/g, "\\operatorname{id}"],
+  [/\\Gal\b/g, "\\operatorname{Gal}"], [/\\Aut\b/g, "\\operatorname{Aut}"],
+  [/\\ord\b/g, "\\operatorname{ord}"], [/\\sgn\b/g, "\\operatorname{sgn}"],
+  [/\\diag\b/g, "\\operatorname{diag}"], [/\\tr\b/g, "\\operatorname{tr}"],
+  [/\\abs\{/g, "\\lvert "], [/\\norm\{/g, "\\lVert "],
+  [/\\ceil\{/g, "\\lceil "], [/\\floor\{/g, "\\lfloor "],
+];
 
 /** siunitx 常见单位 → 文本（不支持 siunitx 时降级） */
 const UNIT_MAP = [
@@ -1386,6 +1428,7 @@ const UNIT_MAP = [
 /** LaTeX 归一化：能修的都修成 KaTeX 支持的写法（修不了的原样保留，由渲染层降级） */
 function normalizeLatex(src){
   let t = String(src ?? "");
+  for (const [re, to] of SHORTHAND) t = t.replace(re, to);   // 简写 → 标准命令（非宏定义）
   // 注释（保留转义 \%）
   t = t.replace(/(^|[^\\])%.*$/gm, "$1");
   // 导言区 / 文档包裹
@@ -1393,6 +1436,9 @@ function normalizeLatex(src){
   t = t.replace(/\\(begin|end)\{document\}/g, "");
   t = t.replace(/\\(setlength|addtolength|pagestyle|thispagestyle|geometry|newpage|clearpage|noindent|centering|hfill|vfill|smallskip|medskip|bigskip|maketitle|tableofcontents)\b(\[[^\]]*\])?(\{[^}]*\})?/g, "");
   t = t.replace(/\\(label|nonumber|notag|index|glossary)\b(\[[^\]]*\])?(\{[^}]*\})?/g, "");
+  // \tag{N} 在行内模式下 KaTeX 会报 "\tag works only in display equations" → 转成普通文本编号（两种模式都能编译且保留信息）
+  t = t.replace(/\\tag\*?\{([^}]*)\}/g, "\\quad\\text{($1)}");
+  t = t.replace(/\\tag\*?([^\s$\\]+)/g, "\\quad\\text{($1)}");
   t = t.replace(/\\(vspace|hspace|vskip|hskip)\*?\{[^}]*\}/g, "");
   // 常见命令等价替换
   t = t.replace(/\\bm\b/g, "\\boldsymbol");
@@ -1541,7 +1587,7 @@ function renderMathNode(seg){
   try {
     const html = window.katex.renderToString(seg.body, {
       displayMode: !!seg.display, throwOnError: false, strict: false, trust: false,
-      macros: { ...KATEX_MACROS }, errorColor: "#F87171"
+      errorColor: "#F87171"
     });
     host.innerHTML = html;
     // KaTeX 以 errorColor 渲染失败片段；检测到 → 降级展示原文，并给出提示
@@ -1553,7 +1599,7 @@ function renderMathNode(seg){
       box.textContent = seg.raw;
       const tag = document.createElement("span");
       tag.className = "math-fallback-tag";
-      tag.textContent = "⚠ LaTeX 未渲染（原文保留）";
+      tag.textContent = t("latexKept");
       const wrap = document.createElement("span");
       wrap.appendChild(box); wrap.appendChild(tag);
       host.innerHTML = ""; host.appendChild(wrap);
@@ -1627,13 +1673,18 @@ function render(){
   rebuildIndexes();
   $("gstat").textContent = current.valid ? `✓ ${current.nodes.length}● / ${current.edges.length}→` : `⚠ ${current.issues.length}`;
   $("gstat").className = "badge " + (current.valid ? (current.warnings.length ? "warn" : "ok") : "err");
-  renderDocList();
+  // 列表与筛选只在“影响列表的内容”变化时重建（每次 render 重建 70+ 行 DOM 是卡顿主因之一）
+  const listSig = `${current.id}|${current.nodes.length}|${current.edges.length}|${typeFilter ?? ""}|${$("globalSearch")?.value ?? ""}|${current.revision ?? ""}`;
+  if (listSig !== window.__listSig){
+    window.__listSig = listSig;
+    renderDocList();
+    renderTypeFilter();
+  }
   if (CV.on){ cvDraw(); } else { renderGroups(); renderEdges(); renderNodes(); }
   computeConvo();
   applyDepHighlight();
   applyConvoToCanvas();
   renderConvoPanel();
-  renderTypeFilter();
   applyLeanMode();
 }
 
@@ -1668,12 +1719,12 @@ function sectionOfNode(node){
   const tag = (node.tags ?? []).map(String).find((t)=> t.startsWith("sec:"));
   if (tag) return tag.slice(4);
   const g = (current.groups ?? []).find((x)=> (x.members ?? []).includes(node.id));
-  return g ? g.label : "（未分节）";
+  return g ? g.label : t("unsectioned");
 }
 
 function renderReader(){
   const body = $("rd-body");
-  if (!current){ body.innerHTML = '<div class="rd-empty">没有打开的图</div>'; return; }
+  if (!current){ body.innerHTML = `<div class="rd-empty">${t("readerNoGraph")}</div>`; return; }
   const q = ($("rd-search")?.value ?? "").trim().toLowerCase();
   const noteOf = (id)=> String(current.notes?.[id] ?? "");
   const bySec = new Map();
@@ -1702,11 +1753,11 @@ function renderReader(){
           <span class="rd-title">${escapeHtml(n.label)}</span>
           <span class="rd-num">${escapeHtml(n.id)}</span>
           ${xl ? `<span class="xlink-pill">${xl.provides.length ? "⇱" + xl.provides.length : ""}${xl.uses.length ? "⇲" + xl.uses.length : ""}</span>` : ""}
-          <span class="rd-page">${page ? "第 " + page + " 页" : ""}</span>
+          <span class="rd-page">${page ? t("readerPage").replace("{n}", page) : ""}</span>
         </summary>
         <div class="rd-in">
-          ${deps.length ? `<div class="rd-deps"><span class="dlab">依赖</span>${deps.map((d)=> `<span class="rd-dep" data-node="${escapeHtml(d.node.id)}">${escapeHtml(d.node.label)}</span>`).join("")}</div>` : ""}
-          ${uses.length ? `<div class="rd-deps"><span class="dlab">被用于</span>${uses.map((d)=> `<span class="rd-dep" data-node="${escapeHtml(d.node.id)}">${escapeHtml(d.node.label)}</span>`).join("")}</div>` : ""}
+          ${deps.length ? `<div class="rd-deps"><span class="dlab">${t("edgeDeps")}</span>${deps.map((d)=> `<span class="rd-dep" data-node="${escapeHtml(d.node.id)}">${escapeHtml(d.node.label)}</span>`).join("")}</div>` : ""}
+          ${uses.length ? `<div class="rd-deps"><span class="dlab">${t("edgeUses")}</span>${uses.map((d)=> `<span class="rd-dep" data-node="${escapeHtml(d.node.id)}">${escapeHtml(d.node.label)}</span>`).join("")}</div>` : ""}
           <div class="rd-note" data-note="${escapeHtml(n.id)}"></div>
           ${thumbs ? `<div class="rd-thumbs">${thumbs}</div>` : ""}
         </div>
@@ -1718,7 +1769,7 @@ function renderReader(){
         <span class="rd-sec-name">${escapeHtml(sec)}</span>
         <span class="rd-sec-cnt">${list.length} 张</span>
       </div>${cards}</section>`;
-  }).join("") : '<div class="rd-empty">没有匹配的卡片</div>';
+  }).join("") : `<div class="rd-empty">${t("readerNoMatch")}</div>`;
 
   // 备注：懒渲染（展开时才编译公式，避免 87 张卡一次性重排）
   body.querySelectorAll("details.rd-card").forEach((d)=>{
@@ -2175,7 +2226,7 @@ function cvStartGroupDrag({ g, ms }, e){
     try {
       await api(`/api/graph/${current.id}/group-commit`, { method: "POST",
         body: JSON.stringify({ groupId: g.id, moves: ms.map((n)=> ({ nodeId: n.id, x: n.x, y: n.y })), rect }) });
-      toast("已固定分组位置");
+      toast(t("groupPinned"));
     } catch (err){ toast(err.message, true); }
     cvDraw();
   };
@@ -2199,7 +2250,7 @@ function cvStartLink(node, e){
     const target = cvHitNode(w);
     if (target && target.id !== node.id){
       createEdge(node.id, target.id);
-    } else { toast("未落到节点上，已取消"); }
+    } else { toast(t("linkCanceled")); }
     pendingLink = null;
     cvDraw();
   };
@@ -2229,7 +2280,7 @@ function cvMarquee(e){
     }).map((n)=> n.id);
     multiSel = new Set(hits);
     paintMulti();
-    toast(hits.length ? `已选中 ${hits.length} 个节点` : "未选中节点");
+    toast(hits.length ? t("selNodes").replace("{n}", hits.length) : t("selNone"));
     cvDraw();
   };
   window.addEventListener("pointermove", mv); window.addEventListener("pointerup", up);
@@ -2282,7 +2333,7 @@ function paintMulti(){
   const hint = $("multiHint");
   if (!hint) return;
   hint.style.display = multiSel.size > 1 ? "block" : "none";
-  hint.textContent = `已选中 ${multiSel.size} 个节点 · 右键可合并 / Delete 删除 / Esc 取消`;
+  hint.textContent = t("multiHint").replace("{n}", multiSel.size);
 }
 function clearMulti(){ multiSel.clear(); paintMulti(); }
 
@@ -2320,7 +2371,7 @@ function bindMarquee(){
       }
       multiSel = new Set(hits);
       paintMulti();
-      toast(hits.length ? `已选中 ${hits.length} 个节点` : "未选中节点");
+      toast(hits.length ? t("selNodes").replace("{n}", hits.length) : t("selNone"));
     };
     window.addEventListener("pointermove", draw);
     window.addEventListener("pointerup", up);
@@ -2348,7 +2399,7 @@ function bindMarquee(){
       const ids = [...multiSel];
       (async ()=>{
         for (const id of ids){ try { await api(`/api/graph/${current.id}/node/${encodeURIComponent(id)}`, { method: "DELETE" }); } catch { /* 逐条忽略 */ } }
-        clearMulti(); await reload(false); toast(`已删除 ${ids.length} 个节点`);
+        clearMulti(); await reload(false); toast(t("deletedNodes").replace("{n}", ids.length));
       })();
     }
   });
@@ -2416,33 +2467,11 @@ function xlinkBadgeHtml(nodeId){
   const hit = xlinks.byNode.get(nodeId);
   if (!hit) return "";
   const parts = [];
-  if (hit.provides.length) parts.push(`<span class="xlink provides" data-x="provides" title="外部引用：本卡支撑了别的图的 ${hit.provides.length} 个结论">⇱${hit.provides.length}</span>`);
-  if (hit.uses.length) parts.push(`<span class="xlink uses" data-x="uses" title="跨图依据：本卡用了别的图的 ${hit.uses.length} 个结论">⇲${hit.uses.length}</span>`);
+  if (hit.provides.length) parts.push(`<span class="xlink provides" data-x="provides" title="${t("xlinkBadgeProvides").replace("{n}", hit.provides.length)}">↗${hit.provides.length}</span>`);
+  if (hit.uses.length) parts.push(`<span class="xlink uses" data-x="uses" title="${t("xlinkBadgeUses").replace("{n}", hit.uses.length)}">↘${hit.uses.length}</span>`);
   return parts.join("");
 }
 
-/** 检查器：跨图链接明细（含数学理由） */
-function renderXlinks(node){
-  const box = $("xlinkBox");
-  if (!box) return;
-  const hit = node ? xlinks.byNode.get(node.id) : null;
-  if (!hit){ box.innerHTML = ""; box.hidden = true; return; }
-  box.hidden = false;
-  const rows = [
-    ...hit.uses.map((it)=> ({ ...it, label: "跨图依据", cls: "uses" })),
-    ...hit.provides.map((it)=> ({ ...it, label: "外部引用", cls: "provides" })),
-  ];
-  box.innerHTML = `<label style="margin-top:8px">跨图链接（${rows.length}）</label>
-    <div class="xlink-list">${rows.map((it, i)=> `
-      <div class="xlink-item" data-i="${i}">
-        <div class="h"><span class="badge" style="color:${it.cls === "uses" ? "#22D3EE" : "#F59E0B"}">${it.label}</span>
-          <b>${escapeHtml(it.other.graph)}</b> · ${escapeHtml(it.other.node)}</div>
-        ${it.why ? `<div class="why">${escapeHtml(String(it.why).slice(0, 220))}</div>` : ""}
-      </div>`).join("")}</div>`;
-  box.querySelectorAll(".xlink-item").forEach((el)=>{
-    el.onclick = ()=> jumpToLink(rows[Number(el.dataset.i)]);
-  });
-}
 
 
 
@@ -2476,9 +2505,24 @@ function renderDepList(node){
   const up = pick(depFocus.up), down = pick(depFocus.down);
   const chip = (n, cls)=> `<span class="dep ${cls}" data-node="${escapeHtml(n.id)}" title="${escapeHtml(String(n.label))} · ${escapeHtml(n.id)}" style="${cls === "up" ? "border-color:#38BDF8;color:#38BDF8" : "border-color:#F87171;color:#F87171"}">${escapeHtml(String(n.label).slice(0, 26))}</span>`;
   box.hidden = false;
-  box.innerHTML = `
-    <div class="card-deps" style="margin-top:8px"><span class="dlab">上游（谁支撑它）</span>${up.length ? up.map((n)=> chip(n, "up")).join("") : '<span class="dlab">— 无</span>'}</div>
-    <div class="card-deps"><span class="dlab">下游（它支撑谁）</span>${down.length ? down.map((n)=> chip(n, "down")).join("") : '<span class="dlab">— 无</span>'}</div>`;
+  const CAP = 6;   // 默认只显示 6 条，其余折叠（20+ chip 会把详情挤出屏幕）
+  const seg = (list, cls, label)=>{
+    if (!list.length) return '';
+    const shown = list.slice(0, CAP), rest = list.length - shown.length;
+    return `<div class="card-deps" style="margin-top:6px"><span class="dlab">${label}</span>`
+      + shown.map((n)=> chip(n, cls)).join("")
+      + (rest > 0 ? `<span class="dep more" data-more="${cls}">+${rest} 展开</span>` : "")
+      + `</div>`
+      + (rest > 0 ? `<div class="card-deps dep-rest" data-rest="${cls}" hidden>${list.slice(CAP).map((n)=> chip(n, cls)).join("")}</div>` : '');
+  };
+  box.innerHTML = seg(up, "up", t("depUpstream")) + seg(down, "down", t("depDownstream"));
+  box.querySelectorAll(".dep.more").forEach((el)=>{
+    el.onclick = ()=>{
+      const cls = el.dataset.more;
+      const rest = box.querySelector(`.dep-rest[data-rest="${cls}"]`);
+      if (rest){ rest.hidden = !rest.hidden; el.textContent = rest.hidden ? t("depMore").replace("{n}", rest.children.length) : t("depLess"); }
+    };
+  });
   box.querySelectorAll(".dep").forEach((el)=>{
     el.onclick = ()=>{
       const id = el.dataset.node;
@@ -2490,6 +2534,158 @@ function renderDepList(node){
 }
 
 
+
+
+
+/* ================= 公式规则（内置帮助） ================= */
+const FX_RULES = {
+  zh: [
+    ["四种定界符", "$行内$ · $$独占一行$$ · \\(行内\\) · \\[独占一行\\]"],
+    ["不用定界符也能编译", "整行是公式 → 自动当显示公式；行内出现 \\ce{...} \\frac{...} 等命令 → 只把该段当公式；粘贴整篇论文源码 → 自动剥掉导言区"],
+    ["会自动转换（不用手改）", "\\tag{1.2}→（1.2）文本 · \\bm→\\boldsymbol · \\cite→[key] · \\eqref/\\ref→文本 · \\SI{9.8}{\\meter\\per\\second\\squared}→9.8 m/s² · align/gather→aligned/gathered（保留对齐）· \\documentclass/\\usepackage/% 注释→删除"],
+    ["化学式", "\\ce{2H2 + O2 -> 2H2O} · \\ce{SO4^2- + Ba^2+ -> BaSO4 v}"],
+    ["不支持（降级显示原文，不丢内容）", "tikzpicture / figure / table / lstlisting → 显示占位提示；\\includegraphics → 删除（图片请用「＋ 附件」上传）；自定义宏（\\newcommand）无法展开"],
+    ["编译不出来先查这 5 条", "① 花括号是否配对 ② 是否用了自定义宏 ③ 是否在 $ 里又写了 $ ④ x_ 后面是否紧跟内容 ⑤ 行内的 \\tag 建议改用 $$…$$"],
+    ["写错了会怎样", "该公式原样显示，并标 ⚠ LaTeX 未渲染（原文保留）——内容绝不丢失，照规则改即可"],
+  ],
+  en: [
+    ["Four delimiters", "$inline$ · $$display$$ · \\(inline\\) · \\[display\\]"],
+    ["Bare LaTeX also compiles", "a whole line of LaTeX becomes a display formula; inline commands like \\ce{...} \\frac{...} are extracted from prose; pasting a full paper source auto-strips the preamble"],
+    ["Auto-normalised (no edits needed)", "\\tag{1.2}→(1.2) text · \\bm→\\boldsymbol · \\cite→[key] · \\eqref/\\ref→text · \\SI{9.8}{\\meter\\per\\second\\squared}→9.8 m/s² · align/gather→aligned/gathered · \\documentclass/\\usepackage/% comments→removed"],
+    ["Chemistry", "\\ce{2H2 + O2 -> 2H2O} · \\ce{SO4^2- + Ba^2+ -> BaSO4 v}"],
+    ["Not supported (degrades to source, nothing lost)", "tikzpicture / figure / table / lstlisting → placeholder; \\includegraphics → removed (use the ＋ Attach button); custom \\newcommand macros cannot be expanded"],
+    ["Top 5 causes of failure", "1) unbalanced braces 2) macros defined by \\newcommand 3) nested $ 4) x_ with nothing after it 5) \\tag inside inline $…$ — prefer $$…$$"],
+    ["What if it fails", "the formula is shown verbatim with a ⚠ LaTeX not rendered (source kept) marker — nothing is lost"],
+  ],
+};
+
+function openFxHelp(){
+  const rows = FX_RULES[LANG] ?? FX_RULES.zh;
+  openModal(`<h2>${LANG === "en" ? "Formula rules" : "公式书写规则"}</h2>
+    <div class="fx-help">
+      ${rows.map(([h, b])=> `<div class="fx-row"><b>${escapeHtml(h)}</b><span>${escapeHtml(b)}</span></div>`).join("")}
+    </div>
+    <div class="hint" style="margin-top:8px">${LANG === "en"
+      ? "Full reference: docs/FORMULAS.md in the repository."
+      : "完整说明见仓库内 docs/FORMULAS.md。"}</div>
+    <div class="btnrow"><button class="primary" id="fx-close">${LANG === "en" ? "Got it" : "知道了"}</button></div>`);
+  $("fx-close").onclick = closeModal;
+}
+
+/* ================= 跨图依赖（用户级：选图 + 搜节点 + 写理由） ================= */
+let xlinkDialogTarget = null;
+
+async function openXlinkDialog(node){
+  xlinkDialogTarget = node;
+  let list = [];
+  try { list = await api("/api/graphs"); } catch { list = []; }
+  const others = (Array.isArray(list) ? list : []).filter((g)=> g.id !== current.id);
+  openModal(`<h2>链接到其他图</h2>
+    <div class="hint" style="margin:0 0 8px">源节点：<b>${escapeHtml(String(node.label).slice(0, 40))}</b>（${escapeHtml(node.id)}）</div>
+    <label>目标图</label>
+    <select id="xl-graph">${others.map((g)=> `<option value="${escapeHtml(g.id)}">${escapeHtml(g.name ?? g.id)}</option>`).join("")}</select>
+    <label>搜索目标节点</label>
+    <input id="xl-q" data-ph="xlinkFilterPh" autocomplete="off">
+    <div id="xl-nodes" class="xl-nodes"></div>
+    <label data-i18n="xlinkWhyLabel"></label>
+    <textarea id="xl-why" rows="3" data-ph="xlinkWhyPh"></textarea>
+    <div class="row2" style="margin-top:6px">
+      <div><label>方向</label><select id="xl-dir">
+        <option value="to">我依赖对方（对方是依据）</option>
+        <option value="from">对方依赖我（我提供依据）</option>
+      </select></div>
+      <div></div>
+    </div>
+    <div class="btnrow"><button class="primary" id="xl-save" data-i18n="xlinkCreate"><//button><button id="xl-cancel" data-i18n="cancel"><//button></div>`);
+  $("xl-cancel").onclick = closeModal;
+  const loadNodes = async ()=>{
+    const gid = $("xl-graph").value;
+    const q = $("xl-q").value.trim().toLowerCase();
+    let g = null;
+    try { g = await api(`/api/graph/${encodeURIComponent(gid)}`); } catch { g = null; }
+    const nodes = (g?.nodes ?? []).filter((n)=> !q || `${n.label} ${n.id}`.toLowerCase().includes(q));
+    $("xl-nodes").innerHTML = nodes.length
+      ? nodes.slice(0, 60).map((n)=> `<span class="xl-node" data-id="${escapeHtml(n.id)}"><b>${escapeHtml(String(n.label).slice(0, 34))}</b><i>${escapeHtml(n.id)}</i></span>`).join("")
+      : `<div class="dep-none">${t("xlinkNoMatch")}</div>`;
+    $("xl-nodes").querySelectorAll(".xl-node").forEach((el)=>{
+      el.onclick = ()=>{
+        $("xl-nodes").querySelectorAll(".xl-node").forEach((x)=> x.classList.remove("on"));
+        el.classList.add("on");
+      };
+    });
+  };
+  $("xl-graph").onchange = loadNodes;
+  $("xl-q").addEventListener("input", ()=>{ clearTimeout(window.__xlT); window.__xlT = setTimeout(loadNodes, 180); });
+  await loadNodes();
+  $("xl-save").onclick = async ()=>{
+    const gid = $("xl-graph").value;
+    const pick = $("xl-nodes").querySelector(".xl-node.on");
+    if (!pick){ toast(t("xlinkPickNode"), true); return; }
+    const why = $("xl-why").value.trim();
+    if (!why){ toast(t("xlinkNeedWhy"), true); return; }
+    const body = $("xl-dir").value === "to"
+      ? { fromGraph: gid, fromNode: pick.dataset.id, toGraph: current.id, toNode: node.id, why }
+      : { fromGraph: current.id, fromNode: node.id, toGraph: gid, toNode: pick.dataset.id, why };
+    try {
+      await api("/api/crosslinks", { method: "POST", body: JSON.stringify(body) });
+      closeModal();
+      xlinkCache.clear();
+      await loadCrosslinks(true);
+      renderXlinks(node);
+      render();
+      toast(t("xlinkCreated"));
+    } catch (e){ toast(e.message, true); }
+  };
+}
+
+/** 检查器：跨图依赖区（友好名称 + 跳转 + 删除 + 失效提示） */
+function renderXlinks(node){
+  const box = $("xlinkBox");
+  if (!box) return;
+  const hit = node ? xlinks.byNode.get(node.id) : null;
+  if (!node){ box.hidden = true; return; }
+  box.hidden = false;
+  const rows = hit
+    ? [...hit.uses.map((it)=> ({ ...it, dir: t("xlinkDirUses") })), ...hit.provides.map((it)=> ({ ...it, dir: t("xlinkDirProvides") }))]
+    : [];
+  box.innerHTML = `<div class="insp-sec-head" style="margin-top:10px">
+      <label>跨图依赖（${rows.length}）</label>
+      <button class="mini" id="xlAdd" data-i18n="xlinkAdd"><//button>
+    </div>`
+    + (rows.length ? `<div class="xlink-list">${rows.map((it, i)=> `
+        <div class="xlink-item ${it.broken ? "broken" : ""}" data-i="${i}">
+          <div class="h">
+            <span class="badge">${escapeHtml(it.dir)}</span>
+            <b>${escapeHtml(it.otherGraphName ?? it.other.graph)}</b>
+            <span class="xdel" data-del="${escapeHtml(it.id)}" title="${t("xlinkDelTitle")}">✕</span>
+          </div>
+          <div class="t">${it.broken ? `<i>${t("xlinkBroken")}</i>` : escapeHtml(String(it.otherNodeLabel ?? it.other.node).slice(0, 46))}</div>
+          ${it.why ? `<div class="why">${escapeHtml(String(it.why).slice(0, 200))}</div>` : ""}
+        </div>`).join("")}</div>`
+      : '<div class="dep-none" style="margin:4px 0 8px">${t("xlinkNone")}</div>');
+  $("xlAdd").onclick = ()=> openXlinkDialog(node);
+  box.querySelectorAll(".xlink-item").forEach((el)=>{
+    el.onclick = (ev)=>{
+      if (ev.target.closest(".xdel")) return;
+      const it = rows[Number(el.dataset.i)];
+      if (it.broken){ toast(t("xlinkBrokenHint"), true); return; }
+      location.hash = `#${encodeURIComponent(it.other.graph)}/${encodeURIComponent(it.other.node)}`;
+    };
+  });
+  box.querySelectorAll(".xdel").forEach((el)=>{
+    el.onclick = async (ev)=>{
+      ev.stopPropagation();
+      try {
+        await api(`/api/crosslinks?id=${encodeURIComponent(el.dataset.del)}`, { method: "DELETE" });
+        xlinkCache.clear();
+        await loadCrosslinks(true);
+        renderXlinks(node);
+        render();
+        toast(t("xlinkRemoved"));
+      } catch (e){ toast(e.message, true); }
+    };
+  });
+}
 
 /* ================= 节点附件（原书页面图 / PDF / 外链） ================= */
 let lbState = null;   // { list, idx, k, x, y }
@@ -2507,7 +2703,7 @@ function openLightbox(list, idx){
       <button id="lb-zoomin">+</button>
       <button id="lb-fit">适应</button>
       <button id="lb-open">原文件</button>
-      <button id="lb-close">关闭 (Esc)</button>
+      <button id="lb-close" data-i18n="readerClose"><//button>
     </div>
     <div class="lb-stage" id="lb-stage"><img id="lb-img" alt=""></div>
     <div class="lb-cap" id="lb-cap"></div>`;
@@ -2592,7 +2788,7 @@ async function addAttachment(nodeId){
   input.onchange = async ()=>{
     const files = [...(input.files ?? [])];
     if (!files.length) return;
-    toast(`正在添加 ${files.length} 个附件…`);
+    toast(t("attachAdding").replace("{n}", files.length));
     for (const f of files){
       try {
         const dataUrl = await new Promise((res, rej)=>{
@@ -2609,7 +2805,7 @@ async function addAttachment(nodeId){
       } catch (e){ toast(`${f.name} 添加失败：${e.message}`, true); }
     }
     await reload(false);
-    toast("附件已添加（点击缩略图可放大）");
+    toast(t("attachAdded"));
   };
   input.click();
 }
@@ -2660,14 +2856,14 @@ function pushHistory(){
   history.redo.length = 0;
 }
 async function undo(){
-  if (!history.undo.length){ toast("没有可撤销的操作"); return; }
+  if (!history.undo.length){ toast(t("undoEmpty")); return; }
   const now = snapshotState();
   const prev = history.undo.pop();
   history.redo.push(now);
   await applySnapshot(prev, "已撤销");
 }
 async function redo(){
-  if (!history.redo.length){ toast("没有可重做的操作"); return; }
+  if (!history.redo.length){ toast(t("redoEmpty")); return; }
   const now = snapshotState();
   const next = history.redo.pop();
   history.undo.push(now);
@@ -2677,13 +2873,13 @@ async function applySnapshot(snap, tip){
   // 护栏：目标快照无节点而当前有内容 → 拒绝（防误清空）
   try {
     const obj = JSON.parse(snap);
-    if (!(obj.nodes?.length > 0) && (current?.nodes?.length ?? 0) > 0){ toast("已阻止一次会清空内容的操作", true); return; }
-  } catch { toast("快照损坏，已忽略", true); return; }
+    if (!(obj.nodes?.length > 0) && (current?.nodes?.length ?? 0) > 0){ toast(t("blockedWipe"), true); return; }
+  } catch { toast(t("snapCorrupt"), true); return; }
   try {
     await api(`/api/graph/${current.id}/replace`, { method: "POST", body: JSON.stringify({ graph: JSON.parse(snap) }) });
     await reload(false);
     toast(tip);
-  } catch (e){ toast("操作失败：" + e.message, true); }
+  } catch (e){ toast(t("opFailed").replace("{msg}", e.message), true); }
 }
 
 /** 包装 api：凡是对图的写操作，先记历史 */
@@ -2728,6 +2924,7 @@ function openNodeMenu(node, x, y){
       <div class="cm-row">${statuses.map(([v, l])=> `<button data-s="${v}">${l}</button>`).join("")}</div>
       <hr>` : ""}
     <button data-a="attach">📎 加附件（页面图 / PDF）</button>
+    <button data-a="xlink">🔗 跨图依赖…</button>
     <button data-a="rename">✎ 改标题</button>
     <button data-a="branchFrom">＋ 在此后插入一轮</button>
     <button data-a="trace">◎ 依赖追踪</button>
@@ -2757,6 +2954,7 @@ function openNodeMenu(node, x, y){
         await post({ op: "merge", sources, label: "汇合" }); toast("已汇合"); return;
       }
       if (a === "attach"){ addAttachment(node.id); return; }
+      if (a === "xlink"){ openXlinkDialog(node); return; }
       if (a === "rename"){
         const v = prompt("新标题", node.label);
         if (v != null){ await api(`/api/graph/${current.id}/node`, { method: "POST", body: JSON.stringify({ nodeId: node.id, patch: { label: v } }) }).catch(()=>{}); await reload(false); }
@@ -2781,7 +2979,7 @@ function recordTurnAt(parentId, fork){
     <datalist id="turn-agents">${agents.map((n)=> `<option value="${escapeHtml(n)}">`).join("")}</datalist>
     <label>内容</label>
     <textarea id="turn-text" style="min-height:130px" placeholder="粘进来即可（支持 $公式$）"></textarea>
-    <div class="btnrow"><button class="primary" id="turn-save">记录</button><button id="turn-cancel">取消</button></div>`);
+    <div class="btnrow"><button class="primary" id="turn-save">记录</button><button id="turn-cancel" data-i18n="cancel"><//button></div>`);
   $("turn-cancel").onclick = closeModal;
   $("turn-save").onclick = async ()=>{
     const text = $("turn-text").value;
@@ -2979,7 +3177,7 @@ function renderConvoPanel(){
         <div><label>接在哪之后</label><input id="turn-parent" placeholder="留空 = 当前点头"></div>
         <div><label>移交控制权给（可选）</label><input id="turn-handoff" placeholder="如 human / bob"></div>
       </div>
-      <div class="btnrow"><button class="primary" id="turn-save">记录</button><button id="turn-cancel">取消</button></div>`);
+      <div class="btnrow"><button class="primary" id="turn-save">记录</button><button id="turn-cancel" data-i18n="cancel"><//button></div>`);
     $("turn-cancel").onclick = closeModal;
     $("turn-save").onclick = async ()=>{
       const text = $("turn-text").value;
@@ -4111,6 +4309,7 @@ bindMarquee();
 cvInit();
 installHistory();
 bindAttachmentDrop();
+$("btnFxHelp") && ($("btnFxHelp").onclick = openFxHelp);
 $("btnCanvas") && ($("btnCanvas").onclick = ()=> cvSetMode(!CV.on));
 $("btnThumbs") && ($("btnThumbs").onclick = ()=>{
   const on = document.body.classList.toggle("show-thumbs");
