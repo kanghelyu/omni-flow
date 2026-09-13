@@ -505,7 +505,10 @@ body.lean .group-box { opacity: .6; }
 .group-box.needs-refit { border-style: dashed; }
 .group-box.needs-refit .glabel::after { content: " · 可右键重新贴合"; opacity: .75; }
 .group-box { position: absolute; border-radius: 16px; border: 1.5px dashed; z-index: 1; opacity: .8; pointer-events: auto; cursor: move; }
+/* 选中组框：复用卡片选中语言（accent 边由内联样式写入，这里补柔光；虚线样式保留） */
+.group-box.sel { opacity: 1; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent), 0 12px 30px rgba(0,0,0,.2); }
 .group-box .glabel { position: absolute; top: -11px; left: 12px; font-size: 11px; padding: 1px 8px; border-radius: 999px; font-weight: 600; line-height: 1.5; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+#groupList .node-item.sel { background: color-mix(in srgb, var(--accent) 10%, var(--panel)); color: var(--accent); box-shadow: 0 7px 20px color-mix(in srgb, var(--accent) 10%, transparent); }
 
 .handle { position: absolute; top: 50%; width: 13px; height: 13px; padding: 0; border: 2px solid var(--canvas); border-radius: 50%;
   background: var(--accent); transform: translateY(-50%); cursor: crosshair; z-index: 3; opacity: 0;
