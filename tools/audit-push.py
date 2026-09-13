@@ -14,6 +14,7 @@
   /usr/bin/python3 tools/audit-push.py --dry-run  # 只审计不推送
 """
 import base64
+import json
 import os
 import subprocess
 import sys
@@ -27,7 +28,7 @@ BRANCH = "main"
 DRY = "--dry-run" in sys.argv
 
 SKIP_DIRS = {".git", "node_modules", ".bak", ".omni-flow", "trash", "__pycache__", ".venv"}
-SKIP_FILES = {".DS_Store", ".gitignore"}  # .gitignore 由远端自行维护
+SKIP_FILES = {".DS_Store", ".gitignore"}  # .gitignore is maintained on the remote
 SKIP_SUFFIX = (".log", ".pyc", ".tmp", ".swp")
 
 os.chdir(REPO_DIR)
@@ -73,7 +74,7 @@ def push(path, msg, remote_sha):
         payload["sha"] = remote_sha
     rc, out, err = run(
         [GH, "api", "--method", "PUT", f"repos/{REPO_SLUG}/contents/{path}", "--input", "-"],
-        input_text=__import__("json").dumps(payload),
+        input_text=json.dumps(payload),
     )
     return rc == 0, (out or err)[:120]
 
@@ -84,19 +85,23 @@ remote = remote_tree()
 missing = [p for p in local if p not in remote]
 changed = [p for p in local if p in remote and blob_sha(p) != remote[p]]
 
-print(f"本地 {len(local)} 文件 | 远端 {len(remote)} blob")
-print(f"缺失 {len(missing)} | 内容不一致 {len(changed)}")
+extra = [p for p in remote if p not in local]
+
+print(f"local {len(local)} files | remote {len(remote)} blobs")
+print(f"missing {len(missing)} | changed {len(changed)} | remote-only {len(extra)}")
 for p in missing:
-    print("  ✗ 远端缺失", p)
+    print("  ✗ missing on remote", p)
 for p in changed:
-    print("  ↻ 需更新  ", p)
+    print("  ↻ needs update   ", p)
+for p in extra:
+    print("  ✂ remote-only    ", p)
 
 if not missing and not changed:
     print("\n✅ 完全同步，无需推送。")
     sys.exit(0)
 
 if DRY:
-    print("\n(--dry-run：未推送)")
+    print("\n(--dry-run: nothing pushed)")
     sys.exit(0)
 
 failed = []
@@ -106,18 +111,33 @@ for p in missing + changed:
         time.sleep(2)
         ok, info = push(p, "sync: align remote with local workspace", remote.get(p))
     if ok:
-        print("  ↑ 已推送", p)
+        print("  ↑ pushed", p)
     else:
         failed.append((p, info))
-        print("  ! 失败  ", p, "——", info)
+        print("  ! FAILED", p, "——", info)
 
-# —— 用递归 tree 复核（不信 PUT 返回）——
+# —— Delete remote files that no longer exist locally (renames, removals) ——
+# Without this, a file deleted locally lingers on GitHub and the repo drifts.
+for p in extra:
+    rc, out, err = run([GH, "api", "--method", "DELETE",
+                        f"repos/{REPO_SLUG}/contents/{p}",
+                        "--input", "-"],
+                       input_text=json.dumps({"message": "sync: remove file deleted locally", "sha": remote[p]}))
+    if rc == 0:
+        print("  ✂ deleted", p)
+    else:
+        failed.append((p, (out or err)[:120]))
+        print("  ! FAILED to delete", p, "——", (out or err)[:120])
+
+# —— Re-verify with the recursive tree (never trust the PUT/DELETE response) ——
 time.sleep(2)
 remote2 = remote_tree()
 still = [p for p in local if p not in remote2 or blob_sha(p) != remote2[p]]
-print("\n=== 复核 ===")
-print(f"仍未同步: {len(still)}" + ((" → " + ", ".join(still[:10])) if still else " ✅"))
+extra2 = [p for p in remote2 if p not in local]
+print("\n=== verify ===")
+print(f"still out of sync: {len(still)}" + ((" → " + ", ".join(still[:10])) if still else " ✅"))
+print(f"remote extras: {len(extra2)}" + ((" → " + ", ".join(extra2[:10])) if extra2 else " ✅"))
 if failed:
     for p, why in failed:
         print("  ✗", p, "——", why)
-sys.exit(1 if (failed or still) else 0)
+sys.exit(1 if (failed or still or extra2) else 0)
