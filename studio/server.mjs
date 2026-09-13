@@ -538,6 +538,40 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         return;
       }
       /* 批量位置：一次 load/save 写多个节点（多选拖动），避免 N 个并发读改写互相覆盖 */
+      /* 删除节点（批量选择删除用）：同时清理连线 / 备注 / 分组归属 */
+      {
+        const m = url.pathname.match(/^\/api\/graph\/([^/]+)\/node\/(.+)$/);
+        if (m && req.method === "DELETE") {
+          const gid = decodeURIComponent(m[1]);
+          const nid = decodeURIComponent(m[2]);
+          if (!gid || !nid) { sendJson(res, 400, { error: "bad request" }); return; }
+          await mutateGraph(root, gid, (draft) => {
+            draft.nodes = draft.nodes.filter((n)=> n.id !== nid);
+            draft.edges = draft.edges.filter((e)=> e.source !== nid && e.target !== nid);
+            for (const g of draft.groups) g.members = (g.members ?? []).filter((x)=> x !== nid);
+            if (draft.notes) delete draft.notes[nid];
+          });
+          sendJson(res, 200, { ok: true, nodeId: nid });
+          return;
+        }
+      }
+      /* 删除节点（批量选择删除用）：同时清理连线 / 备注 / 分组归属 */
+      {
+        const m = url.pathname.match(/^\/api\/graph\/([^/]+)\/node\/(.+)$/);
+        if (m && req.method === "DELETE") {
+          const gid = decodeURIComponent(m[1]);
+          const nid = decodeURIComponent(m[2]);
+          if (!gid || !nid) { sendJson(res, 400, { error: "bad request" }); return; }
+          await mutateGraph(root, gid, (draft) => {
+            draft.nodes = draft.nodes.filter((n)=> n.id !== nid);
+            draft.edges = draft.edges.filter((e)=> e.source !== nid && e.target !== nid);
+            for (const g of draft.groups) g.members = (g.members ?? []).filter((x)=> x !== nid);
+            if (draft.notes) delete draft.notes[nid];
+          });
+          sendJson(res, 200, { ok: true, nodeId: nid });
+          return;
+        }
+      }
       if (req.method === "POST" && action === "positions") {
         const { graph } = await loadGraph(root, id);
         const n = moveNodes(graph, body.moves ?? []);
