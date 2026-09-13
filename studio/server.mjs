@@ -128,14 +128,28 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         if (m && req.method === "GET") {
           const gid = decodeURIComponent(m[1]);
           const name = decodeURIComponent(m[2]);
-          if (!gid || name.includes("..") || name.includes("/")) { sendJson(res, 400, { error: "bad asset path" }); return; }
-          const ext = extname(name).slice(1).toLowerCase();
+          // 只拦目录穿越与绝对路径；允许 images/xxx.jpg 这类历史相对路径（下面按 basename 兜底解析）
+          if (!gid || name.includes("..") || name.startsWith("/") || name.includes("\u0000")) { sendJson(res, 400, { error: "bad asset path" }); return; }
+          const assetsDir = join(root, "graphs", gid, "assets");
+          // 解析顺序：原名 → 去掉目录后的 basename → assets 里以 -<basename> 结尾的同名文件
+          //（导入时会把原图复制成 <节点id>-<原名>，历史数据里仍存原始相对路径，这里做兜底）
+          const base = name.split("/").pop();
+          let file = null, data = null;
+          for (const cand of [name, base]){
+            try { data = await readFile(join(assetsDir, cand)); file = cand; break; } catch { /* 试下一个 */ }
+          }
+          if (!data){
+            try {
+              const files = await readdir(assetsDir);
+              const hit = files.find((f)=> f === base || f.endsWith(`-${base}`) || f.endsWith(base));
+              if (hit){ data = await readFile(join(assetsDir, hit)); file = hit; }
+            } catch { /* 目录不存在 */ }
+          }
+          if (!data){ sendJson(res, 404, { error: `asset not found: ${name}` }); return; }
+          const ext = extname(file ?? base).slice(1).toLowerCase();
           const mime = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp", svg: "image/svg+xml", pdf: "application/pdf" }[ext] ?? "application/octet-stream";
-          try {
-            const data = await readFile(join(root, "graphs", gid, "assets", name));
-            res.writeHead(200, { "content-type": mime, "cache-control": "public, max-age=3600" });
-            res.end(data);
-          } catch { sendJson(res, 404, { error: `asset not found: ${name}` }); }
+          res.writeHead(200, { "content-type": mime, "cache-control": "public, max-age=3600" });
+          res.end(data);
           return;
         }
       }
