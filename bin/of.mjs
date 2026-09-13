@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// OmniFlow CLI (of) — 万用流程图。graph.json 是唯一拓扑事实来源。
+// OmniFlow CLI (of) — universal flow map. graph.json is the single source of truth for topology.
 import { homedir } from "node:os";
 import { join, resolve, dirname, basename } from "node:path";
 import { mkdir, readFile, writeFile, readdir, stat } from "node:fs/promises";
@@ -46,17 +46,17 @@ async function cmdCreate() {
   graph.id = makeGraphId(graph.name);
   if (opt("--desc")) graph.description = opt("--desc");
   await saveGraph(join(root, "graphs", graph.id), graph);
-  console.log(`✓ 已创建图 ${graph.name}（模板 ${template}）`);
+  console.log(`✓ Created graph ${graph.name} (template ${template})`);
   console.log(`  id: ${graph.id}`);
-  console.log(`  节点 ${graph.nodes.length} · 连线 ${graph.edges.length}`);
+  console.log(`  ${graph.nodes.length} nodes · ${graph.edges.length} edges`);
 }
 
 async function cmdList() {
   const root = rootHome();
   const graphs = await listGraphs(root);
-  if (!graphs.length) { console.log("（空）`of create <名称>` 创建第一张图"); return; }
+  if (!graphs.length) { console.log("（empty）run `of create <name>` to build your first graph"); return; }
   for (const graph of graphs) {
-    console.log(`${graph.valid ? "✓" : "⚠"} ${graph.id}  「${graph.name}」  ${graph.nodes} 节点 / ${graph.edges} 连线  ${graph.updatedAt ?? ""}`);
+    console.log(`${graph.valid ? "✓" : "⚠"} ${graph.id}  "${graph.name}"  ${graph.nodes} nodes / ${graph.edges} edges  ${graph.updatedAt ?? ""}`);
   }
 }
 
@@ -71,9 +71,9 @@ async function cmdValidate() {
   const { graph } = await loadGraph(rootHome(), id);
   const verdict = validateGraph(graph);
   if (verdict.ok) {
-    console.log(`✓ 结构合法（${graph.nodes.length} 节点 / ${graph.edges.length} 连线）`);
+    console.log(`✓ Structure valid (${graph.nodes.length} nodes / ${graph.edges.length} edges)`);
     for (const warning of verdict.warnings) console.log(`  ⚠ ${warning}`);
-  } else fail("结构校验未通过", verdict.issues);
+  } else fail("Structure validation failed", verdict.issues);
 }
 
 async function cmdLayout() {
@@ -91,7 +91,7 @@ async function cmdLayout() {
   }
   graph.revision += 1;
   await saveGraph(join(root, "graphs", id), graph);
-  console.log("✓ 已自动布局");
+  console.log("✓ Auto-layout applied");
 }
 
 async function cmdAnalyze() {
@@ -99,14 +99,14 @@ async function cmdAnalyze() {
   const traceFlag = opt("--trace");
   const { graph } = await loadGraph(rootHome(), id);
   const result = analyzeGraph(graph.nodes, graph.edges, { trace: traceFlag });
-  console.log(`节点 ${result.nodeCount} · 连线 ${result.edgeCount}`);
-  console.log(`环：${result.cycles.length ? result.cycles.map((cycle) => cycle.join(" → ")).join("；") : "无"}`);
-  console.log(`枢纽/瓶颈：${result.ranked.slice(0, 5).map((entry) => `${entry.label}(${entry.total})`).join(" ") || "无"}`);
-  console.log(`孤立节点：${result.isolated.map((entry) => entry.label).join(" ") || "无"}`);
+  console.log(`${result.nodeCount} nodes · ${result.edgeCount} edges`);
+  console.log(`Cycles: ${result.cycles.length ? result.cycles.map((cycle) => cycle.join(" → ")).join(" ; ") : "none"}`);
+  console.log(`Hubs / bottlenecks: ${result.ranked.slice(0, 5).map((entry) => `${entry.label}(${entry.total})`).join(" ") || "none"}`);
+  console.log(`Isolated nodes: ${result.isolated.map((entry) => entry.label).join(" ") || "none"}`);
   if (result.trace) {
-    console.log(`\n依赖追踪 — ${result.trace.nodeId}`);
-    console.log(`  上游：${result.trace.upstream.map((entry) => `${entry.label}(${entry.depth})`).join(" ← ") || "无"}`);
-    console.log(`  下游：${result.trace.downstream.map((entry) => `${entry.label}(${entry.depth})`).join(" → ") || "无"}`);
+    console.log(`\nDependency trace — ${result.trace.nodeId}`);
+    console.log(`  Upstream: ${result.trace.upstream.map((entry) => `${entry.label}(${entry.depth})`).join(" ← ") || "none"}`);
+    console.log(`  Downstream: ${result.trace.downstream.map((entry) => `${entry.label}(${entry.depth})`).join(" → ") || "none"}`);
   }
 }
 
@@ -121,7 +121,7 @@ async function cmdExport() {
     const { readNodeNote } = await import("../lib/graph-service.mjs");
     const notes = {};
     for (const n of graph.nodes){
-      try { const r = await readNodeNote(root, id, n.id); if (r?.exists) notes[n.id] = { content: r.content }; } catch { /* 无备注 */ }
+      try { const r = await readNodeNote(root, id, n.id); if (r?.exists) notes[n.id] = { content: r.content }; } catch { /* no note */ }
     }
     text = await toStandaloneHtml(graph, notes, { embed: opt("--no-embed") ? false : true });
   }
@@ -132,7 +132,7 @@ async function cmdExport() {
   else text = toMermaid(graph);
   if (out) {
     await writeFile(out, `${text}\n`, "utf8");
-    console.log(`✓ 已导出到 ${out}`);
+    console.log(`✓ Exported to ${out}`);
   } else console.log(text);
 }
 
@@ -147,10 +147,10 @@ async function cmdImport() {
   else graph = fromMermaid(raw);
   if (opt("--name")) graph.name = opt("--name");
   const verdict = validateGraph(graph);
-  if (!verdict.ok) fail("导入内容校验未通过", verdict.issues);
+  if (!verdict.ok) fail("Imported content failed validation", verdict.issues);
   graph.id = makeGraphId(graph.name);
   await saveGraph(join(root, "graphs", graph.id), graph);
-  console.log(`✓ 已导入「${graph.name}」 id=${graph.id}（${graph.nodes.length} 节点 / ${graph.edges.length} 连线）`);
+  console.log(`✓ Imported "${graph.name}" id=${graph.id} (${graph.nodes.length} nodes / ${graph.edges.length} edges)`);
 }
 
 async function cmdImportAf() {
@@ -162,22 +162,22 @@ async function cmdImportAf() {
   try {
     raw = await readFile(join(afHome, "flows", afId, "flow.json"), "utf8");
   } catch {
-    fail(`agent-flow 工作流 ${afId} 不存在（${join(afHome, "flows", afId)}）`);
+    fail(`agent-flow workflow ${afId} not found (${join(afHome, "flows", afId)})`);
   }
   const graph = await fromAgentFlow(JSON.parse(raw));
   graph.id = makeGraphId(graph.name);
   await saveGraph(join(root, "graphs", graph.id), graph);
-  console.log(`✓ 已从 agent-flow 导入「${graph.name}」 id=${graph.id}（${graph.nodes.length} 节点 / ${graph.edges.length} 连线）`);
+  console.log(`✓ Imported from agent-flow "${graph.name}" id=${graph.id} (${graph.nodes.length} nodes / ${graph.edges.length} edges)`);
 }
 
 async function cmdTemplates() {
   const root = rootHome();
   for (const template of await mergedTemplateSummaries(root)) {
-    console.log(`${template.id.padEnd(20)} ${template.name}${template.custom ? "  [自定义]" : ""} — ${template.desc}`);
+    console.log(`${template.id.padEnd(20)} ${template.name}${template.custom ? "  [custom]" : ""} — ${template.desc}`);
   }
 }
 
-/** of template-save <graphId> --id <tplId> --name <名> --desc <述>：把现有图沉淀为模板。 */
+/** of template-save <graphId> --id <tplId> --name <NAME> --desc <DESC>: distil an existing graph into a template. */
 async function cmdTemplateSave() {
   const graphId = args[1];
   const root = rootHome();
@@ -191,12 +191,12 @@ async function cmdTemplateSave() {
     edges: graph.edges,
     groups: graph.groups
   });
-  console.log(`✓ 模板已保存：${saved.id}（of create --template ${saved.id} 可复用）`);
+  console.log(`✓ Template saved: ${saved.id} (reuse with of create --template ${saved.id})`);
 }
 
 async function cmdTemplateDelete() {
   const result = await deleteCustomTemplate(rootHome(), args[1]);
-  console.log(`✓ 已删除模板 ${result.id}`);
+  console.log(`✓ Template deleted ${result.id}`);
 }
 
 async function cmdMeta() {
@@ -208,7 +208,7 @@ async function cmdMeta() {
   if (opt("--direction")) graph.direction = opt("--direction") === "LR" ? "LR" : "TD";
   graph.revision += 1;
   await saveGraph(join(root, "graphs", id), graph);
-  console.log(`✓ ${graph.name}（方向 ${graph.direction}）`);
+  console.log(`✓ ${graph.name} (direction ${graph.direction})`);
 }
 
 async function cmdTrash() {
@@ -219,8 +219,8 @@ async function cmdTrash() {
   for (const entry of entries.filter((item) => item.isDirectory())) {
     try {
       const raw = JSON.parse(await readFile(join(trashDir, entry.name, "graph.json"), "utf8"));
-      console.log(`${entry.name}  「${raw.name}」 ${raw.id}（of restore "${entry.name}" 恢复）`);
-    } catch { /* 跳过 */ }
+      console.log(`${entry.name}  "${raw.name}" ${raw.id} (restore with of restore "${entry.name}")`);
+    } catch { /* skip */ }
   }
 }
 
@@ -229,14 +229,14 @@ async function cmdRestore() {
   const entry = String(args[1] ?? "").replace(/[/\\]/g, "");
   const raw = JSON.parse(await readFile(join(rootHome(), "trash", entry, "graph.json"), "utf8"));
   await rename(join(rootHome(), "trash", entry), join(rootHome(), "graphs", raw.id));
-  console.log(`✓ 已恢复「${raw.name}」 id=${raw.id}`);
+  console.log(`✓ Restored "${raw.name}" id=${raw.id}`);
 }
 
 async function cmdDelete() {
   const id = args[1];
-  if (opt("--yes") === null) fail("删除会移入 trash（可恢复）。确认请加 --yes");
+  if (opt("--yes") === null) fail("Deletion moves the graph into trash (recoverable). Add --yes to confirm.");
   const trashDir = await deleteGraph(rootHome(), id);
-  console.log(`✓ 已移入 ${trashDir}`);
+  console.log(`✓ Moved into ${trashDir}`);
 }
 
 async function cmdStudio() {
@@ -261,69 +261,68 @@ async function cmdDoctor() {
   const root = rootHome();
   await ensureRoot(root);
   const nodeOk = Number(process.versions.node.split(".")[0]) >= 18;
-  console.log(`Node.js ${process.versions.node} ${nodeOk ? "✓" : "✗（需要 ≥18）"}`);
-  console.log(`存储根：${root} ✓`);
+  console.log(`Node.js ${process.versions.node} ${nodeOk ? "✓" : "✗ (>=18 required)"}`);
+  console.log(`Storage root: ${root} ✓`);
   try {
     await readFile(new URL("../studio/index.html", import.meta.url), "utf8");
-    console.log("Studio 资产 ✓");
-  } catch { console.log("Studio 资产 ✗（index.html 缺失）"); }
+    console.log("Studio assets ✓");
+  } catch { console.log("Studio assets ✗ (index.html missing)"); }
   const graphs = await listGraphs(root);
-  console.log(`图数量：${graphs.length}`);
+  console.log(`Graphs: ${graphs.length}`);
   try {
     const afHome = resolve(process.env.AF_HOME ?? join(homedir(), ".agent-flow"));
     await readFile(join(afHome, "package.json"), "utf8");
-    console.log("agent-flow 检测到 ✓（可用 of import-af <id> 导入工作流图）");
-  } catch { console.log("agent-flow 未安装（可选，不影响其他功能）"); }
+    console.log("agent-flow detected ✓ (import workflows with of import-af <id>)");
+  } catch { console.log("agent-flow not installed (optional; nothing else is affected)"); }
 }
 
 function cmdHelp() {
-  console.log(`OmniFlow v${VERSION} — 万用流程图：一切关系皆可成图
+  console.log(`OmniFlow v${VERSION} — a universal flow map: everything is a graph
 
-用法: of <command> [args]
+usage: of <command> [args]
 
-  create <名称> [--template id] [--desc 文本]   按模板建图（默认 blank）
-  templates                                    列出全部模板
-  list / read <id>                             列出 / 查看图
-  validate <id>                                结构校验（硬错误 + 软警告）
-  analyze <id> [--trace nodeId]                环 / 瓶颈 / 孤立点 / 依赖追踪
-  layout <id> [--mode layered|clusters]         布局：分层 / 分组聚簇
-  export <id> --format mermaid|dot|md|txt|json|html [--out 文件] [--no-embed]
-  import <文件> [--format mermaid|json] [--name 新名]
-  import-doc <content_list.json|.md|build_data.py> [--name 名] [--pages 页面图目录] [--folder 路径]  # MinerU/Markdown/人工卡片表 → 图
-  import-af <agent-flow-id>                    导入 agent-flow 工作流为图
-  studio [--port N] [--no-open]                本地画布（默认 127.0.0.1:4319）
-  mcp                                          MCP 标准服务（stdio，全量 61 个工具）
-  templates                                    内置 + 自定义模板列表
-  template-save <图id> [--id --name --desc]     把图沉淀为自定义模板
-  template-delete <模板id>                      删除自定义模板
-  meta <图id> [--name --desc --direction]       改图元信息
-  trash / restore <trashName>                  回收站列表 / 恢复
-  delete <id> --yes                            移入 trash（可恢复）
-  doctor                                       环境自检
+  create <name> [--template id] [--desc text]   build from a template (default: blank)
+  templates                                    list all templates
+  list / read <id>                             list graphs / show one graph
+  validate <id>                                structure validation (hard errors + soft warnings)
+  analyze <id> [--trace nodeId]                cycles / bottlenecks / orphans / dependency trace
+  layout <id> [--mode layered|clusters]        layout: layered / grouped clusters
+  export <id> --format mermaid|dot|md|txt|json|html [--out FILE] [--no-embed]
+  import <file> [--format mermaid|json] [--name NEW-NAME]
+  import-doc <content_list.json|.md|build_data.py> [--name NAME] [--pages PAGE-IMG-DIR] [--folder PATH]  # MinerU / Markdown / card table → graph
+  import-af <agent-flow-id>                    import an agent-flow workflow as a graph
+  studio [--port N] [--no-open]                local canvas (default 127.0.0.1:4319)
+  mcp                                          MCP standard server (stdio, all 61 tools)
+  template-save <graphId> [--id --name --desc]  distil a graph into a custom template
+  template-delete <templateId>                  delete a custom template
+  meta <graphId> [--name --desc --direction]     edit graph meta
+  trash / restore <trashName>                   list the trash / restore
+  delete <id> --yes                             move into trash (recoverable)
+  doctor                                        environment self-check
 
-节点/连线一切样式（颜色、形状、箭头、标签）在 Studio 里改，或直接编辑 graph.json。`);
+Every node/edge style (color, shape, arrow, label) is edited in the Studio, or by editing graph.json directly.`);
 }
 
 
-/* ---------- 非线性对话（DAG 会话）CLI ---------- */
+/* ---------- Non-linear conversation (DAG sessions) CLI ---------- */
 async function cmdConvo(){
   const sub = args[1];
   const root = rootHome();
   if (sub === "new"){
     const topic = args[2];
-    if (!topic){ console.error('用法: of convo new "话题" [--folder 路径] [--lang zh|en]'); process.exit(1); }
+    if (!topic){ console.error('usage: of convo new "topic" [--folder PATH] [--lang zh|en]'); process.exit(1); }
     await ensureRoot(root);
     const g = ensureConversationShape(normalizeGraph({ name: topic, nodes: [], edges: [], groups: [], notes: {} }), { topic });
     g.id = makeGraphId(g.name);
     appendTurn(g, { text: topic, speaker: "system", type: "topic" });
     await saveGraph(join(root, "graphs", g.id), g);
     const folder = opt("--folder");
-    if (folder) { try { await moveGraph(root, g.id, folder); } catch { /* 归档失败不阻断 */ } }
-    console.log(`✓ 对话已创建\n  id: ${g.id}\n  存储: ${join(root, "graphs", g.id, "graph.json")}`);
+    if (folder) { try { await moveGraph(root, g.id, folder); } catch { /* filing failure is not fatal */ } }
+    console.log(`✓ Conversation created\n  id: ${g.id}\n  stored: ${join(root, "graphs", g.id, "graph.json")}`);
     return;
   }
   const id = args[2];
-  if (!id){ console.error("用法: of convo say|branch|merge|path|open <图id> …"); process.exit(1); }
+  if (!id){ console.error("usage: of convo say|branch|merge|path|open <graphId> …"); process.exit(1); }
   const { graph } = await loadGraph(root, id);
   let changed = false;
   if (sub === "say"){
@@ -331,7 +330,7 @@ async function cmdConvo(){
     const rawWords = args.slice(3);
     const textWords = [];
     for (let i = 0; i < rawWords.length; i++){
-      if (flagNames.has(rawWords[i])){ i++; continue; }   // 跳过 flag 及其值
+      if (flagNames.has(rawWords[i])){ i++; continue; }   // skip the flag and its value
       textWords.push(rawWords[i]);
     }
     const text = textWords.join(" ");
@@ -340,41 +339,41 @@ async function cmdConvo(){
     graph.notes = graph.notes ?? {};
     graph.notes[node.id] = String(text).split("\n")[0].slice(0, 120);
     changed = true;
-    console.log(`✓ 已追加发言 ${node.id}（head 已移动）`);
+    console.log(`✓ Turn appended ${node.id} (head moved)`);
   } else if (sub === "branch"){
     ensureConversationShape(graph);
     setHead(graph, args[3]);
     changed = true;
-    console.log(`✓ head 已移到 ${args[3]}；下次 say 将从这里分出新支`);
+    console.log(`✓ Head moved to ${args[3]}; the next say forks from here`);
   } else if (sub === "merge"){
     ensureConversationShape(graph);
     const sources = String(args[3] ?? "").split(",").map((x)=> x.trim()).filter(Boolean);
-    const node = mergeBranches(graph, { sources, label: opt("--label", "汇合"), text: opt("--text", "") });
+    const node = mergeBranches(graph, { sources, label: opt("--label", "merge"), text: opt("--text", "") });
     changed = true;
-    console.log(`✓ 已建立汇合点 ${node.id}`);
+    console.log(`✓ Merge node created ${node.id}`);
   } else if (sub === "path"){
-    // 第三个位置参数可能是节点 id，也可能是 flag → 只有非 flag 才当节点
+    // the third positional may be a node id or a flag → only treat non-flags as nodes
     const maybeNode = args[3] && !String(args[3]).startsWith("--") ? args[3] : null;
     const target = maybeNode ?? graph.conversation?.head;
     console.log(linearize(graph, target, { format: opt("--format", "md") }));
     return;
   } else if (sub === "next"){
     const n = nextSpeaker(ensureConversationShape(graph));
-    console.log(`下一步该谁产出: ${n.nextSpeaker ?? "—"}\n理由: ${n.reason}\n轮次: ${n.round}\n拓扑: ${n.topology}\n待办: ${n.awaiting.join(", ") || "—"}`);
-    console.log(`\n--- 应发送的上下文（根→head）---\n${n.contextText}`);
+    console.log(`Next speaker: ${n.nextSpeaker ?? "—"}\nreason: ${n.reason}\nround: ${n.round}\ntopology: ${n.topology}\nawaiting: ${n.awaiting.join(", ") || "—"}`);
+    console.log(`\n--- Context to send (root → head) ---\n${n.contextText}`);
     return;
   } else if (sub === "pending"){
     const ps = pendingTurns(ensureConversationShape(graph));
-    console.log(ps.length ? ps.map((x)=> `· [${x.status}] ${x.agent ?? "?"} — ${x.label}  (${x.id})`).join("\n") : "（无待办分支）");
+    console.log(ps.length ? ps.map((x)=> `· [${x.status}] ${x.agent ?? "?"} — ${x.label}  (${x.id})`).join("\n") : "(no pending branches)");
     return;
   } else if (sub === "agent"){
-    // of convo agent <id> <名字> [--role worker] [--model gpt-4o] [--goal 目标]
+    // of convo agent <id> <name> [--role worker] [--model gpt-4o] [--goal GOAL]
     ensureConversationShape(graph);
     const a = registerAgent(graph, { name: args[3], role: opt("--role", "worker"), model: opt("--model", ""), goal: opt("--goal", "") });
     changed = true;
-    console.log(`✓ 已注册 agent ${a.name}（${a.role}）`);
+    console.log(`✓ Agent registered ${a.name} (${a.role})`);
   } else if (sub === "record"){
-    // of convo record <id> <agent> "文本" [--status done|running|...] [--from 节点] [--handoff 目标]
+    // of convo record <id> <agent> "TEXT" [--status done|running|...] [--from NODE] [--handoff TARGET]
     const agent = args[3];
     const words = []; const flags = new Set(["--status", "--from", "--handoff", "--type", "--edge"]);
     const rest = args.slice(4);
@@ -384,20 +383,20 @@ async function cmdConvo(){
     graph.notes = graph.notes ?? {};
     graph.notes[node.id] = words.join(" ").split("\n")[0].slice(0, 120);
     changed = true;
-    console.log(`✓ 已记录 ${agent} 的产出 ${node.id}（${node.status}）`);
+    console.log(`✓ Recorded output of ${agent} → ${node.id} (${node.status})`);
   } else if (sub === "vote"){
-    // of convo vote <id> <节点,节点,...> [--strategy majority|judge] [--text 结论]
+    // of convo vote <id> <node,node,...> [--strategy majority|judge] [--text VERDICT]
     ensureConversationShape(graph);
     const sources = String(args[3] ?? "").split(",").map((x)=> x.trim()).filter(Boolean);
     const r = aggregateBranches(graph, { sources, strategy: opt("--strategy", "majority"), label: opt("--label", null), text: opt("--text", "") });
     graph.notes = graph.notes ?? {};
     graph.notes[r.node.id] = String(r.chosen ?? "").slice(0, 120);
     changed = true;
-    console.log(`✓ 聚合完成：${r.strategy} · ${r.distinct} 种答案 · 共识 ${(r.consensus * 100).toFixed(0)}%\n  票数: ${r.tally.map((t)=> `${t.count}×${t.value.slice(0, 30)}`).join(" | ")}`);
+    console.log(`✓ Aggregated: ${r.strategy} · ${r.distinct} distinct answers · consensus ${(r.consensus * 100).toFixed(0)}%\n  tally: ${r.tally.map((t)=> `${t.count}×${t.value.slice(0, 30)}`).join(" | ")}`);
   } else if (sub === "scaffold"){
-    // of convo scaffold <id> <topology> <名字:角色,名字:角色,...> [--topic 主题]
+    // of convo scaffold <id> <topology> <name:role,name:role,...> [--topic TOPIC]
     ensureConversationShape(graph);
-    // args = [cmd, "convo", sub, id, topology, "名:角色,..."]
+    // args = [cmd, "convo", sub, id, topology, "name:role,..."]
     const topology = args[3] ?? "supervisor";
     const agents = String(args[4] ?? "").split(",").map((x)=> x.trim()).filter(Boolean).map((pair)=> {
       const [name, role] = pair.split(":");
@@ -405,31 +404,31 @@ async function cmdConvo(){
     });
     const created = scaffoldTopology(graph, { topology, agents, topic: opt("--topic", null) });
     changed = true;
-    console.log(`✓ 已生成 ${topology} 骨架：${created.branches.length} 条并行分支（agents: ${created.agents.join(", ")}）`);
+    console.log(`✓ ${topology} scaffold created: ${created.branches.length} parallel branches (agents: ${created.agents.join(", ")})`);
   } else if (sub === "open"){
     const ov = conversationOverview(ensureConversationShape(graph));
-    console.log(`head: ${ov.head}\n主线长度: ${ov.mainline.length}\n开放分支 ${ov.openThreads.length} 条:`);
+    console.log(`head: ${ov.head}\nmainline length: ${ov.mainline.length}\nopen threads: ${ov.openThreads.length}:`);
     for (const th of ov.openThreads) console.log(`  · ${th.label}  (${th.id})`);
-    console.log(`分叉点 ${ov.forkCount ?? ov.forks.length} 个: ${ov.forks.map((f)=> f.label).join(" / ") || "—"}`);
-    console.log(`发言人: ${ov.speakers.join(", ") || "—"}`);
+    console.log(`forks ${ov.forkCount ?? ov.forks.length}: ${ov.forks.map((f)=> f.label).join(" / ") || "—"}`);
+    console.log(`speakers: ${ov.speakers.join(", ") || "—"}`);
     return;
   } else {
-    console.error("用法: of convo new|say|branch|merge|path|open …");
+    console.error("usage: of convo new|say|branch|merge|path|open …");
     process.exit(1);
   }
   if (changed){ graph.revision += 1; await saveGraph(join(root, "graphs", id), graph); }
 }
 
 
-/* ---------- 文档导入：MinerU 结构化 / Markdown → 卡片图 ---------- */
+/* ---------- Document import: MinerU structure / Markdown → card graph ---------- */
 async function cmdImportDoc(){
   const file = args[1];
-  if (!file){ console.error("用法: of import-doc <content_list.json | .md> [--name 图名] [--pages 页面图目录] [--folder 路径] [--lang zh|en]"); process.exit(1); }
+  if (!file){ console.error("usage: of import-doc <content_list.json | .md> [--name GRAPH-NAME] [--pages PAGE-IMG-DIR] [--folder PATH] [--lang zh|en]"); process.exit(1); }
   const root = rootHome();
   await ensureRoot(root);
   const raw = await readFile(file, "utf8");
   const name = opt("--name", file.replace(/^.*\//, "").replace(/\.(json|md)$/i, ""));
-  // 页面图目录：文件名里的数字当作页码（如 p024.png / c2_pdf024_book021.png）
+  // page-image dir: the number in a filename is the page number (e.g. p024.png / c2_pdf024_book021.png)
   const pagesDir = opt("--pages");
   const pages = [];
   if (pagesDir){
@@ -440,13 +439,13 @@ async function cmdImportDoc(){
         const page = nums.length ? Number(nums[nums.length - 1]) : null;
         pages.push({ page, src: join(pagesDir, f), label: f });
       }
-    } catch (e){ console.error(`⚠ 页面图目录不可读：${e.message}`); }
+    } catch (e){ console.error(`⚠ page-image directory unreadable: ${e.message}`); }
   }
-  // MinerU 的 image_source.path 相对 json 所在目录（或 mineru_native/）解析
+  // MinerU's image_source.path is resolved relative to the json directory (or mineru_native/)
   const assetsRoot = opt("--assets-root", dirname(resolve(file)));
   let built;
   if (/\.py$/i.test(file)){
-    // 人工整理的卡片表（build_data.py 形态）：最高保真，含人工 deps 与带理由的节间流
+    // hand-curated card table (build_data.py shape): highest fidelity, with manual deps and justified section flows
     const data = await extractPythonData(file, { python: opt("--python", "python3") });
     built = buildGraphFromCards(data, { name, lang: opt("--lang", "zh") });
     built.__flow = { data };
@@ -457,15 +456,15 @@ async function cmdImportDoc(){
   }
   built.graph.id = makeGraphId(built.graph.name);
   const verdict = validateGraph(built.graph);
-  if (!verdict.ok) console.error(`⚠ 结构校验告警：${verdict.issues.slice(0, 3).join("；")}`);
+  if (!verdict.ok) console.error(`⚠ structure warnings: ${verdict.issues.slice(0, 3).join("; ")}`);
   await saveGraph(join(root, "graphs", built.graph.id), built.graph);
-  // 资源拷贝：① MinerU 抽出图片（公式图/插图）② 页面图；都进 <graph>/assets/
+  // asset copy: (1) MinerU-extracted images (formula figures/illustrations) (2) page images; all go into <graph>/assets/
   let attached = 0;
   {
     const { copyFile, mkdir } = await import("node:fs/promises");
     const assetsDir = join(root, "graphs", built.graph.id, "assets");
     await mkdir(assetsDir, { recursive: true });
-    // 把「图内相对路径」解析成绝对路径的候选（json 同目录 / mineru_native / 图片目录本身）
+    // resolve an in-graph relative path to absolute candidates (json dir / mineru_native / the image dir itself)
     const candidates = (rel)=>{
       const clean = String(rel).replace(/^\.\//, "");
       return [
@@ -478,7 +477,7 @@ async function cmdImportDoc(){
     for (const node of built.graph.nodes){
       const list = [];
       for (const a of (node.attachments ?? [])){
-        if (/^assets\//.test(a.src)){ list.push(a); continue; }   // 已是图内路径
+        if (/^assets\//.test(a.src)){ list.push(a); continue; }   // already an in-graph path
         let copied = false;
         for (const cand of candidates(a.src)){
           try {
@@ -489,9 +488,9 @@ async function cmdImportDoc(){
             list.push({ ...a, src: `assets/${safe}` });
             copied = true;
             break;
-          } catch { /* 试下一个候选 */ }
+          } catch { /* try the next candidate */ }
         }
-        if (!copied) list.push(a);   // 保留原引用（外链或找不到）
+        if (!copied) list.push(a);   // keep the original reference (external link, or not found)
       }
       if (list.length){
         const { setNodeAttachments } = await import("../lib/graph-core.js");
@@ -519,35 +518,35 @@ async function cmdImportDoc(){
   }
   const folder = opt("--folder");
   if (folder) { try { await moveGraph(root, built.graph.id, folder); } catch {} }
-  console.log(`✓ 已从 ${file} 建图`);
+  console.log(`✓ Graph built from ${file}`);
   console.log(`  id: ${built.graph.id}`);
-  console.log(`  卡片 ${built.stats.cards} 张（${Object.entries(built.stats.byType).map(([k, v])=> `${k} ${v}`).join(" · ")}）`);
-  console.log(`  解析格式 ${built.stats.format} · 依赖边 ${built.stats.edges} 条 · 章节分组 ${built.stats.groups} 个${built.stats.pages ? ` · 页面 ${built.stats.pages} 页` : ""}`);
-  if (built.stats.inlineFormulas) console.log(`  行内公式保真 ${built.stats.inlineFormulas} 处`);
-  if (attached) console.log(`  已挂载图片 ${attached} 张（MinerU 插图 + 页面图）`);
-  console.log(`  存储: ${join(root, "graphs", built.graph.id, "graph.json")}${folder ? `\n  归档: ${folder}` : ""}`);
+  console.log(`  cards: ${built.stats.cards} (${Object.entries(built.stats.byType).map(([k, v])=> `${k} ${v}`).join(" · ")})`);
+  console.log(`  format ${built.stats.format} · dependency edges ${built.stats.edges} · section groups ${built.stats.groups}${built.stats.pages ? ` · pages ${built.stats.pages}` : ""}`);
+  if (built.stats.inlineFormulas) console.log(`  inline formulas preserved: ${built.stats.inlineFormulas}`);
+  if (attached) console.log(`  attached images: ${attached} (MinerU figures + page images)`);
+  console.log(`  stored: ${join(root, "graphs", built.graph.id, "graph.json")}${folder ? `\n  filed: ${folder}` : ""}`);
   if (built.__flow?.data?.SECTION_FLOW?.length){
-    const ov = buildOverviewFromFlow(built.__flow.data, { name: `${name} · 章节总览`, sourceId: built.graph.id });
+    const ov = buildOverviewFromFlow(built.__flow.data, { name: `${name} · Section overview`, sourceId: built.graph.id });
     ov.graph.id = makeGraphId(ov.graph.name);
     await saveGraph(join(root, "graphs", ov.graph.id), ov.graph);
     if (folder){ try { await moveGraph(root, ov.graph.id, folder); } catch {} }
-    console.log(`  ↗ 章节总览图：${ov.stats.sections} 小节 · ${ov.stats.edges} 条带理由的节间依赖\n    id: ${ov.graph.id}`);
+    console.log(`  ↗ Section overview: ${ov.stats.sections} sections · ${ov.stats.edges} justified cross-section deps\n    id: ${ov.graph.id}`);
   }
 }
 
 
-/* ---------- 实时对话记录 CLI ----------
-   of live start [--topic 主题] [--folder 路径]    开启（已有则续记）
-   of live log "内容" [--role user|agent]          记一轮（无需 id）
-   of live stop                                     停止
-   of live status                                   状态
+/* ---------- Live conversation capture CLI ----------
+   of live start [--topic TOPIC] [--folder PATH]   start (resumes an open session)
+   of live log "TEXT" [--role user|agent]          log one turn (no id needed)
+   of live stop                                    stop
+   of live status                                  status
 */
 async function cmdLive(){
   const sub = args[1] ?? "status";
   const root = rootHome();
   if (sub === "start"){
     const r = await liveStart(root, { topic: opt("--topic", null), folder: opt("--folder", null), lang: opt("--lang", "zh") === "en" ? "en" : "zh" });
-    console.log(`${r.resumed ? "✓ 已续记" : "✓ 已开启记录"}：${r.name}\n  id: ${r.id}\n  主题: ${r.topic}\n  当前轮数: ${r.turns}`);
+    console.log(`${r.resumed ? "✓ Resumed recording" : "✓ Recording started"}: ${r.name}\n  id: ${r.id}\n  topic: ${r.topic}\n  turns so far: ${r.turns}`);
     return;
   }
   if (sub === "log"){
@@ -555,27 +554,27 @@ async function cmdLive(){
     const rest = args.slice(2);
     for (let i = 0; i < rest.length; i++){ if (flags.has(rest[i])){ i++; continue; } words.push(rest[i]); }
     const r = await liveLog(root, { role: opt("--role", "agent"), text: words.join(" "), name: opt("--name", null), from: opt("--from", null), type: opt("--type", null), status: opt("--status", "done"), handoffTo: opt("--handoff", null) });
-    console.log(`✓ 已记录 ${r.role} 一轮 → ${r.nodeId}（主线 ${r.mainline} · 总计 ${r.total}）`);
+    console.log(`✓ Logged one ${r.role} turn → ${r.nodeId} (mainline ${r.mainline} · total ${r.total})`);
     return;
   }
   if (sub === "stop"){ console.log(JSON.stringify(await liveStop(root), null, 2)); return; }
   const st = await liveStatus(root);
-  console.log(st.on ? `● 记录中：${st.name}\n  已记 ${st.turns} 轮 · 主线 ${st.mainline} · 开放分支 ${st.openThreads}\n  id: ${st.id}` : `○ 未在记录${st.id ? `（上次：${st.name ?? st.id}，${st.turns} 轮）` : ""}`);
+  console.log(st.on ? `● Recording: ${st.name}\n  turns ${st.turns} · mainline ${st.mainline} · open threads ${st.openThreads}\n  id: ${st.id}` : `○ Not recording${st.id ? ` (last: ${st.name ?? st.id}, ${st.turns} turns)` : ""}`);
 }
 
 
-/* ---------- 实时对话记录 CLI ----------
-   of live start [--topic 主题] [--folder 路径]    开启（已有则续记）
-   of live log "内容" [--role user|agent]          记一轮（无需 id）
-   of live stop                                     停止
-   of live status                                   状态
+/* ---------- Live conversation capture CLI ----------
+   of live start [--topic TOPIC] [--folder PATH]   start (resumes an open session)
+   of live log "TEXT" [--role user|agent]          log one turn (no id needed)
+   of live stop                                    stop
+   of live status                                  status
 */
 
 
-/* ---------- 跨图链接（单一事实源 + 数学理由） ----------
-   of xlink add --from 图:节点 --to 图:节点 --why "理由"
-   of xlink import <crosslinks.py|json> [--map BOOK=图id,...]
-   of xlink list [图id] | of xlink rm <id>
+/* ---------- Cross-graph links (single source of truth + mathematical reason) ----------
+   of xlink add --from GRAPH:NODE --to GRAPH:NODE --why "REASON"
+   of xlink import <crosslinks.py|json> [--map BOOK=graphId,...]
+   of xlink list [graphId] | of xlink rm <id>
 */
 async function cmdXlink(){
   const sub = args[1] ?? "list";
@@ -586,14 +585,14 @@ async function cmdXlink(){
   };
   if (sub === "add"){
     const f = split(opt("--from")), t = split(opt("--to"));
-    if (!f || !t){ console.error('用法: of xlink add --from 图id:节点id --to 图id:节点id --why "数学理由"'); process.exit(1); }
+    if (!f || !t){ console.error('usage: of xlink add --from GRAPH:NODE --to GRAPH:NODE --why "mathematical reason"'); process.exit(1); }
     const r = await addCrosslink(root, { fromGraph: f.graph, fromNode: f.node, toGraph: t.graph, toNode: t.node, why: opt("--why", ""), kind: opt("--kind", "depends") });
-    console.log(`${r.created ? "✓ 已新增" : "✓ 已更新"}跨图链接 ${r.link.id}\n  ${f.graph}:${f.node} → ${t.graph}:${t.node}`);
+    console.log(`${r.created ? "✓ Added" : "✓ Updated"} cross-graph link ${r.link.id}\n  ${f.graph}:${f.node} → ${t.graph}:${t.node}`);
     return;
   }
   if (sub === "import"){
     const file = args[2];
-    if (!file){ console.error("用法: of xlink import <crosslinks.py|.json> [--map SAMUEL=图id,ALUFFI=图id]"); process.exit(1); }
+    if (!file){ console.error("usage: of xlink import <crosslinks.py|.json> [--map SAMUEL=graphId,ALUFFI=graphId]"); process.exit(1); }
     const map = {};
     for (const pair of String(opt("--map", "")).split(",").filter(Boolean)){
       const [k, v] = pair.split("=");
@@ -602,13 +601,13 @@ async function cmdXlink(){
     const rows = parseCrosslinkTable(await readFile(file, "utf8"), { bookToGraph: map });
     let created = 0, updated = 0;
     for (const r of rows){ const res = await addCrosslink(root, r); res.created ? created++ : updated++; }
-    console.log(`✓ 已导入跨图链接 ${rows.length} 条（新增 ${created} · 更新 ${updated}）`);
-    if (!Object.keys(map).length) console.log("  提示：用 --map BOOK=图id 把书代号映射到本地图 id");
+    console.log(`✓ Imported ${rows.length} cross-graph links (added ${created} · updated ${updated})`);
+    if (!Object.keys(map).length) console.log("  tip: use --map BOOK=graphId to map book codes onto local graph ids");
     return;
   }
   if (sub === "rm"){
     const r = await removeCrosslink(root, args[2]);
-    console.log(`✓ 已删除 ${r.removed} 条`);
+    console.log(`✓ Removed ${r.removed}`);
     return;
   }
   if (sub === "prune"){
@@ -619,27 +618,27 @@ async function cmdXlink(){
         catch { return false; }
       },
     });
-    console.log(`✓ 已清理陈旧跨图链接 ${r.removed} 条（保留 ${r.kept}/${r.total}）`);
+    console.log(`✓ Pruned ${r.removed} stale cross-graph links (kept ${r.kept}/${r.total})`);
     return;
   }
   const gid = args[2];
   const list = gid ? await crosslinksForGraph(root, gid) : (await readCrosslinks(root)).map((x)=> ({ ...x, view: "-", self: x.from, other: x.to }));
-  if (!list.length){ console.log("（无跨图链接）"); return; }
-  console.log(`共 ${list.length} 条：`);
+  if (!list.length){ console.log("(no cross-graph links)"); return; }
+  console.log(`${list.length} total:`);
   for (const x of list.slice(0, 60)){
-    const arrow = x.view === "provides" ? "→ 外部引用" : x.view === "uses" ? "← 跨图依据" : "";
+    const arrow = x.view === "provides" ? "→ external reference" : x.view === "uses" ? "← cross-graph support" : "";
     console.log(`  ${x.from.graph}:${x.from.node} → ${x.to.graph}:${x.to.node}  ${arrow}`);
-    if (x.why) console.log(`     理由：${String(x.why).slice(0, 110)}${x.why.length > 110 ? "…" : ""}`);
+    if (x.why) console.log(`     why: ${String(x.why).slice(0, 110)}${x.why.length > 110 ? "…" : ""}`);
   }
 }
 
-/* ---------- 分层投影 ----------
-   of project overview <图id> [--name 名] [--folder 路径]
-   of project sections <图id> [--min 3] [--only 小节名] [--folder 路径]
+/* ---------- Hierarchical projection ----------
+   of project overview <graphId> [--name NAME] [--folder PATH]
+   of project sections <graphId> [--min 3] [--only SECTION] [--folder PATH]
 */
 async function cmdProject(){
   const kind = args[1], id = args[2];
-  if (!kind || !id){ console.error("用法: of project overview|sections <图id> [--min 3] [--only 小节] [--folder 路径]"); process.exit(1); }
+  if (!kind || !id){ console.error("usage: of project overview|sections <graphId> [--min 3] [--only SECTION] [--folder PATH]"); process.exit(1); }
   const root = rootHome();
   const folder = opt("--folder");
   if (kind === "overview"){
@@ -647,17 +646,17 @@ async function cmdProject(){
     r.graph.id = makeGraphId(r.graph.name);
     await saveGraph(join(root, "graphs", r.graph.id), r.graph);
     if (folder){ try { await moveGraph(root, r.graph.id, folder); } catch {} }
-    console.log(`✓ 章节总览：${r.graph.nodes.length} 个小节 · ${r.graph.edges.length} 条聚合依赖\n  id: ${r.graph.id}`);
-    if (r.crossLinks) console.log(`  含跨图依据 ${r.crossLinks} 条`);
+    console.log(`✓ Section overview: ${r.graph.nodes.length} sections · ${r.graph.edges.length} aggregated dependencies\n  id: ${r.graph.id}`);
+    if (r.crossLinks) console.log(`  includes ${r.crossLinks} cross-graph links`);
     return;
   }
   if (kind === "sections"){
     const r = await projectSections(root, id, { minCards: Number(opt("--min", 3)), only: opt("--only", null), folder });
-    console.log(`✓ 已生成 ${r.created.length} 张小节图（源图 ${r.sections} 个小节）`);
-    for (const c of r.created) console.log(`  · ${c.name.slice(0, 38)} — ${c.cards} 卡 + ${c.ghosts} 幽灵 · ${c.edges} 边\n    id: ${c.id}`);
+    console.log(`✓ Generated ${r.created.length} section graphs (source has ${r.sections} sections)`);
+    for (const c of r.created) console.log(`  · ${c.name.slice(0, 38)} — ${c.cards} cards + ${c.ghosts} ghosts · ${c.edges} edges\n    id: ${c.id}`);
     return;
   }
-  console.error("用法: of project overview|sections <图id> …");
+  console.error("usage: of project overview|sections <graphId> …");
   process.exit(1);
 }
 
@@ -671,5 +670,5 @@ const commands = {
   "-h": cmdHelp, "--version": () => console.log(VERSION), "-v": () => console.log(VERSION)
 };
 const handler = commands[command];
-if (!handler) { console.error(`未知命令：${command}`); cmdHelp(); process.exit(1); }
+if (!handler) { console.error(`unknown command: ${command}`); cmdHelp(); process.exit(1); }
 await handler();
