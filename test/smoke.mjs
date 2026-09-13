@@ -22,13 +22,13 @@ async function test(name, fn) {
 }
 
 // ---- 1. 数据模型与校验 ----
-await test("normalizeGraph 补全默认值", () => {
+await test("normalizeGraph fills in defaults", () => {
   const graph = normalizeGraph({ nodes: [{ id: "a", label: "A" }], edges: [{ id: "e1", source: "a", target: "a" }] });
   assert.equal(graph.nodes[0].type, "process");
   assert.equal(graph.nodes[0].w, 168);
   assert.equal(graph.schemaVersion, 1);
 });
-await test("validateGraph 拒绝悬空边与重复 id", () => {
+await test("validateGraph rejects dangling edges and duplicate ids", () => {
   const graph = normalizeGraph({
     nodes: [{ id: "a", label: "A" }, { id: "a", label: "A2" }],
     edges: [{ id: "e1", source: "a", target: "ghost" }]
@@ -38,7 +38,7 @@ await test("validateGraph 拒绝悬空边与重复 id", () => {
   assert.ok(verdict.issues.some((issue) => issue.includes("重复")));
   assert.ok(verdict.issues.some((issue) => issue.includes("ghost")));
 });
-await test("validateGraph 环是警告不是错误", () => {
+await test("validateGraph treats cycles as warnings, not errors", () => {
   const graph = normalizeGraph({
     nodes: [{ id: "a" }, { id: "b" }],
     edges: [{ id: "e1", source: "a", target: "b" }, { id: "e2", source: "b", target: "a" }]
@@ -48,7 +48,7 @@ await test("validateGraph 环是警告不是错误", () => {
   assert.equal(verdict.cyclic, true);
   assert.ok(verdict.warnings.some((w) => w.includes("环")));
 });
-await test("自定义节点/边类型注册表生效", () => {
+await test("custom node/edge type registries take effect", () => {
   const graph = normalizeGraph({
     nodeTypes: { drone: { label: "无人机", fill: "#123456", shape: "hexagon", icon: "✈" } },
     edgeTypes: { attacks: { label: "攻击", color: "#FF0000", style: "dashed" } },
@@ -62,12 +62,12 @@ await test("自定义节点/边类型注册表生效", () => {
 
 // ---- 2. 分析引擎 ----
 const diamond = normalizeGraph(buildTemplate("theorem-deps"));
-await test("定理依赖模板结构合法且含类型化节点", () => {
+await test("theorem-deps template is valid and typed", () => {
   assert.equal(validateGraph(diamond).ok, true);
   assert.ok(diamond.nodes.some((n) => n.type === "theorem"));
   assert.ok(diamond.edges.some((e) => e.type === "cites"));
 });
-await test("分层布局：所有节点获得有限坐标且层次递增", () => {
+await test("layered layout: finite coords, increasing ranks", () => {
   const positions = layeredLayout(diamond.nodes, diamond.edges);
   assert.equal(positions.size, diamond.nodes.length);
   for (const [id, position] of positions) {
@@ -77,7 +77,7 @@ await test("分层布局：所有节点获得有限坐标且层次递增", () =>
   const thm = diamond.nodes.find((n) => n.id === "thm-1");
   assert.ok(positions.get(thm.id).y > positions.get(def.id).y, "下游定理应排在更下层");
 });
-await test("依赖追踪：上游/下游闭包正确", () => {
+await test("dependency trace: upstream/downstream closures are correct", () => {
   const trace = traceNode(diamond.nodes, diamond.edges, "thm-1");
   const upIds = trace.upstream.map((entry) => entry.id);
   assert.deepEqual(new Set(upIds), new Set(["def-sub", "def-wgt", "lem-1", "prop-1", "ext-sl2"]));
@@ -85,12 +85,12 @@ await test("依赖追踪：上游/下游闭包正确", () => {
   const traceLemma = traceNode(diamond.nodes, diamond.edges, "def-sub");
   assert.ok(traceLemma.downstream.some((entry) => entry.id === "thm-1"));
 });
-await test("度中心性：主定理是瓶颈节点", () => {
+await test("degree centrality: the main theorem is the bottleneck", () => {
   const report = centralityReport(diamond.nodes, diamond.edges);
   assert.equal(report.ranked[0].id, "thm-1");
   assert.ok(report.hubs.includes("thm-1"));
 });
-await test("analyzeGraph 汇总一致", () => {
+await test("analyzeGraph summary is consistent", () => {
   const result = analyzeGraph(diamond.nodes, diamond.edges, { trace: "lem-1" });
   assert.equal(result.nodeCount, diamond.nodes.length);
   assert.equal(result.cycles.length, 0);
@@ -98,7 +98,7 @@ await test("analyzeGraph 汇总一致", () => {
 });
 
 // ---- 3. 转换器 ----
-await test("Mermaid 往返：导出→解析→节点/边数一致", () => {
+await test("Mermaid round-trip: export → parse → same counts", () => {
   const exported = toMermaid(diamond);
   assert.ok(exported.includes("flowchart TD"));
   assert.ok(exported.includes("classDef"));
@@ -107,7 +107,7 @@ await test("Mermaid 往返：导出→解析→节点/边数一致", () => {
   assert.equal(parsed.edges.length, diamond.edges.length);
   assert.ok(parsed.edges.some((e) => e.label.includes("主定理") === false)); // 标签容错
 });
-await test("Mermaid 手写样例解析（标签/虚线/形状）", () => {
+await test("hand-written Mermaid parses (labels/dashed/shapes)", () => {
   const parsed = fromMermaid([
     "flowchart LR",
     "  S([开始]) -->|确认| P{可以吗}",
@@ -122,18 +122,18 @@ await test("Mermaid 手写样例解析（标签/虚线/形状）", () => {
   assert.ok(parsed.edges.some((e) => e.label === "确认" && e.style === "solid"));
   assert.ok(parsed.edges.some((e) => e.label === "否" && e.style === "dashed"));
 });
-await test("DOT 导出含样式与边标签", () => {
+await test("DOT export contains styles and edge labels", () => {
   const dot = toDot(diamond);
   assert.ok(dot.includes("digraph"));
   assert.ok(dot.includes("fillcolor="));
   assert.ok(dot.includes("label="));
 });
-await test("Markdown 大纲导出按类型分组", () => {
+await test("Markdown outline export groups by type", () => {
   const markdown = toMarkdownOutline(diamond);
   assert.ok(markdown.includes("## 定理"));
   assert.ok(markdown.includes("## 连线"));
 });
-await test("agent-flow 工作流导入：kind 映射与分支标签", async () => {
+await test("agent-flow import: kind mapping and branch labels", async () => {
   const afFlow = {
     name: "修复登录",
     nodes: [
@@ -167,7 +167,7 @@ await test(`全部 ${Object.keys(TEMPLATES).length} 个模板结构合法`, () =
 });
 
 // ---- 5. Studio 服务端 API 合同 ----
-await test("Studio API：创建/读取/编辑/校验/分析/导出/删除 全链路", async () => {
+await test("Studio API: create/read/edit/validate/analyze/export/delete end to end", async () => {
   const root = await mkdtemp(join(tmpdir(), "omniflow-test-"));
   const studio = await startStudioServer({ root, port: 0 });
   const base = `http://127.0.0.1:${studio.port}`;
@@ -237,7 +237,7 @@ await test("Studio API：创建/读取/编辑/校验/分析/导出/删除 全链
 });
 
 // ---- 6. Studio 页面静态审计：顶层 $("id") 绑定不得引用不存在的静态 id（防 boot 静默死亡） ----
-await test("index.html 顶层 $() 绑定与静态 id 一致", async () => {
+await test("index.html top-level $() bindings match static ids", async () => {
   const { readFileSync } = await import("node:fs");
   const html = readFileSync(new URL("../studio/index.html", import.meta.url), "utf8");
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -251,11 +251,11 @@ await test("index.html 顶层 $() 绑定与静态 id 一致", async () => {
     "turn-agent", "turn-agents", "turn-text", "turn-status", "turn-type", "turn-parent", "turn-handoff", "turn-save", "turn-cancel", "depLegend", "depOff", "depBar", "typeFilterBar", "new-create", "new-name", "new-folder", "imp-af", "imp-text", "imp-go", "imp-name", "imp-afid", "imp-data", "exp-text", "exp-copy", "exp-dl", "arrow"]);
   const referenced = [...script.matchAll(/\$\("([\w-]+)"\)/g)].map((m) => m[1]);
   const missing = [...new Set(referenced)].filter((id) => !dynamicIds.has(id) && !new RegExp(`id="${id}"`).test(htmlPart));
-  assert.deepEqual(missing, [], `以下 id 在 HTML 中不存在（会导致顶层 TypeError、boot 静默失败）: ${missing.join(", ")}`);
+  assert.deepEqual(missing, [], `these ids are missing from the HTML (top-level TypeError, silent boot failure): ${missing.join(", ")}`);
 });
 
 // —— 重复顶层声明检查（函数声明后者覆盖前者，是本项目反复踩的坑）——
-await test("index.html 无重复顶层声明（函数/常量）", async () => {
+await test("index.html has no duplicate top-level declarations", async () => {
   const { readFileSync } = await import("node:fs");
   const src = readFileSync(new URL("../studio/index.html", import.meta.url), "utf8");
   const script = src.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -267,15 +267,15 @@ await test("index.html 无重复顶层声明（函数/常量）", async () => {
     names.set(name, (names.get(name) ?? 0) + 1);
   }
   const dup = [...names.entries()].filter(([, n]) => n > 1).map(([k, n]) => `${k}×${n}`);
-  assert.deepEqual(dup, [], `存在重复的顶层声明（后者会静默覆盖前者）：${dup.join(", ")}`);
+  assert.deepEqual(dup, [], `duplicate top-level declarations (the later one silently overrides): ${dup.join(", ")}`);
 });
 // —— test/ 目录健全性：只放可被 node 解析的 .mjs（防止非 JS 脚本混入导致 `node test/*.mjs` 报错）——
-await test("test/ 目录只含可解析的 .mjs", async () => {
+await test("test/ contains only parseable .mjs files", async () => {
   const { readdirSync, readFileSync } = await import("node:fs");
   const dir = new URL("./", import.meta.url);
   const files = readdirSync(dir).filter((f) => !f.startsWith("."));
   const badExt = files.filter((f) => !f.endsWith(".mjs"));
-  assert.deepEqual(badExt, [], `test/ 目录内出现非 .mjs 文件（会破坏“跑全部测试”的约定）：${badExt.join(", ")}`);
+  assert.deepEqual(badExt, [], `non-.mjs file(s) inside test/ (breaks "run all tests"): ${badExt.join(", ")}`);
   const broken = [];
   for (const f of files){
     const txt = readFileSync(new URL(f, import.meta.url), "utf8");
@@ -283,30 +283,31 @@ await test("test/ 目录只含可解析的 .mjs", async () => {
     const hasJsTop = /(?:^|\n)\s*(?:import|export|const|let|function|await|console|assert|process)\b/.test(txt);
     if (isPython || !hasJsTop) broken.push(f);
   }
-  assert.deepEqual(broken, [], `test/ 内的文件不像可执行的 JS 测试（可能是被误命名的脚本）：${broken.join(", ")}`);
+  assert.deepEqual(broken, [], `file(s) inside test/ do not look like runnable JS tests (misnamed script?): ${broken.join(", ")}`);
 });
 
 // —— 文档计数漂移检查：文档里的工具数量必须与 mcp-test 的实现断言一致 ——
-await test("文档工具数量与 mcp-test 断言一致", async () => {
+await test("documented tool count matches the mcp-test assertion", async () => {
   const { readFileSync } = await import("node:fs");
   const mt = readFileSync(new URL("./mcp-test.mjs", import.meta.url), "utf8");
   const mm = mt.match(/tools\.length,\s*(\d+)/);
-  assert.ok(mm, "mcp-test.mjs 中未找到工具数量断言");
+  assert.ok(mm, "no tool-count assertion found in mcp-test.mjs");
   const expect = Number(mm[1]);
   const docs = [
-    "../skills/omni-flow/SKILL.md", "../docs/API.md", "../docs/API.en.md",
-    "../README.md", "../README.zh-CN.md", "../docs/TUTORIAL.md", "../docs/TUTORIAL.zh-CN.md",
+    "../skills/omni-flow/SKILL.md", "../docs/API.md",
+    "../README.md", "../docs/TUTORIAL.md", "../docs/FORMULAS.md",
     "../bin/of.mjs", "../promo/index.html",
   ];
   const bad = [];
   for (const d of docs){
     let txt;
     try { txt = readFileSync(new URL(d, import.meta.url), "utf8"); } catch { continue; }
-    for (const m of txt.matchAll(/(\d+)\s*(?:个工具|\btools\b)/g)){
+    // 负向后顾排除 "python3 tools"、"v1.2/3 tools" 这类误命中；只认独立出现的计数
+    for (const m of txt.matchAll(/(?<![A-Za-z0-9_./-])(\d+)\s*(?:个工具|\btools\b)/g)){
       if (Number(m[1]) !== expect) bad.push(`${d} → ${m[0]}`);
     }
   }
-  assert.deepEqual(bad, [], `文档中的工具数量与实现(${expect})不一致（文档漂移会让 agent 误判能力边界）：${bad.join("; ")}`);
+  assert.deepEqual(bad, [], `documented tool count differs from the implementation (${expect}) — docs drift makes agents misjudge capabilities: ${bad.join("; ")}`);
 });
 console.log(results.join("\n"));
 
