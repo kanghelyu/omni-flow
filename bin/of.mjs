@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // OmniFlow CLI (of) — 万用流程图。graph.json 是唯一拓扑事实来源。
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
-import { mkdir, readFile, writeFile, readdir } from "node:fs/promises";
+import { join, resolve, dirname, basename } from "node:path";
+import { mkdir, readFile, writeFile, readdir, stat } from "node:fs/promises";
 import { normalizeGraph, validateGraph } from "../lib/graph-core.js";
 import { layeredLayout, clusterLayout, forceLayout, gridLayout, analyzeGraph } from "../lib/graph-analysis.js";
 import { loadGraph, saveGraph, listGraphs, deleteGraph, makeGraphId } from "../lib/graph-service.mjs";
@@ -439,6 +439,8 @@ async function cmdImportDoc(){
       }
     } catch (e){ console.error(`⚠ 页面图目录不可读：${e.message}`); }
   }
+  // MinerU 的 image_source.path 相对 json 所在目录（或 mineru_native/）解析
+  const assetsRoot = opt("--assets-root", dirname(resolve(file)));
   const built = /\.json$/i.test(file)
     ? buildGraphFromMineru({ contentList: JSON.parse(raw), pages, name, lang: opt("--lang", "zh") })
     : buildGraphFromMarkdown({ markdown: raw, pages, name });
@@ -446,8 +448,47 @@ async function cmdImportDoc(){
   const verdict = validateGraph(built.graph);
   if (!verdict.ok) console.error(`⚠ 结构校验告警：${verdict.issues.slice(0, 3).join("；")}`);
   await saveGraph(join(root, "graphs", built.graph.id), built.graph);
-  // 页面图：复制进图资源目录并挂到对应卡片（按页码匹配）
+  // 资源拷贝：① MinerU 抽出图片（公式图/插图）② 页面图；都进 <graph>/assets/
   let attached = 0;
+  {
+    const { copyFile, mkdir } = await import("node:fs/promises");
+    const assetsDir = join(root, "graphs", built.graph.id, "assets");
+    await mkdir(assetsDir, { recursive: true });
+    // 把「图内相对路径」解析成绝对路径的候选（json 同目录 / mineru_native / 图片目录本身）
+    const candidates = (rel)=>{
+      const clean = String(rel).replace(/^\.\//, "");
+      return [
+        join(assetsRoot, clean),
+        join(assetsRoot, "mineru_native", clean),
+        join(assetsRoot, "mineru_native", basename(clean)),
+        join(assetsRoot, basename(clean)),
+      ];
+    };
+    for (const node of built.graph.nodes){
+      const list = [];
+      for (const a of (node.attachments ?? [])){
+        if (/^assets\//.test(a.src)){ list.push(a); continue; }   // 已是图内路径
+        let copied = false;
+        for (const cand of candidates(a.src)){
+          try {
+            const info = await stat(cand);
+            if (!info.isFile()) continue;
+            const safe = `${node.id}-${basename(cand)}`.replace(/[^\w.\-\u4e00-\u9fff]/g, "_");
+            await copyFile(cand, join(assetsDir, safe));
+            list.push({ ...a, src: `assets/${safe}` });
+            copied = true;
+            break;
+          } catch { /* 试下一个候选 */ }
+        }
+        if (!copied) list.push(a);   // 保留原引用（外链或找不到）
+      }
+      if (list.length){
+        const { setNodeAttachments } = await import("../lib/graph-core.js");
+        setNodeAttachments(built.graph, node.id, list);
+        if (list.some((x)=> /^assets\//.test(x.src))) attached++;
+      }
+    }
+  }
   if (pages.length){
     const { copyFile, mkdir } = await import("node:fs/promises");
     const assetsDir = join(root, "graphs", built.graph.id, "assets");
@@ -458,20 +499,21 @@ async function cmdImportDoc(){
       if (!hit) continue;
       const safe = hit.label.replace(/[^\w.\-\u4e00-\u9fff]/g, "_");
       try { await copyFile(hit.src, join(assetsDir, safe)); } catch { continue; }
-      node.attachments = [{ kind: "page", src: `assets/${safe}`, label: hit.label, page: pno }];
+      const list = (node.attachments ?? []).filter((a)=> a.kind !== "page");
+      list.push({ kind: "page", src: `assets/${safe}`, label: hit.label, page: pno });
+      const { setNodeAttachments } = await import("../lib/graph-core.js");
+      setNodeAttachments(built.graph, node.id, list);
       attached++;
     }
-    const { setNodeAttachments } = await import("../lib/graph-core.js");
-    for (const node of built.graph.nodes) if (node.attachments?.length) setNodeAttachments(built.graph, node.id, node.attachments);
-    await saveGraph(join(root, "graphs", built.graph.id), built.graph);
   }
   const folder = opt("--folder");
   if (folder) { try { await moveGraph(root, built.graph.id, folder); } catch {} }
   console.log(`✓ 已从 ${file} 建图`);
   console.log(`  id: ${built.graph.id}`);
   console.log(`  卡片 ${built.stats.cards} 张（${Object.entries(built.stats.byType).map(([k, v])=> `${k} ${v}`).join(" · ")}）`);
-  console.log(`  自动抽取依赖边 ${built.stats.edges} 条 · 覆盖 ${built.stats.pages} 页`);
-  if (attached) console.log(`  已挂载页面图 ${attached} 张`);
+  console.log(`  解析格式 ${built.stats.format} · 依赖边 ${built.stats.edges} 条 · 页面 ${built.stats.pages} 页 · 章节分组 ${built.stats.groups} 个`);
+  if (built.stats.inlineFormulas) console.log(`  行内公式保真 ${built.stats.inlineFormulas} 处`);
+  if (attached) console.log(`  已挂载图片 ${attached} 张（MinerU 插图 + 页面图）`);
   console.log(`  存储: ${join(root, "graphs", built.graph.id, "graph.json")}${folder ? `\n  归档: ${folder}` : ""}`);
 }
 
