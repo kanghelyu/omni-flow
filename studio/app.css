@@ -788,3 +788,13 @@ body.canvas-mode #scene { display: block; }
 .note-preview { font-size: 14px; line-height: 1.8; }
 .note-preview h1, .note-preview h2, .note-preview h3 { font-size: 15px; }
 .modal .note-body, .modal #n-preview { font-size: 14px; line-height: 1.8; }
+
+/* The note field sits in the detail block, so it must share that block's rounding (--radius, 10px).
+   With the smaller --radius-sm the focus ring drew a visibly different corner inside the block —
+   aligning the two radii fixes it with no extra element and no repaint cost. */
+#n-note { border-radius: var(--radius); }
+
+/* The note field sits in the detail block, so it must share that block's rounding (--radius, 10px).
+   With the smaller --radius-sm the focus ring drew a visibly different corner inside the block —
+   aligning the two radii fixes it with no extra element and no repaint cost. */
+#n-note { border-radius: var(--radius); }
