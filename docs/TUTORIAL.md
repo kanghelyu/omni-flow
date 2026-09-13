@@ -161,7 +161,7 @@ of import-af <agent-flow-id>                       # AgentFlow workflow → diag
 
 Batch-building tip: have an AI write Mermaid directly → `of import` → polish styles in Studio.
 
-## 10. Three interfaces (full reference: [API.en.md](API.en.md))
+## 10. Three interfaces (full reference: [API.md](API.md))
 
 | Layer | Size | Setup |
 | --- | --- | --- |
