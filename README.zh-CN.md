@@ -113,7 +113,7 @@ Windows PowerShell：先 `Set-ExecutionPolicy -Scope Process Bypass`，再 `.\in
 - 全自定义面板（节点三色 / 8 形状 / 状态徽标；连线标签、颜色、线型、箭头）；
 - 分析配方（RACI 用度中心性找单点故障、定理证明链追踪、环审计）。
 
-对支持 MCP 的 agent，注册一次服务即可把 37 个工具变成原生工具：
+对支持 MCP 的 agent，注册一次服务即可把 61 个工具变成原生工具：
 
 ```json
 { "mcpServers": { "omni-flow": { "command": "of", "args": ["mcp"] } } }
@@ -123,7 +123,7 @@ Windows PowerShell：先 `Set-ExecutionPolicy -Scope Process Bypass`，再 `.\in
 
 OmniFlow 暴露**三层完全对等的标准接口**，任何 agent 按自身偏好任选：
 
-1. **MCP（推荐）**——37 个工具，走标准 Model Context Protocol（stdio JSON-RPC 2.0）。Claude Code / Codex CLI / WorkBuddy / Cursor 等一切 MCP 客户端直接挂载：
+1. **MCP（推荐）**——61 个工具，走标准 Model Context Protocol（stdio JSON-RPC 2.0）。Claude Code / Codex CLI / WorkBuddy / Cursor 等一切 MCP 客户端直接挂载：
 
 ```json
 { "mcpServers": { "omni-flow": { "command": "of", "args": ["mcp"] } } }
