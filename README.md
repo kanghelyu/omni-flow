@@ -118,7 +118,7 @@ Requirements: Node.js ≥ 18. Zero npm dependencies.
 - the full-customization surface (node triple colors / 8 shapes / status badges; edge labels, colors, styles, arrows);
 - analysis recipes (RACI single-point-of-failure via centrality, proof-chain tracing, cycle audit).
 
-For MCP-capable agents, register the server once and all 36 tools become native tools:
+For MCP-capable agents, register the server once and all 61 tools become native tools:
 
 ```json
 { "mcpServers": { "omni-flow": { "command": "of", "args": ["mcp"] } } }
@@ -128,7 +128,7 @@ For MCP-capable agents, register the server once and all 36 tools become native 
 
 OmniFlow exposes **three fully equivalent layers** — pick whichever your agent speaks:
 
-1. **MCP (recommended)** — 36 tools over the standard Model Context Protocol (stdio JSON-RPC 2.0). Works with Claude Code, Codex CLI, WorkBuddy, Cursor, and any MCP client:
+1. **MCP (recommended)** — 61 tools over the standard Model Context Protocol (stdio JSON-RPC 2.0). Works with Claude Code, Codex CLI, WorkBuddy, Cursor, and any MCP client:
 
 ```json
 { "mcpServers": { "omni-flow": { "command": "of", "args": ["mcp"] } } }
