@@ -242,7 +242,7 @@ await test("index.html 顶层 $() 绑定与静态 id 一致", async () => {
   const html = readFileSync(new URL("../studio/index.html", import.meta.url), "utf8");
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
   const htmlPart = html.slice(0, html.indexOf("<script>"));
-  const dynamicIds = new Set(["note-save", "note-edit", "note-close", "note-preview", "depLegend", "depOff", "depBar", "typeFilterBar", "convoHead", "convoMerge", "convoThreads", "convoNext", "convoPending", "convoLinear", "convoSayBtn", "convoStats", "convoHeadLine", "convoPanel",
+  const dynamicIds = new Set(["fx-close", "btnFxHelp", "xlAdd", "xl-graph", "xl-q", "xl-nodes", "xl-why", "xl-dir", "xl-save", "xl-cancel", "note-save", "note-edit", "note-close", "note-preview", "depLegend", "depOff", "depBar", "typeFilterBar", "convoHead", "convoMerge", "convoThreads", "convoNext", "convoPending", "convoLinear", "convoSayBtn", "convoStats", "convoHeadLine", "convoPanel",
     "lightbox", "lb-stage", "lb-img", "lb-title", "lb-cap", "lb-prev", "lb-next", "lb-zoomin", "lb-zoomout", "lb-fit", "lb-open", "lb-close",
     "attachBox", "attachAdd", "convo-text", "convo-copy", "convo-close2",
     "turn-agent", "turn-agents", "turn-text", "turn-status", "turn-type", "turn-parent", "turn-handoff", "turn-save", "turn-cancel", "convoHead", "convoMerge", "convoThreads", "convoNext", "convoPending", "convoLinear", "convoSayBtn", "convoStats", "convoHeadLine", "convoPanel",
@@ -254,7 +254,6 @@ await test("index.html 顶层 $() 绑定与静态 id 一致", async () => {
   assert.deepEqual(missing, [], `以下 id 在 HTML 中不存在（会导致顶层 TypeError、boot 静默失败）: ${missing.join(", ")}`);
 });
 
-console.log(results.join("\n"));
 // —— 重复顶层声明检查（函数声明后者覆盖前者，是本项目反复踩的坑）——
 await test("index.html 无重复顶层声明（函数/常量）", async () => {
   const { readFileSync } = await import("node:fs");
@@ -270,6 +269,46 @@ await test("index.html 无重复顶层声明（函数/常量）", async () => {
   const dup = [...names.entries()].filter(([, n]) => n > 1).map(([k, n]) => `${k}×${n}`);
   assert.deepEqual(dup, [], `存在重复的顶层声明（后者会静默覆盖前者）：${dup.join(", ")}`);
 });
+// —— test/ 目录健全性：只放可被 node 解析的 .mjs（防止非 JS 脚本混入导致 `node test/*.mjs` 报错）——
+await test("test/ 目录只含可解析的 .mjs", async () => {
+  const { readdirSync, readFileSync } = await import("node:fs");
+  const dir = new URL("./", import.meta.url);
+  const files = readdirSync(dir).filter((f) => !f.startsWith("."));
+  const badExt = files.filter((f) => !f.endsWith(".mjs"));
+  assert.deepEqual(badExt, [], `test/ 目录内出现非 .mjs 文件（会破坏“跑全部测试”的约定）：${badExt.join(", ")}`);
+  const broken = [];
+  for (const f of files){
+    const txt = readFileSync(new URL(f, import.meta.url), "utf8");
+    const isPython = /^#!.*python/.test(txt) || /^\s*"""[\s\S]*?"""/m.test(txt.slice(0, 400));
+    const hasJsTop = /(?:^|\n)\s*(?:import|export|const|let|function|await|console|assert|process)\b/.test(txt);
+    if (isPython || !hasJsTop) broken.push(f);
+  }
+  assert.deepEqual(broken, [], `test/ 内的文件不像可执行的 JS 测试（可能是被误命名的脚本）：${broken.join(", ")}`);
+});
+
+// —— 文档计数漂移检查：文档里的工具数量必须与 mcp-test 的实现断言一致 ——
+await test("文档工具数量与 mcp-test 断言一致", async () => {
+  const { readFileSync } = await import("node:fs");
+  const mt = readFileSync(new URL("./mcp-test.mjs", import.meta.url), "utf8");
+  const mm = mt.match(/tools\.length,\s*(\d+)/);
+  assert.ok(mm, "mcp-test.mjs 中未找到工具数量断言");
+  const expect = Number(mm[1]);
+  const docs = [
+    "../skills/omni-flow/SKILL.md", "../docs/API.md", "../docs/API.en.md",
+    "../README.md", "../README.zh-CN.md", "../docs/TUTORIAL.md", "../docs/TUTORIAL.zh-CN.md",
+    "../bin/of.mjs", "../promo/index.html",
+  ];
+  const bad = [];
+  for (const d of docs){
+    let txt;
+    try { txt = readFileSync(new URL(d, import.meta.url), "utf8"); } catch { continue; }
+    for (const m of txt.matchAll(/(\d+)\s*(?:个工具|\btools\b)/g)){
+      if (Number(m[1]) !== expect) bad.push(`${d} → ${m[0]}`);
+    }
+  }
+  assert.deepEqual(bad, [], `文档中的工具数量与实现(${expect})不一致（文档漂移会让 agent 误判能力边界）：${bad.join("; ")}`);
+});
+console.log(results.join("\n"));
 
 
 console.log(`\n${passed}/${results.length} 通过`);
