@@ -400,6 +400,31 @@ A conversation is a **DAG**, not a list. Every turn is a node; edges carry the r
 
 **Why it matters**: regeneration/editing/retry become siblings instead of polluting the thread; a discarded attempt stays in the graph for audit; any branch can be resumed later. This mirrors the msgId/parentId/forkOf model used by Ably ai-transport, TreeGPT and the CMV DAG paper.
 
+# Importing a PDF / MinerU output (`of import-doc`)
+
+```bash
+of import-doc <content_list.json | .md> --name "书名 第N章" [--pages <页面图目录>] [--assets-root <目录>] [--folder 归档路径]
+```
+
+Handles **both MinerU formats**:
+
+| | v1 (flat) | **v2 (page-grouped, richer)** |
+| --- | --- | --- |
+| Shape | `[{type,text,page_idx,bbox}]` | `[[{type,content:{…},bbox}], …]` |
+| Detect | `type: "text"` | `type: "paragraph" / "title" / "equation_interline"` |
+| Section structure | — | **`title` items → auto groups** |
+| Inline formulas | lost | **`equation_inline` spans → `$…$` preserved** |
+| Standalone formulas | 56 cards | **56 cards, LaTeX + original image** |
+| Figures | — | **`image_source.path` copied into `<graph>/assets/`** |
+
+Cards are classified into definition / theorem / proposition / lemma / corollary / example / remark / equation, references between numbers are auto-linked as `depends-on` edges, section titles become colour-coded groups, and every card can carry its source page image.
+
+Layout uses `packedLayeredLayout` so a 90-card chapter becomes a ~2500×2100 block instead of a 30,000 px line.
+
+# Group boxes stay put
+
+A group's geometry is **persisted** (`group.rect = {x,y,w,h}`) the first time you drag it, and re-dragging **overwrites** it — it never accumulates. Rendering prefers the persisted rect, so the box no longer re-derives from member bounds and can no longer drift or grow. Dragging commits **one transaction** (`POST /api/graph/:id/group-commit`, members + rect) instead of N parallel position writes, which was the root cause of members scattering on reload.
+
 # Standalone HTML canvas export (share without a server)
 
 `of export <graphId> --format html --out canvas.html` (or HTTP `GET /api/graph/<id>/export?format=html`, MCP `of_export { "format": "html" }`)
