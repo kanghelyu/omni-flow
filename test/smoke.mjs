@@ -309,18 +309,21 @@ await test("documented tool count matches the mcp-test assertion", async () => {
   assert.deepEqual(bad, [], `documented tool count differs from the implementation (${expect}) — docs drift makes agents misjudge capabilities: ${bad.join("; ")}`);
 });
 // —— SKILL.md 结构守卫：重复的标题说明某次编辑被应用了两遍（脚本重跑 / 补丁叠加）——
-await test("SKILL.md has no duplicated section headings", async () => {
+await test("markdown docs have no duplicated section headings", async () => {
   const { readFileSync } = await import("node:fs");
-  const md = readFileSync(new URL("../skills/omni-flow/SKILL.md", import.meta.url), "utf8");
-  const seen = new Map();
-  for (const line of md.split("\n")) {
-    const m = /^(#{1,4})\s+(.+?)\s*$/.exec(line);
-    if (!m) continue;
-    const key = m[2];
-    seen.set(key, (seen.get(key) ?? 0) + 1);
+  const docs = ["../skills/omni-flow/SKILL.md", "../README.md", "../docs/API.md", "../docs/FORMULAS.md", "../docs/TUTORIAL.md", "../tools/README.md"];
+  const bad = [];
+  for (const d of docs){
+    let md;
+    try { md = readFileSync(new URL(d, import.meta.url), "utf8"); } catch { continue; }
+    const seen = new Map();
+    for (const line of md.split("\n")){
+      const m = /^(#{1,4})\s+(.+?)\s*$/.exec(line);
+      if (m) seen.set(m[2], (seen.get(m[2]) ?? 0) + 1);
+    }
+    for (const [k, n] of seen) if (n > 1) bad.push(`${d}: ${k}×${n}`);
   }
-  const dup = [...seen.entries()].filter(([, n]) => n > 1).map(([k, n]) => `${k}×${n}`);
-  assert.deepEqual(dup, [], `duplicate heading(s) in SKILL.md (an edit was applied more than once): ${dup.join(", ")}`);
+  assert.deepEqual(bad, [], `duplicate heading(s) — an edit was applied more than once: ${bad.join(", ")}`);
 });
 // —— Front-end split invariant: markup stays thin, styles/behaviour live beside it ——
 await test("studio front-end is split (thin index.html + app.css + app.js)", async () => {
