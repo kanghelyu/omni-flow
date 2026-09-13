@@ -4,21 +4,27 @@ import { createServer } from "node:http";
 import { homedir } from "node:os";
 import { join, resolve, extname, basename } from "node:path";
 import { spawn } from "node:child_process";
-import { readFile, writeFile, copyFile, mkdir, readdir, unlink, stat } from "node:fs/promises";
+import { readFile, writeFile, copyFile, mkdir, readdir, stat } from "node:fs/promises";
 import { NODE_TYPES, EDGE_TYPES, normalizeGraph, validateGraph, newId, nodeTypeDef, setNodeAttachments, setGroupRect, moveNodes } from "../lib/graph-core.js";
-import { layeredLayout, clusterLayout, forceLayout, gridLayout, analyzeGraph } from "../lib/graph-analysis.js";
+import { computeLayout, analyzeGraph } from "../lib/graph-analysis.js";
 import { searchGraphs } from "../lib/search.mjs";
 import { suggestGroups } from "../lib/group-suggest.js";
-import { ensureConversationShape, appendTurn, setHead, mergeBranches, pathTo, conversationOverview, linearize, registerAgent, recordTurn, resolveTurn, pendingTurns, nextSpeaker, aggregateBranches, scaffoldTopology } from "../lib/conversation.js";
+import { ensureConversationShape, appendTurn, setHead, mergeBranches, pathTo, conversationOverview, linearize, recordTurn, resolveTurn, pendingTurns, nextSpeaker, aggregateBranches, scaffoldTopology } from "../lib/conversation.js";
 import { liveStart, liveLog, liveStop, liveStatus } from "../lib/live-conversation.js";
-import { addCrosslink, removeCrosslink, crosslinksForGraph, parseCrosslinkTable } from "../lib/crosslinks.js";
+import { addCrosslink, removeCrosslink, crosslinksForGraph } from "../lib/crosslinks.js";
 import { projectOverview, projectSections } from "../lib/project.js";
-import { loadGraph, saveGraph, listGraphs, deleteGraph, readNodeNote, writeNodeNote, makeGraphId, readJsonIfPresent } from "../lib/graph-service.mjs";
+import { loadGraph, saveGraph, listGraphs, deleteGraph, readNodeNote, writeNodeNote, makeGraphId, readJsonIfPresent, mutateGraph as mutateGraphAt, graphDir } from "../lib/graph-service.mjs";
 import { createFolder, renameFolder, deleteFolder, moveGraph, readTree, updateLedger } from "../lib/vault.js";
 import { buildTemplateById, mergedTemplateSummaries, saveCustomTemplate, deleteCustomTemplate } from "../lib/templates.js";
 import { toMermaid, fromMermaid, toDot, toMarkdownOutline, toPlainText, fromAgentFlow } from "../lib/converters.js";
 
 const BODY_LIMIT = 48 * 1024 * 1024;   // attachments upload as base64 (~1.33x overhead), so the cap is raised
+
+/** Front-end assets served next to index.html, so the markup file stays small and readable. */
+const STUDIO_ASSETS = {
+  "/app.css": ["app.css", "text/css; charset=utf-8"],
+  "/app.js": ["app.js", "text/javascript; charset=utf-8"],
+};
 
 function sendJson(res, status, payload) {
   const body = JSON.stringify(payload);
@@ -71,32 +77,22 @@ function graphDetail(graph, notesSummary = {}) {
   };
 }
 
-/** Graph-level topology change: mutate a copy → validate → persist → revision + 1. */
+/**
+ * HTTP adapter over the shared write pipeline (lib/graph-service.mjs `mutateGraph`).
+ * The pipeline itself lives in one place so the formula gate cannot be bypassed; here we only
+ * translate its exceptions into the shape the HTTP routes expect:
+ *   - success            → { ok: true, revision, detail }
+ *   - structure failure   → { ok: false, issues }   (routes answer 400 with it)
+ *   - LaTeX failure       → rethrown                (the outer handler answers 400 with the hint)
+ */
 async function mutateGraph(root, id, mutator, { bump = true } = {}) {
-  const { graph } = await loadGraph(root, id);
-  const draft = normalizeGraph(structuredClone(graph));
-  mutator(draft);
-  // ===== Formula gate (enforced: every write, from any agent and any entry point, is validated) =====
-  {
-    const { guardGraphText, normalizeGraphText } = await import("../lib/latex.js");
-    normalizeGraphText(draft);                       // normalise first (what lands on disk is always plain standard KaTeX, never an outside macro)
-    const __g = guardGraphText(draft);
-    if (__g.failed.length){
-      const det = __g.failed.slice(0, 5).map((f, i)=> `  ${i + 1}) ${f.where}: ${String(f.fragment).replace(/\s+/g, ' ').slice(0, 90)}\n     fix: ${f.hint}`).join("\n");
-      const err = new Error(`LaTeX validation failed, write rejected (${__g.failed.length} issue(s)):\n${det}\nApply the fixes and write again; to show LaTeX source itself, put it inside a code fence \`\`\`…\`\`\`.`);
-      err.code = "LATEX_INVALID";
-      throw err;
-    }
+  try {
+    const result = await mutateGraphAt(root, id, mutator, { bump });
+    return { ok: true, revision: result.revision, detail: graphDetail(result.graph) };
+  } catch (error) {
+    if (error.code === "INVALID_STRUCTURE") return { ok: false, issues: error.issues ?? [error.message] };
+    throw error;
   }
-  const verdict = validateGraph(draft);
-  if (!verdict.ok) return { ok: false, issues: verdict.issues };
-  if (bump) draft.revision = graph.revision + 1;
-  await saveGraph(graphDirSafe(root, id), draft);
-  return { ok: true, detail: graphDetail(draft), revision: draft.revision };
-}
-
-function graphDirSafe(root, id) {
-  return join(root, "graphs", id);
 }
 
 async function watchSignature(root) {
@@ -169,6 +165,19 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
           res.end(data);
           return;
         }
+      }
+      // Studio front-end assets (app.css / app.js) live next to index.html.
+      // Read per request like index.html, so editing them needs no server restart.
+      if (req.method === "GET" && STUDIO_ASSETS[url.pathname]) {
+        const [file, mime] = STUDIO_ASSETS[url.pathname];
+        try {
+          const body = await readFile(new URL(`./${file}`, import.meta.url), "utf8");
+          res.writeHead(200, { "content-type": mime, "cache-control": "no-store" });
+          res.end(body);
+        } catch {
+          sendJson(res, 404, { error: `asset not found: ${file}` });
+        }
+        return;
       }
       // Local static assets (vendored KaTeX and fonts): fully offline, no CDN dependency
       if (req.method === "GET" && url.pathname.startsWith("/vendor/")) {
@@ -251,7 +260,7 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         const graph = await buildTemplateById(root, templateId, name, body.lang === "zh" ? "zh" : "en");
         graph.id = makeGraphId(name);
         if (typeof body.description === "string" && body.description.trim()) graph.description = body.description.trim();
-        await saveGraph(graphDirSafe(root, graph.id), graph);
+        await saveGraph(graphDir(root, graph.id), graph);
         // optional filing into a folder: build the folder tree + assignment, return the full storage info so an agent can report it faithfully
         let folder = null;
         if (typeof body.folder === "string" && body.folder.trim()) {
@@ -297,7 +306,7 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         if (typeof body.name === "string" && body.name.trim()) graph.name = body.name.trim();
         const verdict = validateGraph(graph);
         if (!verdict.ok) { sendJson(res, 400, { ok: false, issues: verdict.issues }); return; }
-        await saveGraph(graphDirSafe(root, graph.id), graph);
+        await saveGraph(graphDir(root, graph.id), graph);
         sendJson(res, 201, { id: graph.id, name: graph.name });
         return;
       }
@@ -421,7 +430,7 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         if (body3.kind === "overview"){
           const r = await projectOverview(root, id, { name: body3.name ?? null });
           r.graph.id = makeGraphId(r.graph.name);
-          await saveGraph(graphDirSafe(root, r.graph.id), r.graph);
+          await saveGraph(graphDir(root, r.graph.id), r.graph);
           if (body3.folder){ try { await moveGraph(root, r.graph.id, body3.folder); } catch { /* filing failure is not fatal */ } }
           sendJson(res, 200, { id: r.graph.id, name: r.graph.name, sections: r.graph.nodes.length, edges: r.graph.edges.length });
           return;
@@ -588,7 +597,7 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         // The canvas is unbounded: any finite coordinate is allowed, including negatives, with no clamping.
         node.x = Math.round(x);
         node.y = Math.round(y);
-        await saveGraph(graphDirSafe(root, id), graph);
+        await saveGraph(graphDir(root, id), graph);
         sendJson(res, 200, { ok: true });
         return;
       }
@@ -624,7 +633,7 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         }
         const verdict = validateGraph(draft);
         if (!verdict.ok) { sendJson(res, 400, { error: `structure validation failed: ${verdict.issues.slice(0, 3).join('; ')}` }); return; }
-        await saveGraph(graphDirSafe(root, id), draft);
+        await saveGraph(graphDir(root, id), draft);
         broadcast();
         sendJson(res, 200, { ok: true });
         return;
@@ -649,7 +658,7 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
       if (req.method === "POST" && action === "positions") {
         const { graph } = await loadGraph(root, id);
         const n = moveNodes(graph, body.moves ?? []);
-        await saveGraph(graphDirSafe(root, id), graph);
+        await saveGraph(graphDir(root, id), graph);
         sendJson(res, 200, { ok: true, moved: n });
         return;
       }
@@ -674,23 +683,20 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
             rect = setGroupRect(graph, group.id, { x: minX, y: minY, w: maxX - minX, h: maxY - minY });
           }
         }
-        await saveGraph(graphDirSafe(root, id), graph);
+        await saveGraph(graphDir(root, id), graph);
         sendJson(res, 200, { ok: true, moved, rect });
         return;
       }
       if (req.method === "POST" && action === "layout") {
         const { graph } = await loadGraph(root, id);
         const mode = String(body.mode ?? "layered");
-        const positions = mode === "clusters" ? clusterLayout(graph)
-          : mode === "force" ? forceLayout(graph.nodes, graph.edges)
-          : mode === "grid" ? gridLayout(graph.nodes)
-          : layeredLayout(graph.nodes, graph.edges, { direction: graph.direction });
+        const positions = computeLayout(graph, mode);
         for (const node of graph.nodes) {
           const position = positions.get(node.id);
           if (position) { node.x = position.x; node.y = position.y; }
         }
         graph.revision += 1;
-        await saveGraph(graphDirSafe(root, id), graph);
+        await saveGraph(graphDir(root, id), graph);
         sendJson(res, 200, { ok: true, detail: graphDetail(graph) });
         return;
       }
@@ -716,7 +722,7 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         if (!graph.nodes.some((node) => node.id === nodeId)) { sendJson(res, 400, { error: 'node not found' }); return; }
         await writeNodeNote(root, id, nodeId, String(body.content ?? ""));
         graph.notes[nodeId] = String(body.content ?? "").split("\n")[0].slice(0, 120);
-        await saveGraph(graphDirSafe(root, id), graph);
+        await saveGraph(graphDir(root, id), graph);
         sendJson(res, 200, { ok: true });
         return;
       }
