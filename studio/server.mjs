@@ -1,5 +1,5 @@
-// OmniFlow Studio 本地服务 — 零依赖 HTTP + SSE，只绑定 127.0.0.1。
-// 所有拓扑变更先在内存 normalize + validate，硬错误不落盘。
+// OmniFlow Studio local server — zero-dependency HTTP + SSE, bound to 127.0.0.1 only.
+// Every topology change is normalised and validated in memory first; hard errors never reach disk.
 import { createServer } from "node:http";
 import { homedir } from "node:os";
 import { join, resolve, extname, basename } from "node:path";
@@ -18,7 +18,7 @@ import { createFolder, renameFolder, deleteFolder, moveGraph, readTree, updateLe
 import { buildTemplateById, mergedTemplateSummaries, saveCustomTemplate, deleteCustomTemplate } from "../lib/templates.js";
 import { toMermaid, fromMermaid, toDot, toMarkdownOutline, toPlainText, fromAgentFlow } from "../lib/converters.js";
 
-const BODY_LIMIT = 48 * 1024 * 1024;   // 附件上传走 base64（约 1.33 倍膨胀），放宽上限
+const BODY_LIMIT = 48 * 1024 * 1024;   // attachments upload as base64 (~1.33x overhead), so the cap is raised
 
 function sendJson(res, status, payload) {
   const body = JSON.stringify(payload);
@@ -27,8 +27,8 @@ function sendJson(res, status, payload) {
 }
 
 const BODY_CACHE = new WeakMap();
-/** 读请求体。**可重入**：同一请求多次调用返回同一份解析结果——
- *  此前图级路由在入口处预读了一次，导致后面的 /upload 拿到空对象。 */
+/** Read the request body. **Reentrant**: calling it several times for one request returns the same parsed result —
+ *  previously an entry-point pre-read made the later /upload handler see an empty object. */
 async function readBody(req) {
   if (BODY_CACHE.has(req)) return BODY_CACHE.get(req);
   let size = 0;
@@ -66,24 +66,24 @@ function graphDetail(graph, notesSummary = {}) {
     edges: graph.edges,
     groups: graph.groups,
     notes: { ...graph.notes, ...notesSummary },
-    // 非线性对话元数据（head / speakers / mode）：透传给前端
+    // non-linear conversation metadata (head / speakers / mode): passed straight to the front end
     ...(graph.conversation ? { conversation: graph.conversation } : {})
   };
 }
 
-/** 图级拓扑变更：改副本 → 校验 → 落盘 → revision+1。 */
+/** Graph-level topology change: mutate a copy → validate → persist → revision + 1. */
 async function mutateGraph(root, id, mutator, { bump = true } = {}) {
   const { graph } = await loadGraph(root, id);
   const draft = normalizeGraph(structuredClone(graph));
   mutator(draft);
-  // ===== 公式防线（系统强制：任何 agent / 客户端从任何入口写入都要过检）=====
+  // ===== Formula gate (enforced: every write, from any agent and any entry point, is validated) =====
   {
     const { guardGraphText, normalizeGraphText } = await import("../lib/latex.js");
-    normalizeGraphText(draft);                       // 先规范化（落库永远纯标准 KaTeX，不依赖库外宏）
+    normalizeGraphText(draft);                       // normalise first (what lands on disk is always plain standard KaTeX, never an outside macro)
     const __g = guardGraphText(draft);
     if (__g.failed.length){
-      const det = __g.failed.slice(0, 5).map((f, i)=> `  ${i + 1}) ${f.where}：${String(f.fragment).replace(/\s+/g, " ").slice(0, 90)}\n     修法：${f.hint}`).join("\n");
-      const err = new Error(`LaTeX 校验未通过，已拒绝写入（${__g.failed.length} 处）：\n${det}\n请按修法改正后重写；若要展示 LaTeX 源码本身，请放进代码围栏 \`\`\`…\`\`\` 内。`);
+      const det = __g.failed.slice(0, 5).map((f, i)=> `  ${i + 1}) ${f.where}: ${String(f.fragment).replace(/\s+/g, ' ').slice(0, 90)}\n     fix: ${f.hint}`).join("\n");
+      const err = new Error(`LaTeX validation failed, write rejected (${__g.failed.length} issue(s)):\n${det}\nApply the fixes and write again; to show LaTeX source itself, put it inside a code fence \`\`\`…\`\`\`.`);
       err.code = "LATEX_INVALID";
       throw err;
     }
@@ -136,31 +136,31 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
       const parts = url.pathname.split("/").filter(Boolean);
       if (req.method === "GET" && url.pathname === "/") {
         res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
-        res.end(await readFile(new URL("./index.html", import.meta.url), "utf8"));   // 每请求读盘：改前端无需重启
+        res.end(await readFile(new URL("./index.html", import.meta.url), "utf8"));   // read per request: front-end edits need no restart
         return;
       }
-      // 图附件资源（原书页面图 / PDF 等）：<root>/graphs/<图id>/assets/<文件>
+      // Graph attachment assets (source page images / PDFs): <root>/graphs/<graphId>/assets/<file>
       {
         const m = url.pathname.match(/^\/api\/graph\/([^/]+)\/asset\/(.+)$/);
         if (m && req.method === "GET") {
           const gid = decodeURIComponent(m[1]);
           const name = decodeURIComponent(m[2]);
-          // 只拦目录穿越与绝对路径；允许 images/xxx.jpg 这类历史相对路径（下面按 basename 兜底解析）
+          // Only block traversal and absolute paths; allow legacy relative paths such as images/xxx.jpg (resolved by basename below)
           if (!gid || name.includes("..") || name.startsWith("/") || name.includes("\u0000")) { sendJson(res, 400, { error: "bad asset path" }); return; }
           const assetsDir = join(root, "graphs", gid, "assets");
-          // 解析顺序：原名 → 去掉目录后的 basename → assets 里以 -<basename> 结尾的同名文件
-          //（导入时会把原图复制成 <节点id>-<原名>，历史数据里仍存原始相对路径，这里做兜底）
+          // resolution order: exact name → basename without directories → a file in assets ending with -<basename>
+          // (import copies the original to <nodeId>-<originalName>; older data still holds the raw relative path, hence the fallback)
           const base = name.split("/").pop();
           let file = null, data = null;
           for (const cand of [name, base]){
-            try { data = await readFile(join(assetsDir, cand)); file = cand; break; } catch { /* 试下一个 */ }
+            try { data = await readFile(join(assetsDir, cand)); file = cand; break; } catch { /* try the next one */ }
           }
           if (!data){
             try {
               const files = await readdir(assetsDir);
               const hit = files.find((f)=> f === base || f.endsWith(`-${base}`) || f.endsWith(base));
               if (hit){ data = await readFile(join(assetsDir, hit)); file = hit; }
-            } catch { /* 目录不存在 */ }
+            } catch { /* directory does not exist */ }
           }
           if (!data){ sendJson(res, 404, { error: `asset not found: ${name}` }); return; }
           const ext = extname(file ?? base).slice(1).toLowerCase();
@@ -170,7 +170,7 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
           return;
         }
       }
-      // 本地静态资源（KaTeX 及字体等 vendor 资源）：完全离线，无 CDN 依赖
+      // Local static assets (vendored KaTeX and fonts): fully offline, no CDN dependency
       if (req.method === "GET" && url.pathname.startsWith("/vendor/")) {
         const rel = decodeURIComponent(url.pathname.slice("/vendor/".length));
         if (!rel || rel.includes("..")) { sendJson(res, 400, { error: "bad asset path" }); return; }
@@ -246,13 +246,13 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
       }
       if (req.method === "POST" && url.pathname === "/api/graphs") {
         const body = await readBody(req);
-        const name = String(body.name ?? "").trim() || "未命名图";
+        const name = String(body.name ?? "").trim() || 'Untitled graph';
         const templateId = String(body.template ?? "blank");
         const graph = await buildTemplateById(root, templateId, name, body.lang === "zh" ? "zh" : "en");
         graph.id = makeGraphId(name);
         if (typeof body.description === "string" && body.description.trim()) graph.description = body.description.trim();
         await saveGraph(graphDirSafe(root, graph.id), graph);
-        // 归档到文件夹（可选）：建文件夹树 + 归属，返回完整存储信息供 agent 如实汇报
+        // optional filing into a folder: build the folder tree + assignment, return the full storage info so an agent can report it faithfully
         let folder = null;
         if (typeof body.folder === "string" && body.folder.trim()) {
           const archived = await createFolder(root, body.folder);
@@ -275,7 +275,7 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         return;
       }
       if (req.method === "POST" && url.pathname === "/api/import") {
-        // 文本导入：format = mermaid | json；af = agent-flow 导入。
+        // text import: format = mermaid | json; af = agent-flow import.
         const body = await readBody(req);
         const format = String(body.format ?? "mermaid");
         let graph;
@@ -287,7 +287,7 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
           const { readJsonIfPresent } = await import("../lib/graph-service.mjs");
           const afHome = resolve(process.env.AF_HOME ?? join(homedir(), ".agent-flow"));
           const afFlow = await readJsonIfPresent(join(afHome, "flows", safeId(afId) ?? "_", "flow.json"));
-          if (!afFlow) { sendJson(res, 404, { error: `agent-flow 工作流 ${afId} 不存在` }); return; }
+          if (!afFlow) { sendJson(res, 404, { error: `agent-flow workflow ${afId} not found` }); return; }
           graph = await fromAgentFlow(afFlow);
           graph.id = makeGraphId(graph.name);
         } else {
@@ -308,12 +308,12 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         req.on("close", () => clients.delete(res));
         return;
       }
-      /* 跨图链接：GET ?graph=<id> 取该图相关；POST { fromGraph,… } 新增；DELETE ?id= */
+      /* Cross-graph links: GET ?graph=<id> for one graph; POST { fromGraph,… } to add; DELETE ?id= */
       if (url.pathname === "/api/crosslinks") {
         if (req.method === "GET"){
           const gid = url.searchParams.get("graph");
           const links = gid ? await crosslinksForGraph(root, gid) : await (await import("../lib/crosslinks.js")).readCrosslinks(root);
-          // enrich：把对端「图名 + 节点标题」解析出来，供界面显示友好名称；并标记失效链接
+          // enrich: resolve the peer graph name + node label for display, and flag broken links
           const cache = new Map();
           const head = async (g)=> {
             if (cache.has(g)) return cache.get(g);
@@ -350,7 +350,7 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         }
       }
 
-      /* 实时对话记录：GET 状态 / POST { op: start|log|stop, … } */
+      /* Live conversation capture: GET status / POST { op: start|log|stop, … } */
       if (url.pathname === "/api/live") {
         if (req.method === "GET"){ sendJson(res, 200, await liveStatus(root)); return; }
         const body = await readBody(req);
@@ -380,20 +380,20 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         sendJson(res, 200, graphDetail(graph, notesSummary));
         return;
       }
-      /* 节点附件：POST { nodeId, src, kind?, label?, caption?, page?, mode? } —— 本地文件自动复制进图资源目录 */
+      /* Node attachment: POST { nodeId, src, kind?, label?, caption?, page?, mode? } — a local file is copied into the graph asset dir automatically */
       if (action === "attach" && req.method === "POST") {
         const body = await readBody(req);
         const rawSrc = String(body.src ?? "").trim();
-        if (!rawSrc) { sendJson(res, 400, { error: "缺少 src" }); return; }
+        if (!rawSrc) { sendJson(res, 400, { error: 'missing src' }); return; }
         const nodeId = String(body.nodeId ?? "");
         let finalSrc = rawSrc, kind = body.kind ?? "image";
         const assetsDir = join(root, "graphs", id, "assets");
         if (!/^https?:\/\//i.test(rawSrc)) {
-          // 本地文件 → 复制进图资源目录，保证可移植
+          // local file → copy into the graph asset dir so the graph stays portable
           const abs = resolve(rawSrc.replace(/^file:\/\//, ""));
           try {
             const info = await stat(abs);
-            if (!info.isFile()) throw new Error("不是文件");
+            if (!info.isFile()) throw new Error('not a file');
             await mkdir(assetsDir, { recursive: true });
             const safeName = basename(abs).replace(/[^\w.\-\u4e00-\u9fff]/g, "_");
             const target = join(assetsDir, safeName);
@@ -402,7 +402,7 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
             if (/pdf$/i.test(safeName)) kind = "pdf";
             else if (/page|p\d{3}|book/i.test(safeName)) kind = "page";
           } catch (error) {
-            sendJson(res, 400, { error: `无法读取本地文件：${error.message}` });
+            sendJson(res, 400, { error: `cannot read the local file: ${error.message}` });
             return;
           }
         } else if (body.kind) kind = body.kind;
@@ -415,14 +415,14 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         sendJson(res, 200, { ok: true, attachments: result?.detail?.nodes?.find((n)=> n.id === nodeId)?.attachments ?? [] });
         return;
       }
-      /* 分层投影：POST { kind: "overview"|"sections", … } */
+      /* Hierarchical projection: POST { kind: 'overview'|'sections', … } */
       if (action === "project" && req.method === "POST") {
         const body3 = await readBody(req);
         if (body3.kind === "overview"){
           const r = await projectOverview(root, id, { name: body3.name ?? null });
           r.graph.id = makeGraphId(r.graph.name);
           await saveGraph(graphDirSafe(root, r.graph.id), r.graph);
-          if (body3.folder){ try { await moveGraph(root, r.graph.id, body3.folder); } catch { /* 归档失败不阻断 */ } }
+          if (body3.folder){ try { await moveGraph(root, r.graph.id, body3.folder); } catch { /* filing failure is not fatal */ } }
           sendJson(res, 200, { id: r.graph.id, name: r.graph.name, sections: r.graph.nodes.length, edges: r.graph.edges.length });
           return;
         }
@@ -430,7 +430,7 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         sendJson(res, 200, r2);
         return;
       }
-      /* 非线性对话：GET 总览 / POST say|branch|merge */
+      /* Non-linear conversation: GET overview / POST say|branch|merge */
       if (action === "convo") {
         if (req.method === "GET") {
           const { graph } = await loadGraph(root, id);
@@ -467,16 +467,16 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
             return { nodeId: r.node.id, strategy: r.strategy, tally: r.tally, consensus: Number(r.consensus.toFixed(3)), chosen: r.chosen };
           }
           if (op === "merge"){
-            const node = mergeBranches(draft, { sources: body.sources ?? [], label: body.label ?? "汇合", text: body.text ?? "", speaker: body.speaker ?? "user" });
+            const node = mergeBranches(draft, { sources: body.sources ?? [], label: body.label ?? 'merge', text: body.text ?? "", speaker: body.speaker ?? "user" });
             if (body.text) draft.notes[node.id] = String(body.text).split("\n")[0].slice(0, 120);
             return node.id;
           }
-          throw new Error(`不支持的对话操作：${op}`);
+          throw new Error(`unsupported conversation op: ${op}`);
         });
         sendJson(res, 200, result);
         return;
       }
-      /* 活跃路径（根→节点）与线性化文本 */
+      /* Active path (root → node) and its linearised text */
       if (action === "convo-path" && req.method === "GET") {
         const { graph } = await loadGraph(root, id);
         const target = url.searchParams.get("node") ?? graph.conversation?.head ?? null;
@@ -526,7 +526,7 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         const patch = body.patch ?? {};
         const result = await mutateGraph(root, id, (draft) => {
           const node = draft.nodes.find((candidate) => candidate.id === nodeId);
-          if (!node) throw new Error(`节点 ${nodeId} 不存在`);
+          if (!node) throw new Error(`node ${nodeId} not found`);
           const allowed = ["label", "type", "note", "x", "y", "w", "h", "shape", "fill", "border", "textColor", "icon", "status", "tags"];
           for (const key of allowed) if (patch[key] !== undefined) node[key] = patch[key];
         });
@@ -547,10 +547,10 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
       if (req.method === "POST" && action === "edge-add") {
         const source = String(body.source ?? "");
         const target = String(body.target ?? "");
-        if (source === target) { sendJson(res, 400, { ok: false, issues: ["不允许自环连线（源与目标相同）"] }); return; }
+        if (source === target) { sendJson(res, 400, { ok: false, issues: ['self-loops are not allowed (source equals target)'] }); return; }
         const result = await mutateGraph(root, id, (draft) => {
-          if (!draft.nodes.some((node) => node.id === source)) throw new Error(`起点 ${source} 不存在`);
-          if (!draft.nodes.some((node) => node.id === target)) throw new Error(`终点 ${target} 不存在`);
+          if (!draft.nodes.some((node) => node.id === source)) throw new Error(`source node ${source} not found`);
+          if (!draft.nodes.some((node) => node.id === target)) throw new Error(`target node ${target} not found`);
           const type = typeof body.type === "string" ? body.type : "";
           draft.edges.push(normalizeGraph({ edges: [{ id: newId("e"), source, target, type, label: String(body.label ?? "") }] }).edges[0]);
         });
@@ -562,7 +562,7 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         const patch = body.patch ?? {};
         const result = await mutateGraph(root, id, (draft) => {
           const edge = draft.edges.find((candidate) => candidate.id === edgeId);
-          if (!edge) throw new Error(`连线 ${edgeId} 不存在`);
+          if (!edge) throw new Error(`edge ${edgeId} not found`);
           for (const key of ["label", "type", "color", "width", "style", "arrow", "curve"]) {
             if (patch[key] !== undefined) edge[key] = patch[key];
           }
@@ -578,29 +578,29 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         return;
       }
       if (req.method === "POST" && action === "position") {
-        // 拖拽只改坐标：不 bump revision、不做拓扑校验（与 agent-flow 的 position 端点同策略）。
+        // Dragging only moves coordinates: no revision bump and no topology validation (same policy as agent-flow's position endpoint).
         const { graph } = await loadGraph(root, id);
         const node = graph.nodes.find((candidate) => candidate.id === String(body.nodeId ?? ""));
-        if (!node) { sendJson(res, 400, { error: "节点不存在" }); return; }
+        if (!node) { sendJson(res, 400, { error: 'node not found' }); return; }
         const x = Number(body.x);
         const y = Number(body.y);
-        if (!Number.isFinite(x) || !Number.isFinite(y)) { sendJson(res, 400, { error: "坐标必须是有限数字" }); return; }
-        // 画布无边界：允许任意有限坐标（含负数），不做钳制。
+        if (!Number.isFinite(x) || !Number.isFinite(y)) { sendJson(res, 400, { error: 'coordinates must be finite numbers' }); return; }
+        // The canvas is unbounded: any finite coordinate is allowed, including negatives, with no clamping.
         node.x = Math.round(x);
         node.y = Math.round(y);
         await saveGraph(graphDirSafe(root, id), graph);
         sendJson(res, 200, { ok: true });
         return;
       }
-      /* 批量位置：一次 load/save 写多个节点（多选拖动），避免 N 个并发读改写互相覆盖 */
-      /* 附件上传（用户选文件即可，不必手输路径）：{ name, dataUrl } → 存入 assets/ 并返回 src */
+      /* Batch positions: write several nodes in one load/save (multi-select drag), avoiding N concurrent read-modify-writes that overwrite each other */
+      /* Attachment upload (the user just picks a file): { name, dataUrl } → stored in assets/ and src returned */
       if (action === "upload" && req.method === "POST") {
         const b = await readBody(req);
         const name = String(b.name ?? "file").replace(/[^\w.\-\u4e00-\u9fff]/g, "_");
         const m = String(b.dataUrl ?? "").match(/^data:([^;]+);base64,(.*)$/);
-        if (!m) { sendJson(res, 400, { error: "需要 dataUrl（data:<mime>;base64,...）" }); return; }
+        if (!m) { sendJson(res, 400, { error: 'dataUrl required (data:<mime>;base64,...)' }); return; }
         const buf = Buffer.from(m[2], "base64");
-        if (buf.length > 40 * 1024 * 1024) { sendJson(res, 413, { error: "文件过大（上限 40MB）" }); return; }
+        if (buf.length > 40 * 1024 * 1024) { sendJson(res, 413, { error: 'file too large (40MB limit)' }); return; }
         const assetsDir = join(root, "graphs", id, "assets");
         await mkdir(assetsDir, { recursive: true });
         const safe = `${Date.now().toString(36)}-${name}`;
@@ -608,28 +608,28 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         sendJson(res, 200, { ok: true, src: `assets/${safe}`, bytes: buf.length, mime: m[1] });
         return;
       }
-      /* 整图替换（撤销 / 重做用）：保存一份完整快照 */
+      /* Whole-graph replace (undo / redo): store one complete snapshot */
       if (action === "replace" && req.method === "POST") {
         const b = await readBody(req);
         const draft = normalizeGraph({ ...b.graph, id, name: b.graph?.name ?? id });
-        // 护栏：绝不让「空图」覆盖「非空图」（撤销时的空快照曾导致数据被清空）
+        // guard: never let an empty graph overwrite a non-empty one (an empty undo snapshot once wiped the data)
         if (!b.force){
           try {
             const { graph: cur } = await loadGraph(root, id);
             if ((cur.nodes?.length ?? 0) > 0 && (draft.nodes?.length ?? 0) === 0){
-              sendJson(res, 409, { error: "拒绝用空图覆盖已有内容（如确需清空，请显式 force）" });
+              sendJson(res, 409, { error: 'refusing to overwrite existing content with an empty graph (pass force explicitly if you really mean to clear it)' });
               return;
             }
-          } catch { /* 读不到当前图则放行 */ }
+          } catch { /* current graph unreadable: allow */ }
         }
         const verdict = validateGraph(draft);
-        if (!verdict.ok) { sendJson(res, 400, { error: `结构校验未通过：${verdict.issues.slice(0, 3).join("；")}` }); return; }
+        if (!verdict.ok) { sendJson(res, 400, { error: `structure validation failed: ${verdict.issues.slice(0, 3).join('; ')}` }); return; }
         await saveGraph(graphDirSafe(root, id), draft);
         broadcast();
         sendJson(res, 200, { ok: true });
         return;
       }
-      /* 删除节点（批量选择删除用）：同时清理连线 / 备注 / 分组归属 */
+      /* Delete a node (for batch selection): also cleans up its edges, note and group membership */
       {
         const m = url.pathname.match(/^\/api\/graph\/([^/]+)\/node\/(.+)$/);
         if (m && req.method === "DELETE") {
@@ -653,17 +653,17 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         sendJson(res, 200, { ok: true, moved: n });
         return;
       }
-      /* 组框拖动事务：成员位移 + 框几何一次提交（rect 为覆盖式，旧位置被抹除） */
+      /* Group-drag transaction: member offsets + box geometry committed together (rect is overwriting, so the old position is erased) */
       if (req.method === "POST" && action === "group-commit") {
         const { graph } = await loadGraph(root, id);
         const group = graph.groups.find((g)=> g.id === String(body.groupId ?? ""));
-        if (!group) { sendJson(res, 400, { error: "分组不存在" }); return; }
+        if (!group) { sendJson(res, 400, { error: 'group not found' }); return; }
         const moved = moveNodes(graph, body.moves ?? []);
         let rect = null;
         if (body.rect === null){ delete group.rect; }
         else if (body.rect){ rect = setGroupRect(graph, group.id, body.rect); }
         else {
-          // 未显式给 rect：按提交后的成员包围盒固定一次（这就是"记录此次位置"）
+          // no rect supplied: fix it once from the committed member bounding box (this is what 'remember this position' means)
           const ms = (group.members ?? []).map((mid)=> graph.nodes.find((x)=> x.id === mid)).filter(Boolean);
           if (ms.length){
             const pad = { x: 24, top: 34, bottom: 24 };
@@ -697,8 +697,8 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
       if (req.method === "POST" && action === "group-add") {
         const result = await mutateGraph(root, id, (draft) => {
           const members = (Array.isArray(body.members) ? body.members : []).map(String).filter((member) => draft.nodes.some((node) => node.id === member));
-          if (members.length === 0) throw new Error("分组至少需要一个真实存在的成员节点");
-          draft.groups.push({ id: newId("g"), label: String(body.label ?? "分组"), color: typeof body.color === "string" ? body.color : "#64748B", members });
+          if (members.length === 0) throw new Error('a group needs at least one existing member node');
+          draft.groups.push({ id: newId("g"), label: String(body.label ?? 'Group'), color: typeof body.color === "string" ? body.color : "#64748B", members });
         });
         sendJson(res, result.ok ? 200 : 400, result);
         return;
@@ -713,7 +713,7 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
       if (req.method === "POST" && action === "note") {
         const nodeId = String(body.nodeId ?? "");
         const { graph } = await loadGraph(root, id);
-        if (!graph.nodes.some((node) => node.id === nodeId)) { sendJson(res, 400, { error: "节点不存在" }); return; }
+        if (!graph.nodes.some((node) => node.id === nodeId)) { sendJson(res, 400, { error: 'node not found' }); return; }
         await writeNodeNote(root, id, nodeId, String(body.content ?? ""));
         graph.notes[nodeId] = String(body.content ?? "").split("\n")[0].slice(0, 120);
         await saveGraph(graphDirSafe(root, id), graph);
@@ -732,7 +732,7 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
       if (req.method === "POST" && action === "node-type-patch") {
         const result = await mutateGraph(root, id, (draft) => {
           const key = String(body.type ?? "").trim();
-          if (!key) throw new Error("缺少 type");
+          if (!key) throw new Error('missing type');
           const prev = draft.nodeTypes[key] ?? {};
           draft.nodeTypes[key] = {
             label: String(body.label ?? prev.label ?? key),
@@ -750,7 +750,7 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
       if (req.method === "POST" && action === "edge-type-patch") {
         const result = await mutateGraph(root, id, (draft) => {
           const key = String(body.type ?? "").trim();
-          if (!key) throw new Error("缺少 type");
+          if (!key) throw new Error('missing type');
           const prev = draft.edgeTypes[key] ?? {};
           draft.edgeTypes[key] = {
             label: String(body.label ?? prev.label ?? key),
@@ -771,7 +771,7 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
           try {
             const raw = await readJsonIfPresent(join(trashDir, entry, "graph.json"));
             if (raw) out.push({ trashName: entry, id: raw.id, name: raw.name, nodes: (raw.nodes ?? []).length });
-          } catch { /* 跳过 */ }
+          } catch { /* skip */ }
         }
         sendJson(res, 200, out);
         return;
@@ -779,7 +779,7 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
       if (req.method === "POST" && action === "trash-restore") {
         const entry = String(body.trashName ?? "").replace(/[/\\]/g, "");
         const raw = await readJsonIfPresent(join(root, "trash", entry, "graph.json"));
-        if (!raw) { sendJson(res, 404, { error: "回收站中不存在该条目" }); return; }
+        if (!raw) { sendJson(res, 404, { error: 'no such entry in the trash' }); return; }
         const { rename } = await import("node:fs/promises");
         await rename(join(root, "trash", entry), join(root, "graphs", raw.id));
         sendJson(res, 200, { ok: true, id: raw.id });
@@ -793,11 +793,11 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
 
       sendJson(res, 404, { error: "not found" });
     } catch (error) {
-      // 优先用错误码（NOT_FOUND → 404；CORRUPT → 500）；否则回退到消息匹配。
+      // Prefer the error code (NOT_FOUND → 404; CORRUPT → 500); otherwise fall back to matching the message.
       const message = String(error?.message ?? error);
       const status = error?.code === "NOT_FOUND" ? 404
         : error?.code === "CORRUPT" ? 500
-        : message.includes("不存在（") ? 404
+        : message.includes('not found (') ? 404
         : 400;
       sendJson(res, status, { error: message, issues: error?.issues, code: error?.code ?? null });
     }
@@ -811,8 +811,8 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
     server.listen(port, host);
   });
 
-  // 轮询式变更广播（跨平台）：仅在存在 SSE 订阅者时才扫描磁盘（mtime 签名比对），
-  // 无观众时零磁盘读取——不做后台常驻 I/O，不侵占机器性能。
+  // Polling change broadcast (cross-platform): the disk is only scanned when SSE subscribers exist (mtime signature compare),
+  // and with no listeners there is zero disk I/O — no background resident reads, no performance cost.
   const watcher = setInterval(async () => {
     try {
       if (clients.size === 0) return;
@@ -820,7 +820,7 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
       if (signature === lastSignature) return;
       lastSignature = signature;
       for (const client of clients) client.write("event: change\ndata: {}\n\n");
-    } catch { /* 静默重试 */ }
+    } catch { /* retry silently */ }
   }, 1200);
   const heartbeat = setInterval(() => {
     if (clients.size === 0) return;
