@@ -37,7 +37,7 @@ foreach ($item in @("bin", "lib", "studio", "skills", "docs")) {
     Copy-Item -Recurse -Force -Path $src -Destination $InstallDir
   }
 }
-foreach ($item in @("package.json", "README.md", "README.zh-CN.md", "LICENSE", "install.sh")) {
+foreach ($item in @("package.json", "README.md", "LICENSE", "install.sh")) {
   $src = Join-Path $Here $item
   if (Test-Path $src) { Copy-Item -Force -Path $src -Destination $InstallDir }
 }
