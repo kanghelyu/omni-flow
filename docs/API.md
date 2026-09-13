@@ -6,9 +6,9 @@ OmniFlow 对外暴露**三层完全对等的标准接口**，任何 agent 按自
 
 | 层 | 协议 | 规模 | 启动方式 |
 | --- | --- | --- | --- |
-| **MCP 工具** | Model Context Protocol（stdio JSON-RPC 2.0），**37 个工具** | 全量 | `of mcp` |
-| **HTTP JSON API** | REST + SSE，**27 个端点**，只绑 `127.0.0.1:4319` | 全量 | `of studio --no-open` |
-| **CLI** | shell，**19 个子命令** | 全量 | 直接调用 |
+| **MCP 工具** | Model Context Protocol（stdio JSON-RPC 2.0），**61 个工具** | 全量 | `of mcp` |
+| **HTTP JSON API** | REST + SSE，**50+ 个端点**，只绑 `127.0.0.1:4319` | 全量 | `of studio --no-open` |
+| **CLI** | shell，**20+ 个子命令** | 全量 | 直接调用 |
 
 数据目录：`~/.omni-flow/graphs/<id>/graph.json`（拓扑事实源）+ `notes/<nodeId>.md`（节点领域内容）+ `templates/*.json`（自定义模板）。
 
@@ -27,7 +27,7 @@ OmniFlow 对外暴露**三层完全对等的标准接口**，任何 agent 按自
 | **回收站** | MCP `of_list_trash` / `of_restore_graph`；HTTP `GET /api/graph/:id/trash`、`POST /api/graph/:id/trash-restore`；CLI `of trash` / `of restore` | 删除可恢复 |
 | **画布** | MCP `of_start_studio` | 后台拉起可视化画布并返回 URL |
 
-## 一、MCP 标准服务（37 个工具）
+## 一、MCP 标准服务（61 个工具）
 
 ```json
 { "mcpServers": { "omni-flow": { "command": "of", "args": ["mcp"] } } }
@@ -56,7 +56,7 @@ OmniFlow 对外暴露**三层完全对等的标准接口**，任何 agent 按自
 | `of_start_studio` | 后台启动可视化画布 |
 | `of_list_trash` / `of_restore_graph` | 回收站 |
 
-## 二、HTTP JSON API（27 个端点，`127.0.0.1:4319`）
+## 二、HTTP JSON API（50+ 个端点，`127.0.0.1:4319`）
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
@@ -79,7 +79,7 @@ OmniFlow 对外暴露**三层完全对等的标准接口**，任何 agent 按自
 | GET | `/api/graph/:id/trash` · POST `/api/graph/:id/trash-restore` | 回收站 |
 | POST | `/api/graph/:id/graph-delete` | 删除（进 trash） |
 
-## 三、CLI（19 个子命令）
+## 三、CLI（20+ 个子命令）
 
 `create / templates / template-save / template-delete / list / read / validate / analyze / layout / export / import / import-af / meta / trash / restore / delete / studio / mcp / doctor` — 见 `of help`。
 
