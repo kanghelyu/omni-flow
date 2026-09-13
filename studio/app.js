@@ -48,12 +48,15 @@ function applyLang(){
   if (typeof buildTypeSelects === "function") buildTypeSelects();
   if (typeof localizeStaticSelects === "function") localizeStaticSelects();
   if (typeof render === "function") render();
+  const noteEl = $("n-note");   // 语言切换会重排 inspector：备注框高度必须跟着内容重算
+  if (noteEl) autoGrow(noteEl);
 }
 
 /* ================= state ================= */
 let graphs = [], templates = [];
 let current = null;
 let selected = null;         // {kind:'node'|'edge', id}
+let selGroupId = null;       // 选中的分组 id（与节点/边选择互斥；选组 = 高亮框 + 组列表定位）
 let liveDrag = null;         // {id} 正在拖拽的节点
 let pendingLink = null;      // {sourceId, end, hover} 正在拉线
 let highlightMembers = [];   // 组列表点击后持续高亮的成员
@@ -196,6 +199,7 @@ $("cvFit").onclick = ()=>fitView({ duration: 560 });
 function select(kind, id){
   if (!kind){ depFocus = null; }
   selected = kind && id ? { kind, id } : null;
+  selGroupId = null;          // 选中节点/边或清空选择时，组选中随之取消（单向互斥）
   document.querySelectorAll(".node.sel").forEach((el)=>el.classList.remove("sel"));
   document.querySelectorAll(".docitem.active").forEach((el)=>el.classList.remove("active"));
   if (!selected){
@@ -237,6 +241,22 @@ function select(kind, id){
   }
   renderEdges();
 }
+/** 选中一个分组（DOM/画布通用）：面板归位到 meta（组列表在其中），高亮 + 滚动定位，
+ *  组框以卡片选中语言（accent 边 + 柔光）高亮。不新建面板——组详情仍走右键菜单（范围控制）。 */
+function selectGroup(id){
+  selGroupId = id ?? null;
+  selected = null;
+  depFocus = null;
+  document.querySelectorAll(".node.sel").forEach((el)=>el.classList.remove("sel"));
+  document.querySelectorAll(".docitem.active").forEach((el)=>el.classList.remove("active"));
+  $("insp-empty").style.display = ""; $("insp-node").style.display = "none"; $("insp-edge").style.display = "none"; $("insp-meta").style.display = "";
+  fillMeta();   // → renderGroupList() 会带上 sel 高亮
+  const item = id ? document.querySelector(`#groupList [data-g="${CSS.escape(id)}"]`) : null;
+  if (item) item.scrollIntoView({ block: "nearest" });
+  if (CV.on) cvDraw(); else renderGroups();
+}
+window.__ofSel = ()=>({ node: selected?.kind ? selected.id : null, group: selGroupId });   // 只读调试钩子（浏览器检查/诊断用）
+window.__ofView = ()=>({ k: view.k, x: view.x, y: view.y });   // 只读：当前视口变换（世界→屏幕换算用）
 function fillMeta(){
   if (!current) return;
   $("m-name").value = current.name; $("m-desc").value = current.description ?? ""; $("m-direction").value = current.direction ?? "TD";
@@ -790,6 +810,7 @@ function cvDraw(){
     const gm = (g.rect && !g._dragging)
       ? { minX: g.rect.x, minY: g.rect.y, w: g.rect.w, h: g.rect.h }
       : groupGeom(ms);
+    const isSel = selGroupId === g.id;
     ctx.save();
     ctx.globalAlpha = dim(ms[0].id) && ms.every((m)=> dim(m.id)) ? 0.35 : 1;
     rr(ctx, gm.minX, gm.minY, gm.w, gm.h, 14);
@@ -797,7 +818,7 @@ function cvDraw(){
     ctx.fill();
     ctx.setLineDash(g.rect ? [] : [7, 5]);
     ctx.lineWidth = 1.5;
-    ctx.strokeStyle = g.color ?? "#64748B";
+    ctx.strokeStyle = isSel ? ((cs.getPropertyValue("--accent") || "#38BDF8").trim()) : (g.color ?? "#64748B");
     ctx.stroke();
     ctx.setLineDash([]);
     // 标签
@@ -1112,7 +1133,7 @@ function cvStartGroupDrag({ g, ms }, e){
     }
     const n0 = ms[0];
     const dx = n0.x - origin.get(n0.id).x, dy = n0.y - origin.get(n0.id).y;
-    if (!dx && !dy) return;
+    if (!dx && !dy){ selectGroup(g.id); return; }   // pointer 未移动 = 点击选中（镜像 beginNodeDrag 的 moved 语义）
     const prevRect = g.rect ? { ...g.rect } : null;
     const rect = groupRectOf(ms);       // same geometry helper as the DOM path
     g.rect = rect;                      // optimistic local sync — the box never redraws at the old rect
@@ -2556,7 +2577,8 @@ function renderGroups(){
     const box = document.createElement("div");
     box.className = "group-box";
     if (group.rect) box.classList.add("pinned");
-    box.style.cssText = `left:${gm.minX}px;top:${gm.minY}px;width:${gm.w}px;height:${gm.h}px;border-color:${group.color};background:${group.color}14;`;
+    if (selGroupId === group.id) box.classList.add("sel");
+    box.style.cssText = `left:${gm.minX}px;top:${gm.minY}px;width:${gm.w}px;height:${gm.h}px;border-color:${selGroupId === group.id ? "var(--accent)" : group.color};background:${group.color}14;`;
     box.dataset.groupId = group.id;
     // 注意：**绝不自动改写已固定的 rect**——用户手动摆好的位置必须原样保留。
     // 内容与框不符时只做「提示」，需要贴合由用户右键『重新贴合内容』显式触发。
@@ -2608,7 +2630,7 @@ function renderGroups(){
         //    back for one round-trip (and stay there if the request failed).
         liveDrag = null;
         updateEdgesLive();
-        if (!moved){ renderGroups(); return; }
+        if (!moved){ selectGroup(group.id); return; }   // 原地点击 = 选中该组（不拖动）
         const ms = members.map((m)=> nodeById(m.id)).filter(Boolean);
         const prevRect = g0?.rect ? { ...g0.rect } : null;
         const rect = ms.length ? groupRectOf(ms) : null;
@@ -2951,7 +2973,7 @@ function renderGroupList(){
   if (!box) return;
   const groups = current?.groups ?? [];
   box.innerHTML = groups.length ? groups.map((g)=>
-    `<div class="node-item" data-g="${escapeHtml(g.id)}"><span class="dot" style="background:${g.color};border:1.5px solid ${g.color}"></span><span class="t">${escapeHtml(g.label)} · ${(g.members ?? []).length}</span></div>`).join("")
+    `<div class="node-item${selGroupId === g.id ? " sel" : ""}" data-g="${escapeHtml(g.id)}"><span class="dot" style="background:${g.color};border:1.5px solid ${g.color}"></span><span class="t">${escapeHtml(g.label)} · ${(g.members ?? []).length}</span></div>`).join("")
     : `<div class="hint" style="margin:0">${LANG === "en" ? "No groups yet — select nodes, then use 「Group selection」." : "还没有分组——选中节点后点「从选中建组」。"}</div>`;
   box.querySelectorAll("[data-g]").forEach((item)=>{
     item.onclick = ()=>{
@@ -3120,7 +3142,7 @@ $("leftSplitter").addEventListener("pointerdown", (event)=>{
 });
 
 /* ================= 数据加载 ================= */
-async function reload(resetView = true){
+async function reloadNow(resetView){
   graphs = await api("/api/graphs");
   tree = await api("/api/tree");
   renderVault();
@@ -3130,10 +3152,39 @@ async function reload(resetView = true){
   buildTypeSelects();
   renderChrome();
   await loadCrosslinks();          // 切图时加载一次（带缓存；不在 render 里调用，避免死循环）
-  select(selected);
+  // 选中状态跨 reload 保留：节点/边由 select(selected) 恢复；组选中同样必须恢复，
+  // 否则任何被动 reload（SSE/提交回声）都会把高亮静默抹掉。组被删时回落到清空。
+  if (selGroupId && (current.groups ?? []).some((grp)=> grp.id === selGroupId)) selectGroup(selGroupId);
+  else { if (selGroupId) selGroupId = null; select(selected); }
   render();
   if (resetView) fitView();
   focusPendingNode();
+}
+/* 单飞 reload：并发调用合并进同一轮执行（50ms 尾随窗口，最新 resetView 实参获胜）。
+ * boot reload + hashchange reload 由此只发一轮请求；落在「执行中」窗口里的调用在
+ * 本轮结束后补跑一轮（re-read location.hash，绝不吞掉真实的图切换）。
+ * SSE 的 300ms 防抖与 suppressSSEUntil 语义保持不变。 */
+let reloadState = "idle";          // idle | pending | running
+let reloadRun = null, reloadLatestReset = true, reloadRerunNeeded = false;
+function reload(resetView = true){
+  reloadLatestReset = resetView;
+  if (reloadState === "idle"){
+    reloadState = "pending";
+    reloadRun = new Promise((resolve, reject)=>{
+      setTimeout(async ()=>{
+        reloadState = "running";
+        try { await reloadNow(reloadLatestReset); resolve(); }
+        catch (e){ reject(e); }
+        finally {
+          reloadState = "idle";
+          if (reloadRerunNeeded){ reloadRerunNeeded = false; reload(reloadLatestReset); }
+        }
+      }, 50);
+    });
+  } else if (reloadState === "running"){
+    reloadRerunNeeded = true;      // 本轮已错过最新实参，完成后补一轮
+  }
+  return reloadRun;                // pending：本轮尚未起跑，实参已被采纳，本次调用被吸收
 }
 function renderChrome(){
   for (const btn of document.querySelectorAll("[data-needs-graph]")) btn.disabled = !current;
@@ -3144,15 +3195,14 @@ function buildTypeSelects(){
   if (!current) return;
   const nodeSel = $("n-type"), edgeSel = $("e-type");
   const keepN = nodeSel.value, keepE = edgeSel.value;
-  nodeSel.innerHTML = "";
-  for (const [id, def] of Object.entries(current.nodeTypes ?? {})){
+  // 一次性赋值（此前在循环里 innerHTML += ：二次方字符串拼接，且每次迭代都会重置选中态）
+  nodeSel.innerHTML = Object.entries(current.nodeTypes ?? {}).map(([id, def])=>{
     const text = `${def.icon ?? ""} ${(LANG === "en" ? def.labelEn : def.label) ?? id}`;
-    nodeSel.innerHTML += `<option value="${escapeHtml(id)}">${escapeHtml(text)}</option>`;
-  }
-  edgeSel.innerHTML = `<option value="">${LANG === "zh" ? "（通用关联）" : "(Generic link)"}</option>`;
-  for (const [id, def] of Object.entries(current.edgeTypes ?? {})){
-    edgeSel.innerHTML += `<option value="${escapeHtml(id)}">${escapeHtml((LANG === "en" ? def.labelEn : def.label) ?? id)}</option>`;
-  }
+    return `<option value="${escapeHtml(id)}">${escapeHtml(text)}</option>`;
+  }).join("");
+  edgeSel.innerHTML = `<option value="">${LANG === "zh" ? "（通用关联）" : "(Generic link)"}</option>`
+    + Object.entries(current.edgeTypes ?? {}).map(([id, def])=>
+      `<option value="${escapeHtml(id)}">${escapeHtml((LANG === "en" ? def.labelEn : def.label) ?? id)}</option>`).join("");
   nodeSel.value = keepN; edgeSel.value = keepE;
 }
 
@@ -3511,13 +3561,19 @@ $("btnExport").onclick = async ()=>{
 
 /* ================= 启动 ================= */
 (async function boot(){
+  const bt = performance.now();
+  window.__bootPerf = {};   // 各阶段耗时（ms）：诊断首屏慢的打点，只测量不优化
+  const mark = (name)=>{ window.__bootPerf[name] = +(performance.now() - bt).toFixed(1); };
   try {
     window.__bootStep = "applyLang";
     applyLang();
+    mark("applyLang");
     window.__bootStep = "templates-fetch";
     templates = await api("/api/templates?lang=" + LANG);
+    mark("templatesFetch");
     window.__bootStep = "reload";
     await reload();
+    mark("reload");
     window.__bootStep = "done";
   } catch (e) {
     window.__bootErr = String((e && e.stack) || e);
