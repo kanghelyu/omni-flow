@@ -49,7 +49,7 @@ assert.ok(init.result.capabilities.tools);
 // 2. tools/list 全量
 const tools = await rpc("tools/list", {});
 const names = tools.result.tools.map((tool) => tool.name);
-assert.equal(tools.result.tools.length, 55, `应有 55 个工具，实际 ${tools.result.tools.length}`);
+assert.equal(tools.result.tools.length, 61, `应有 61 个工具，实际 ${tools.result.tools.length}`);
 for (const required of ["of_create_graph", "of_get_graph", "of_patch_node", "of_patch_edge", "of_import_mermaid", "of_import_agentflow", "of_analyze", "of_export", "of_save_template", "of_delete_template", "of_patch_node_type", "of_patch_edge_type", "of_patch_graph_meta", "of_start_studio", "of_list_trash", "of_restore_graph", "of_mcp_check_list"]) {
   // 最后一个故意不存在，防止复制粘贴假通过
   if (required === "of_mcp_check_list") assert.ok(!names.includes(required));
