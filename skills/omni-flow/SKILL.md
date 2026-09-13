@@ -667,9 +667,11 @@ Error / empty JSON) are retried by simply re-running it after ~15 s.
 4. **Sync to GitHub** — `python3 tools/audit-push.py` (from the repo root). It diffs local
    files against remote blobs, pushes only what changed, and ends with a verify block; only
    proceed when it reports `still out of sync: 0`.
-5. **GitHub release** — `gh release create vX.Y.Z --target main` with notes mirroring the new
-   CHANGELOG section (v0.2.0's notes are the house style: Highlights / Fixes + an
-   Install-upgrade block).
+5. **GitHub release** — `gh release create vX.Y.Z --repo kanghelyu/omni-flow --target main`
+   with notes mirroring the new CHANGELOG section (v0.2.0's notes are the house style:
+   Highlights / Fixes + an Install-upgrade block). ⚠️ `--repo` is mandatory: the repo has no
+   `.git`, so `gh` cannot infer it from the working directory and fails with
+   "failed to run git: fatal: not a git repository".
 6. **Local install** — `bash install.sh` refreshes the installed copy in `~/.omni-flow`;
    `of --version` must print the new version afterwards. Studio is served from the installed
    copy: a browser refresh picks up `studio/*` changes, but `lib/` changes need the
