@@ -1250,8 +1250,11 @@ function edgeGeometry(edge){
   const sh = s._h ?? s.h, th = t._h ?? t.h;
   const start = { x: sp.x + s.w, y: sp.y + sh / 2 };
   const end = { x: tp.x, y: tp.y + th / 2 };
-  const forward = Math.max(54, Math.abs(end.x - start.x) * 0.46);
-  const bend = end.x >= start.x ? forward : Math.max(90, forward * 0.7);
+  // 弯距必须限幅：旧公式 bend ∝ 水平距离，远距离连线会被拉成跨半屏的"巨弧"
+  const dx = end.x - start.x, adx = Math.abs(dx), dy = Math.abs(end.y - start.y);
+  let bend = Math.min(110, Math.max(36, adx * 0.34));
+  if (dx < 0) bend = Math.min(84, Math.max(44, adx * 0.22));      // 回边：小弯绕行
+  if (dy > adx) bend = Math.min(bend, Math.max(28, adx * 0.5));    // 竖直拉开：进一步收弯
   return { start, end, path: `M ${start.x} ${start.y} C ${start.x + bend} ${start.y}, ${end.x - bend} ${end.y}, ${end.x} ${end.y}` };
 }
 
@@ -1370,7 +1373,7 @@ function renderReader(){
     }, { once: true });
   });
   body.querySelectorAll(".rd-dep").forEach((el)=>{
-    el.onclick = ()=>{ closeReader(); select("node", el.dataset.node); fitNode(current.nodes.find((n)=> n.id === el.dataset.node)); };
+    el.onclick = ()=>{ closeReader(); select("node", el.dataset.node); focusNode(current.nodes.find((n)=> n.id === el.dataset.node)); };
   });
   body.querySelectorAll(".rd-thumbs .attach-thumb").forEach((el)=>{
     el.onclick = ()=> openLightbox([{ src: el.dataset.img.replace(/^.*\/asset\//, "assets/"), label: "" }], 0);
@@ -1379,6 +1382,18 @@ function renderReader(){
 
 
 
+
+/* ================= 分组几何自动回写（每组 1.2s 内只写一次，避免写盘风暴） ================= */
+const refitTimers = new Map();
+function scheduleGroupRefit(groupId, rect){
+  if (refitTimers.has(groupId)) return;
+  refitTimers.set(groupId, setTimeout(async ()=>{
+    refitTimers.delete(groupId);
+    try {
+      await api(`/api/graph/${current.id}/group-commit`, { method: "POST", body: JSON.stringify({ groupId, rect }) });
+    } catch { /* 静默：下次渲染会再自查 */ }
+  }, 1200));
+}
 
 /* ================= 视口移动期优化（对齐 canvas 的绘制策略） ================= */
 let vmTimer = null;
@@ -1633,7 +1648,7 @@ function renderDepList(node){
     el.onclick = ()=>{
       const id = el.dataset.node;
       select("node", id);
-      fitNode(nodeById(id));
+      focusNode(nodeById(id));
       box.querySelectorAll(".dep-chip").forEach((x)=> x.classList.toggle("on", x.dataset.node === id));
     };
   });
@@ -1663,7 +1678,7 @@ function renderDepList(node){
     el.onclick = ()=>{
       const id = el.dataset.node;
       select("node", id);
-      fitNode(nodeById(id));
+      focusNode(nodeById(id));
       box.querySelectorAll(".dep-chip").forEach((x)=> x.classList.toggle("on", x.dataset.node === id));
     };
   });
@@ -1900,7 +1915,7 @@ function renderConvoActions(node){
       }
       else if (a === "done"){ await post({ op: "resolve", nodeId: node.id, status: "done" }); toast("已标完成"); }
       else if (a === "attach"){ addAttachment(node.id); }
-      else if (a === "locate"){ fitNode(node); }
+      else if (a === "locate"){ focusNode(node); }
     };
   });
 }
@@ -2424,9 +2439,18 @@ function renderGroups(){
     box.style.cssText = `left:${gm.minX}px;top:${gm.minY}px;width:${gm.w}px;height:${gm.h}px;border-color:${group.color};background:${group.color}14;`;
     box.dataset.groupId = group.id;
     if (group.rect){
+      // 自查：成员跑出框外、或框比内容大太多 → 立即贴合（并去抖回写），杜绝"空壳大框"
       const b = groupGeom(members);
-      const drift = Math.abs((gm.w - b.w) / Math.max(1, b.w)) + Math.abs((gm.h - b.h) / Math.max(1, b.h));
-      if (drift > 0.5) box.title = "已固定几何（内容变动较大，可用右键『重新贴合』恢复）";
+      const areaA = gm.w * gm.h, areaB = Math.max(1, b.w * b.h);
+      const ratio = Math.max(areaA, areaB) / Math.max(1, Math.min(areaA, areaB));
+      const covers = b.minX >= gm.minX - 8 && b.minY >= gm.minY - 8
+        && b.minX + b.w <= gm.minX + gm.w + 8 && b.minY + b.h <= gm.minY + gm.h + 8;
+      if (!covers || ratio > 1.6){
+        group.rect = { x: b.minX, y: b.minY, w: b.w, h: b.h };
+        box.style.left = b.minX + "px"; box.style.top = b.minY + "px";
+        box.style.width = b.w + "px"; box.style.height = b.h + "px";
+        scheduleGroupRefit(group.id, group.rect);
+      }
     }
     box.innerHTML = `<span class="glabel" style="background:${group.color}22;color:${group.color};border:1px solid ${group.color}66">${escapeHtml(group.label)}</span>`;
     box.addEventListener("contextmenu", (e)=>{
