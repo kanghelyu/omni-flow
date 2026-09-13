@@ -504,6 +504,7 @@ body.lean .group-box { opacity: .6; }
 .group-box.pinned { border-style: solid; }
 .group-box.needs-refit { border-style: dashed; }
 .group-box.needs-refit .glabel::after { content: " · 可右键重新贴合"; opacity: .75; }
+html[lang="en"] .group-box.needs-refit .glabel::after { content: " · right-click to refit"; }
 .group-box { position: absolute; border-radius: 16px; border: 1.5px dashed; z-index: 1; opacity: .8; pointer-events: auto; cursor: move; }
 /* 选中组框：复用卡片选中语言（accent 边由内联样式写入，这里补柔光；虚线样式保留） */
 .group-box.sel { opacity: 1; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent), 0 12px 30px rgba(0,0,0,.2); }
@@ -770,9 +771,11 @@ body.interacting { user-select: none; -webkit-user-select: none; cursor: grabbin
 .node.dep-down .card { box-shadow: 0 0 0 3px color-mix(in srgb, #F87171 60%, transparent); }
 .node.dep-dim { opacity: .32; filter: saturate(.45); pointer-events: auto; }
 .node.dep-dim:hover { opacity: .6; }
+/* 依赖高亮：只突出依赖路径，其余连线压到近隐（否则大图上依旧一片乱线） */
 .edge-group.dep-up .edge-line { stroke: #38BDF8; }
 .edge-group.dep-down .edge-line { stroke: #F87171; }
-.edge-group.dep-dim { opacity: .18; }
+.edge-group.dep-up .edge-line, .edge-group.dep-down .edge-line { stroke-width: 3.4; filter: drop-shadow(0 0 3px color-mix(in srgb, currentColor 45%, transparent)); }
+.edge-group.dep-dim { opacity: .07; }
 .edge-group.dep-dim .edge-hit { pointer-events: stroke; }
 
 /* Only one rendering surface may be visible at a time: the DOM cards, or the canvas. */
