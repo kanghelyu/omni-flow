@@ -165,9 +165,9 @@ Batch-building tip: have an AI write Mermaid directly → `of import` → polish
 
 | Layer | Size | Setup |
 | --- | --- | --- |
-| MCP | **36 tools** | `{"mcpServers":{"omni-flow":{"command":"of","args":["mcp"]}}}` |
-| HTTP | 27 endpoints + SSE | `of studio --no-open` → `127.0.0.1:4319` |
-| CLI | 19 subcommands | `of help` |
+| MCP | **61 tools** | `{"mcpServers":{"omni-flow":{"command":"of","args":["mcp"]}}}` |
+| HTTP | 50+ endpoints + SSE | `of studio --no-open` → `127.0.0.1:4319` |
+| CLI | 20+ subcommands | `of help` |
 
 Agent tip: mount MCP once, then `of_save_template` (distill templates), `of_patch_node_type` (extend registries), `of_set_note` (fill node substance), `of_analyze` (insight) cover the whole loop.
 
