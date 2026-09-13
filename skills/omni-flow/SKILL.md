@@ -46,6 +46,22 @@ Before touching anything, state the following in your first reply:
 - **MUST NOT** recursively delete the storage root or any user directory.
 - If a graph "seems to have disappeared", **MUST** check the read path and the server first (storage self-heals on read) — **do not** delete files.
 
+## Language policy (MUST)
+
+- **This skill and everything under `docs/` is English-only.** New instructions, hints, and documentation text are written in English. Do not add Chinese prose to them.
+- **Agent-facing text is English**: MCP tool descriptions, CLI help and CLI messages, validation messages, LaTeX errors and hints, and the API reference.
+- **Display data is bilingual by design — do not strip the Chinese side**: the Studio UI (`zh` / `en` toggle), template and node/edge-type labels (a `label` plus a `labelEn`), the standalone HTML canvas (follows the browser language), and the promo page (`data-zh` / `data-en`).
+- **User graph content** may be in any language — follow the graph's own `lang` setting (see "Language Rules for Graph Creation").
+- Literal trigger phrases the user types (e.g. `开启非线性对话`, `停止记录`) stay verbatim; they are protocol tokens, not prose.
+
+## Language policy (MUST)
+
+- **This skill and everything under `docs/` is English-only.** New instructions, hints, and documentation text are written in English. Do not add Chinese prose to them.
+- **Agent-facing text is English**: MCP tool descriptions, CLI help and CLI messages, validation messages, LaTeX errors and hints, and the API reference.
+- **Display data is bilingual by design — do not strip the Chinese side**: the Studio UI (`zh` / `en` toggle), template and node/edge-type labels (a `label` plus a `labelEn`), the standalone HTML canvas (follows the browser language), and the promo page (`data-zh` / `data-en`).
+- **User graph content** may be in any language — follow the graph's own `lang` setting (see "Language Rules for Graph Creation").
+- Literal trigger phrases the user types (e.g. `开启非线性对话`, `停止记录`) stay verbatim; they are protocol tokens, not prose.
+
 # OmniFlow — Universal Flow Map
 
 Every "elements + relations" structure deserves a map. OmniFlow is domain-agnostic:
