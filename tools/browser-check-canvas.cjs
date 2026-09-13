@@ -232,6 +232,88 @@ async function api(p, opt) {
     return { box: el?.dataset.groupId ?? null, listed: !!item };
   });
 
+  // 8) dep highlight: selecting a card must classify EVERY edge (up/down/dim) — the old bug was
+  //    renderEdges() rebuilding the edge DOM after applyDepHighlight() and wiping the classes.
+  await page.evaluate(async () => {
+    const el = document.querySelector('#nodesLayer .node');
+    const r = el.getBoundingClientRect();
+    const opt = { bubbles: true, cancelable: true, pointerId: 30, button: 0, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 };
+    el.dispatchEvent(new PointerEvent('pointerdown', opt));
+    window.dispatchEvent(new PointerEvent('pointerup', opt));
+    await new Promise((r2) => setTimeout(r2, 400));
+  });
+  const depState = await page.evaluate(() => {
+    const groups = [...document.querySelectorAll('.edge-group')];
+    return {
+      self: !!document.querySelector('.node.dep-self'),
+      dimNodes: document.querySelectorAll('.node.dep-dim').length,
+      edges: groups.length,
+      classified: groups.filter((g) => g.classList.contains('dep-up') || g.classList.contains('dep-down') || g.classList.contains('dep-dim')).length,
+      upDown: groups.filter((g) => g.classList.contains('dep-up') || g.classList.contains('dep-down')).length,
+      dim: groups.filter((g) => g.classList.contains('dep-dim')).length,
+      selNode: window.__ofSel?.().node ?? null,
+    };
+  });
+
+  // panning (drag on empty canvas) must NOT clear the selection; a plain empty click still does
+  const domPan = await page.evaluate(async () => {
+    const before = window.__ofSel().node;
+    const wrap = document.getElementById('canvasWrap');
+    const opt = { bubbles: true, cancelable: true, pointerId: 31, button: 0, clientX: 500, clientY: 300 };
+    wrap.dispatchEvent(new PointerEvent('pointerdown', opt));
+    for (let k = 1; k <= 3; k++) { window.dispatchEvent(new PointerEvent('pointermove', { ...opt, clientX: 500 - k * 15, clientY: 300 - k * 8 })); await new Promise((r2) => setTimeout(r2, 30)); }
+    window.dispatchEvent(new PointerEvent('pointerup', { ...opt, clientX: 455, clientY: 276 }));
+    await new Promise((r2) => setTimeout(r2, 300));
+    return { before, after: window.__ofSel().node };
+  });
+  await page.evaluate(async () => {
+    const wrap = document.getElementById('canvasWrap');
+    const opt = { bubbles: true, cancelable: true, pointerId: 32, button: 0, clientX: 500, clientY: 300 };
+    wrap.dispatchEvent(new PointerEvent('pointerdown', opt));
+    window.dispatchEvent(new PointerEvent('pointerup', opt));
+    await new Promise((r2) => setTimeout(r2, 300));
+  });
+  const domCleared = await page.evaluate(() => window.__ofSel());
+
+  // 9) canvas mode: clicking a card selects it and panning keeps it (previously pan-on-empty
+  //    deselected on pointerdown, killing the dep highlight on the first drag)
+  const emptyWorldPoint = async () => {
+    const g = await api(`/api/graph/${id}`);
+    const minX = Math.min(...g.nodes.map((n) => n.x)), minY = Math.min(...g.nodes.map((n) => n.y));
+    return page.evaluate((wx, wy) => {
+      const v = window.__ofView();
+      const r = document.getElementById('viewport').getBoundingClientRect();
+      return { x: r.left + v.x + wx * v.k, y: r.top + v.y + wy * v.k };
+    }, minX - 160, minY - 160);
+  };
+  const cardPoint = async () => {
+    const g = await api(`/api/graph/${id}`);
+    return page.evaluate((w) => {
+      const v = window.__ofView();
+      const r = document.getElementById('viewport').getBoundingClientRect();
+      return { x: r.left + v.x + (w.x + (w.w ?? 168) / 2) * v.k, y: r.top + v.y + (w.y + (w.h ?? 64) / 2) * v.k };
+    }, g.nodes[0]);
+  };
+  await page.evaluate(() => document.getElementById('btnCanvas').click());
+  await sleep(900);
+  await page.evaluate(() => document.getElementById('cvFit')?.click());
+  await sleep(1000);
+  const cardPt = await cardPoint();
+  await tapAt(cardPt, 40);
+  const cvNodeSel = await page.evaluate(() => window.__ofSel());
+  const emptyPt2 = await emptyWorldPoint();
+  await page.evaluate(async ({ pt }) => {
+    const vp = document.getElementById('viewport');
+    const opt = { bubbles: true, cancelable: true, pointerId: 41, button: 0, clientX: pt.x, clientY: pt.y };
+    vp.dispatchEvent(new PointerEvent('pointerdown', opt));
+    for (let k = 1; k <= 3; k++) { window.dispatchEvent(new PointerEvent('pointermove', { ...opt, clientX: pt.x + k * 20, clientY: pt.y + k * 10 })); await new Promise((r2) => setTimeout(r2, 30)); }
+    window.dispatchEvent(new PointerEvent('pointerup', { ...opt, clientX: pt.x + 60, clientY: pt.y + 30 }));
+    await new Promise((r2) => setTimeout(r2, 400));
+  }, { pt: emptyPt2 });
+  const cvNodeAfterPan = await page.evaluate(() => window.__ofSel());
+  await tapAt(emptyPt2, 42);
+  const cvNodeCleared = await page.evaluate(() => window.__ofSel());
+
   await browser.close();
 
   const results = [
@@ -258,6 +340,12 @@ async function api(p, opt) {
     ['canvas: clicking empty clears the selection', !!canvasDeselected && canvasDeselected.group === null, JSON.stringify(canvasDeselected)],
     ['DOM: group drag commits members+rect', domDrag.pass, domDrag.detail],
     ['DOM: clicking a group box selects it (box + list)', domSelBox.box === groupGid && domSelBox.listed, JSON.stringify(domSelBox)],
+    ['DOM: card selection classifies every edge (up/down/dim)', depState.self && depState.edges > 0 && depState.classified === depState.edges && depState.dim > 0 && depState.upDown > 0, `edges=${depState.edges} up/down=${depState.upDown} dim=${depState.dim} dimNodes=${depState.dimNodes}`],
+    ['DOM: panning keeps the selection (highlight survives)', !!domPan.before && domPan.before === domPan.after, JSON.stringify(domPan)],
+    ['DOM: plain empty click still clears', domCleared.node === null && domCleared.group === null, JSON.stringify(domCleared)],
+    ['canvas: clicking a card selects it', !!cvNodeSel && cvNodeSel.node !== null, JSON.stringify(cvNodeSel)],
+    ['canvas: panning keeps the node selection', !!cvNodeAfterPan && cvNodeAfterPan.node === (cvNodeSel && cvNodeSel.node), JSON.stringify(cvNodeAfterPan)],
+    ['canvas: empty click clears node selection', !!cvNodeCleared && cvNodeCleared.node === null, JSON.stringify(cvNodeCleared)],
   ];
   let ok = 0;
   for (const [n, pass, extra] of results) { if (pass) ok++; console.log(`${pass ? '  ✓' : '  ✗'} ${n.padEnd(34)} ${extra}`); }
