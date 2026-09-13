@@ -1,6 +1,6 @@
 {
   "name": "omni-flow",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "OmniFlow (of) — universal flow map plugin: theorem dependencies, paper relations, task RACI, org structure, conversation maps. Zero-dep CLI + visual Studio canvas.",
   "license": "CC-BY-NC-4.0",
   "type": "module",
