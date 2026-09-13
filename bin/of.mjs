@@ -4,15 +4,15 @@ import { homedir } from "node:os";
 import { join, resolve, dirname, basename } from "node:path";
 import { mkdir, readFile, writeFile, readdir, stat } from "node:fs/promises";
 import { normalizeGraph, validateGraph } from "../lib/graph-core.js";
-import { layeredLayout, clusterLayout, forceLayout, gridLayout, analyzeGraph } from "../lib/graph-analysis.js";
-import { loadGraph, saveGraph, listGraphs, deleteGraph, makeGraphId } from "../lib/graph-service.mjs";
+import { computeLayout, analyzeGraph } from "../lib/graph-analysis.js";
+import { loadGraph, saveGraphChecked, listGraphs, deleteGraph, makeGraphId } from "../lib/graph-service.mjs";
 import { buildTemplateById, mergedTemplateSummaries, saveCustomTemplate, deleteCustomTemplate } from "../lib/templates.js";
-import { ensureConversationShape, appendTurn, setHead, mergeBranches, pathTo, conversationOverview, linearize, registerAgent, recordTurn, resolveTurn, pendingTurns, nextSpeaker, aggregateBranches, scaffoldTopology } from "../lib/conversation.js";
+import { ensureConversationShape, appendTurn, setHead, mergeBranches, conversationOverview, linearize, registerAgent, recordTurn, pendingTurns, nextSpeaker, aggregateBranches, scaffoldTopology } from "../lib/conversation.js";
 import { toMermaid, fromMermaid, toDot, toMarkdownOutline, toPlainText, fromAgentFlow } from "../lib/converters.js";
 import { buildGraphFromMineru, buildGraphFromMarkdown } from "../lib/import-doc.js";
 import { extractPythonData, buildGraphFromCards, buildOverviewFromFlow } from "../lib/import-cards.js";
 import { liveStart, liveLog, liveStop, liveStatus } from "../lib/live-conversation.js";
-import { addCrosslink, removeCrosslink, readCrosslinks, crosslinksForGraph, crosslinkIndex, parseCrosslinkTable, pruneCrosslinks } from "../lib/crosslinks.js";
+import { addCrosslink, removeCrosslink, readCrosslinks, crosslinksForGraph, parseCrosslinkTable, pruneCrosslinks } from "../lib/crosslinks.js";
 import { projectOverview, projectSections } from "../lib/project.js";
 
 const VERSION = "0.1.0";
@@ -33,6 +33,20 @@ function fail(message, issues) {
   process.exit(1);
 }
 
+/** Persist a graph through the checked pipeline (formula gate + structure validation).
+ *  A structure problem stays a warning (as before); unacceptable LaTeX aborts with the fix list. */
+async function saveChecked(root, id, graph) {
+  try {
+    return await saveGraphChecked(root, id, graph);
+  } catch (error) {
+    if (error.code === "INVALID_STRUCTURE") {
+      console.error(`\u26a0 structure warnings: ${(error.issues ?? []).slice(0, 3).join("; ")}`);
+      return null;
+    }
+    fail(error.message);
+  }
+}
+
 async function ensureRoot(root) {
   await mkdir(join(root, "graphs"), { recursive: true });
 }
@@ -45,7 +59,7 @@ async function cmdCreate() {
   const graph = await buildTemplateById(root, template, nameArg, opt("--lang", "en") === "zh" ? "zh" : "en");
   graph.id = makeGraphId(graph.name);
   if (opt("--desc")) graph.description = opt("--desc");
-  await saveGraph(join(root, "graphs", graph.id), graph);
+  await saveChecked(root, graph.id, graph);
   console.log(`✓ Created graph ${graph.name} (template ${template})`);
   console.log(`  id: ${graph.id}`);
   console.log(`  ${graph.nodes.length} nodes · ${graph.edges.length} edges`);
@@ -81,16 +95,13 @@ async function cmdLayout() {
   const root = rootHome();
   const { graph } = await loadGraph(root, id);
   const mode = opt("--mode", "layered");
-  const positions = mode === "clusters" ? clusterLayout(graph)
-    : mode === "force" ? forceLayout(graph.nodes, graph.edges)
-    : mode === "grid" ? gridLayout(graph.nodes)
-    : layeredLayout(graph.nodes, graph.edges, { direction: graph.direction });
+  const positions = computeLayout(graph, mode);
   for (const node of graph.nodes) {
     const position = positions.get(node.id);
     if (position) { node.x = position.x; node.y = position.y; }
   }
   graph.revision += 1;
-  await saveGraph(join(root, "graphs", id), graph);
+  await saveChecked(root, id, graph);
   console.log("✓ Auto-layout applied");
 }
 
@@ -149,7 +160,7 @@ async function cmdImport() {
   const verdict = validateGraph(graph);
   if (!verdict.ok) fail("Imported content failed validation", verdict.issues);
   graph.id = makeGraphId(graph.name);
-  await saveGraph(join(root, "graphs", graph.id), graph);
+  await saveChecked(root, graph.id, graph);
   console.log(`✓ Imported "${graph.name}" id=${graph.id} (${graph.nodes.length} nodes / ${graph.edges.length} edges)`);
 }
 
@@ -166,7 +177,7 @@ async function cmdImportAf() {
   }
   const graph = await fromAgentFlow(JSON.parse(raw));
   graph.id = makeGraphId(graph.name);
-  await saveGraph(join(root, "graphs", graph.id), graph);
+  await saveChecked(root, graph.id, graph);
   console.log(`✓ Imported from agent-flow "${graph.name}" id=${graph.id} (${graph.nodes.length} nodes / ${graph.edges.length} edges)`);
 }
 
@@ -207,7 +218,7 @@ async function cmdMeta() {
   if (opt("--desc")) graph.description = opt("--desc");
   if (opt("--direction")) graph.direction = opt("--direction") === "LR" ? "LR" : "TD";
   graph.revision += 1;
-  await saveGraph(join(root, "graphs", id), graph);
+  await saveChecked(root, id, graph);
   console.log(`✓ ${graph.name} (direction ${graph.direction})`);
 }
 
@@ -315,7 +326,7 @@ async function cmdConvo(){
     const g = ensureConversationShape(normalizeGraph({ name: topic, nodes: [], edges: [], groups: [], notes: {} }), { topic });
     g.id = makeGraphId(g.name);
     appendTurn(g, { text: topic, speaker: "system", type: "topic" });
-    await saveGraph(join(root, "graphs", g.id), g);
+    await saveChecked(root, g.id, g);
     const folder = opt("--folder");
     if (folder) { try { await moveGraph(root, g.id, folder); } catch { /* filing failure is not fatal */ } }
     console.log(`✓ Conversation created\n  id: ${g.id}\n  stored: ${join(root, "graphs", g.id, "graph.json")}`);
@@ -416,7 +427,7 @@ async function cmdConvo(){
     console.error("usage: of convo new|say|branch|merge|path|open …");
     process.exit(1);
   }
-  if (changed){ graph.revision += 1; await saveGraph(join(root, "graphs", id), graph); }
+  if (changed){ graph.revision += 1; await saveChecked(root, id, graph); }
 }
 
 
@@ -457,7 +468,7 @@ async function cmdImportDoc(){
   built.graph.id = makeGraphId(built.graph.name);
   const verdict = validateGraph(built.graph);
   if (!verdict.ok) console.error(`⚠ structure warnings: ${verdict.issues.slice(0, 3).join("; ")}`);
-  await saveGraph(join(root, "graphs", built.graph.id), built.graph);
+  await saveChecked(root, built.graph.id, built.graph);
   // asset copy: (1) MinerU-extracted images (formula figures/illustrations) (2) page images; all go into <graph>/assets/
   let attached = 0;
   {
@@ -528,7 +539,7 @@ async function cmdImportDoc(){
   if (built.__flow?.data?.SECTION_FLOW?.length){
     const ov = buildOverviewFromFlow(built.__flow.data, { name: `${name} · Section overview`, sourceId: built.graph.id });
     ov.graph.id = makeGraphId(ov.graph.name);
-    await saveGraph(join(root, "graphs", ov.graph.id), ov.graph);
+    await saveChecked(root, ov.graph.id, ov.graph);
     if (folder){ try { await moveGraph(root, ov.graph.id, folder); } catch {} }
     console.log(`  ↗ Section overview: ${ov.stats.sections} sections · ${ov.stats.edges} justified cross-section deps\n    id: ${ov.graph.id}`);
   }
@@ -644,7 +655,7 @@ async function cmdProject(){
   if (kind === "overview"){
     const r = await projectOverview(root, id, { name: opt("--name", null), folder });
     r.graph.id = makeGraphId(r.graph.name);
-    await saveGraph(join(root, "graphs", r.graph.id), r.graph);
+    await saveChecked(root, r.graph.id, r.graph);
     if (folder){ try { await moveGraph(root, r.graph.id, folder); } catch {} }
     console.log(`✓ Section overview: ${r.graph.nodes.length} sections · ${r.graph.edges.length} aggregated dependencies\n  id: ${r.graph.id}`);
     if (r.crossLinks) console.log(`  includes ${r.crossLinks} cross-graph links`);
