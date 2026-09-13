@@ -67,14 +67,14 @@ main { flex: 1; display: flex; min-width: 0; min-height: 0; }
   font-size: 12.5px; line-height: 1.65; color: var(--text); word-break: break-word;
 }
 .note-preview:empty { display: none; }
-.note-preview h1, .note-preview h2, .note-preview h3 { margin: 6px 0 4px; font-size: 13.5px; color: var(--accent); }
+.note-preview h1, .note-preview h2, .note-preview h3 { margin: 8px 0 5px; font-size: 15px; font-weight: 650; color: var(--accent); }
 .note-preview p { margin: 4px 0; }
 .note-preview ul, .note-preview ol { margin: 4px 0 4px 18px; }
 .note-preview code {
   background: var(--panel); border: 1px solid var(--border); border-radius: 4px;
   padding: 0 4px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
 }
-.note-preview .katex { color: inherit; font-size: 1.02em; }
+.note-preview .katex { color: inherit; font-size: 1.04em; }
 .math-fallback { display:inline-block; padding:1px 5px; border-radius:5px;
   background:rgba(248,113,113,.12); border:1px dashed rgba(248,113,113,.5);
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11.5px; }
@@ -538,7 +538,9 @@ body.lean .group-box { opacity: .6; }
 #inspector { flex: none; width: 300px; display: flex; flex-direction: column; background: var(--panel); border-left: 1px solid var(--border); min-width: 0; min-height: 0; transition: width .18s ease; }
 #inspector.collapsed { width: 0; min-width: 0; border-left: 0; overflow: hidden; }
 #inspector .ins-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); min-height: 40px; flex: none; }
-#inspector textarea { resize: vertical; min-height: 56px; max-height: 50vh; width: 100%; max-width: 100%; }
+/* The content box has no length limit: it grows with its content instead of scrolling inside a
+   50vh cap (the data layer never truncated anything — that cap only made it look limited). */
+#inspector textarea { resize: vertical; min-height: 56px; width: 100%; max-width: 100%; overflow-y: hidden; }
 #rightSplitter { flex: none; width: 9px; background: var(--panel); cursor: col-resize; touch-action: none; position: relative; display: grid; place-items: center; }
 #rightSplitter::before { content: ""; position: absolute; inset: 0 3px; background: var(--border); }
 #rightSplitter::after { content: ""; width: 3px; height: 42px; border-radius: 99px; background: var(--border); }
@@ -773,3 +775,16 @@ body.interacting { user-select: none; -webkit-user-select: none; cursor: grabbin
 /* Only one rendering surface may be visible at a time: the DOM cards, or the canvas. */
 body:not(.canvas-mode) #scene { display: none; }
 body.canvas-mode #scene { display: block; }
+
+
+/* ===== Detail column: 14px (requested) =====
+   The inspector is where text is actually read and typed, so the whole column runs at 14px — fields
+   and the rendered detail block alike. Only the tiny section headers (h3, uppercase) and the
+   secondary hints stay smaller so the hierarchy is still readable. */
+#inspector { font-size: 14px; }
+#inspector input, #inspector textarea, #inspector select, #inspector label { font-size: 14px; }
+#inspector .hint { font-size: 12.5px; }
+#n-preview { font-size: 14px; line-height: 1.8; }
+.note-preview { font-size: 14px; line-height: 1.8; }
+.note-preview h1, .note-preview h2, .note-preview h3 { font-size: 15px; }
+.modal .note-body, .modal #n-preview { font-size: 14px; line-height: 1.8; }
