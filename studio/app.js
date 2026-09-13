@@ -771,9 +771,22 @@ function cvInit(){
   CV.canvas = c;
   CV.ctx = c.getContext("2d", { alpha: true });
   cvResize();
-  window.addEventListener("resize", cvResize);
+  window.addEventListener("resize", cvQueueResize);
+  // 视口尺寸会因右栏收起/展开、左右分栏拖宽、阅读模式等变化——这些都不走 window resize。
+  // #scene 的 CSS 是 width:100%，位图不同步时浏览器把旧帧拉伸铺满 → 交界处出现整条花屏。
+  if (typeof ResizeObserver !== "undefined" && $("viewport")){
+    new ResizeObserver(cvQueueResize).observe($("viewport"));
+  }
   cvBind();                       // 事件先绑好，但默不启用
   cvSetMode(CV.on);
+}
+
+/** 位图重设按帧合并：分栏拖动等高频触发只算一次 */
+let cvResizeQueued = false;
+function cvQueueResize(){
+  if (cvResizeQueued) return;
+  cvResizeQueued = true;
+  requestAnimationFrame(()=>{ cvResizeQueued = false; cvResize(); });
 }
 
 /** 切换渲染模式：false = DOM（默认，功能完整）· true = canvas（大图加速档） */
