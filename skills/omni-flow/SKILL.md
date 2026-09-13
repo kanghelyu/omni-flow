@@ -21,6 +21,11 @@ Before touching anything, state the following in your first reply:
 
 - **MUST** call **`of_latex_check`** before writing anything that contains math (note body, card title, edge label). A non-empty `failed` means **you must not commit** — fix per `hint` and re-check.
 - **MUST NOT** define macros with `\newcommand`. The legal set is KaTeX built-ins plus official `mhchem` `\ce{}`.
+- **Custom symbol macros are rejected by the gate, not just discouraged**: `\newcommand`, `\renewcommand`,
+  `\providecommand`, `\DeclareMathOperator`, `\def`, `\gdef`, `\edef`, `\xdef`, `\let` fail validation outright.
+  A macro defined in one card does not exist in the others, so there is no safe way to use one — write the
+  standard command every time (`\mathbb{R}`, `\operatorname{Tr}`, `\gcd`, …). If a symbol has no KaTeX
+  equivalent, write it as `\operatorname{name}` or plain text.
 - **MUST** wrap anything needing `\tag{...}`, `aligned` or matrices in `$$…$$` (`\tag` is illegal inline; the system auto-converts it to a text number, but never rely on that).
 - **MUST** keep braces, brackets and `\left`/`\right` balanced — one unclosed pair fails the **whole** fragment.
 - **MUST** close every delimiter. An unclosed `$`, `$$`, `\(` or `\[` turns the rest of the text into plain
