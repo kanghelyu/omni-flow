@@ -8,7 +8,7 @@
 OmniFlow（`of` CLI）— 万用流程图工具：定理依赖、论文关联、任务 RACI、组织架构、对话关联等一切关系图。
 
 **三层标准接口**（同一能力，三种入口）：
-- MCP：`of mcp`（stdio JSON-RPC），**37 个工具**（`of_layout` 支持 `mode: layered|clusters`；`of_search` 全局搜索；`of_create_graph` 支持 `lang`）
+- MCP：`of mcp`（stdio JSON-RPC），**61 个工具**（`of_layout` 支持 `mode: layered|clusters`；`of_search` 全局搜索；`of_create_graph` 支持 `lang`）
 - HTTP：`of studio --port 4319` 启动可视化 Studio（默认端口 4319），REST API 见 `docs/API.md`
 - CLI：`of <command>`（`of create ... --lang zh|en`），全量命令见 `of --help`
 
