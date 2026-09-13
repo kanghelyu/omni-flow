@@ -8,8 +8,22 @@ INSTALL_DIR="${OF_INSTALL_DIR:-$HOME/.omni-flow}"
 BIN_DIR="${OF_BIN_DIR:-$HOME/.local/bin}"
 
 fail() { printf 'OmniFlow install: %s\n' "$1" >&2; exit 1; }
-command -v node >/dev/null 2>&1 || fail 'Node.js >= 18 is required.'
-node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 18 ? 0 : 1)' || fail "Node.js >= 18 is required (found $(node --version))."
+# 找 node：PATH 优先，其次常见安装位置（WorkBuddy 托管 / Homebrew / nvm）
+find_node() {
+  if command -v node >/dev/null 2>&1; then printf '%s' "$(command -v node)"; return; fi
+  local cand
+  for cand in \
+    "$HOME/.workbuddy/binaries/node/versions"/*/bin/node \
+    /opt/homebrew/bin/node /usr/local/bin/node /usr/bin/node \
+    "$HOME/.nvm/versions/node"/*/bin/node; do
+    [ -x "$cand" ] && { printf '%s' "$cand"; return; }
+  done
+  return 1
+}
+NODE="$(find_node)" || fail 'Node.js >= 18 is required (not found in PATH or common locations).'
+"$NODE" -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 18 ? 0 : 1)' || fail "Node.js >= 18 is required (found $("$NODE" --version))."
+# 让后续所有 node 调用都用找到的这个（含生成 MCP 配置里的路径）
+export PATH="$(dirname "$NODE"):$PATH"
 
 mkdir -p "$INSTALL_DIR" "$BIN_DIR"
 for item in bin lib studio skills docs; do
