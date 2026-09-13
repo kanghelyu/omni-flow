@@ -6,12 +6,12 @@ import { join, resolve, extname, basename } from "node:path";
 import { spawn } from "node:child_process";
 import { readFile, writeFile, copyFile, mkdir, readdir, stat } from "node:fs/promises";
 import { NODE_TYPES, EDGE_TYPES, normalizeGraph, validateGraph, newId, nodeTypeDef, setNodeAttachments, setGroupRect, moveNodes } from "../lib/graph-core.js";
-import { computeLayout, analyzeGraph } from "../lib/graph-analysis.js";
+import { computeLayout, applyLayout, analyzeGraph } from "../lib/graph-analysis.js";
 import { searchGraphs } from "../lib/search.mjs";
 import { suggestGroups } from "../lib/group-suggest.js";
 import { ensureConversationShape, appendTurn, setHead, mergeBranches, pathTo, conversationOverview, linearize, recordTurn, resolveTurn, pendingTurns, nextSpeaker, aggregateBranches, scaffoldTopology } from "../lib/conversation.js";
 import { liveStart, liveLog, liveStop, liveStatus } from "../lib/live-conversation.js";
-import { addCrosslink, removeCrosslink, crosslinksForGraph } from "../lib/crosslinks.js";
+import { addCrosslink, removeCrosslink, crosslinksForGraph, assertLinkTargets } from "../lib/crosslinks.js";
 import { projectOverview, projectSections } from "../lib/project.js";
 import { loadGraph, saveGraph, listGraphs, deleteGraph, readNodeNote, writeNodeNote, makeGraphId, readJsonIfPresent, mutateGraph as mutateGraphAt, graphDir } from "../lib/graph-service.mjs";
 import { createFolder, renameFolder, deleteFolder, moveGraph, readTree, updateLedger } from "../lib/vault.js";
@@ -350,7 +350,12 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         }
         if (req.method === "POST"){
           const body2 = await readBody(req);
-          sendJson(res, 200, await addCrosslink(root, body2));
+          try {
+            await assertLinkTargets(root, body2);      // refuse links to things that do not exist
+            sendJson(res, 200, await addCrosslink(root, body2));
+          } catch (error){
+            sendJson(res, error.code === "XLINK_TARGET" ? 400 : 500, { error: error.message });
+          }
           return;
         }
         if (req.method === "DELETE"){
@@ -690,11 +695,7 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
       if (req.method === "POST" && action === "layout") {
         const { graph } = await loadGraph(root, id);
         const mode = String(body.mode ?? "layered");
-        const positions = computeLayout(graph, mode);
-        for (const node of graph.nodes) {
-          const position = positions.get(node.id);
-          if (position) { node.x = position.x; node.y = position.y; }
-        }
+        applyLayout(graph, mode);            // also re-fits every group box to its members
         graph.revision += 1;
         await saveGraph(graphDir(root, id), graph);
         sendJson(res, 200, { ok: true, detail: graphDetail(graph) });
