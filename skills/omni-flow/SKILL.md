@@ -3,78 +3,48 @@ name: omni-flow
 description: Use OmniFlow (of CLI) to create and edit universal flow maps — theorem dependencies, paper relations, task RACI, org structure, research collaboration, conversation maps, and any "elements + relations" structure. Full customization (node/edge colors, shapes, arrow labels), Obsidian-style folder tree, Mermaid/DOT/JSON/Markdown import/export, auto layout, cycle detection and dependency tracing. Three standard interfaces: MCP (61 tools) / HTTP JSON API / CLI.
 ---
 
-# ⛔ 强制红线（MUST · 违反即视为任务失败）
+# ⛔ Hard rules (MUST · violating any one of these = the task failed)
 
-> 以下每条都是**实际踩过的坑**，不是建议。任何一条被违反，产物在浏览器里一定出问题。
+> Every rule below comes from a real incident, not from theory. Breaking one always shows up as a broken canvas for the user.
 
-## R0. 任务开始时的合规声明（MUST · 每次都要做）
+## R0. Declare before you start (MUST)
 
-动手前**MUST**完成三件事，并在首条回复里明确写出：
+Before touching anything, state the following in your first reply:
 
-1. **已通读 R1–R8 与「📕 失败案例库」**（是"已读"，不是"将读"）。
-2. **写出本次验证计划**：要跑哪些测试、怎么核对（例：`smoke` + `mcp-test` + 浏览器实测 + `.bak` 前后节点/边计数）。
-3. **声明红线状态**：若某条红线客观上无法满足（例如用户明确要求跳过验证），**MUST**先停止并说明冲突、由用户裁决；**MUST NOT** 静默降级，也**MUST NOT**"先做了再补"。
+1. **You have read R1–R4 and the 📕 Failure library** (read, not "about to read").
+2. **How you will verify**: which `of_*` tools you will use (e.g. `of_latex_check` → write → `of_get_graph` for counts → `of_get_note` for read-back → `of_validate`).
+3. **If a rule cannot be satisfied** (e.g. the user explicitly asks to skip validation) → **MUST** stop and surface the conflict for the user to decide; **MUST NOT** silently downgrade, and **MUST NOT** "do it first and patch later".
 
-> **违规处理**：一旦发现违反 R0–R8 中任何一条，**MUST**立刻回滚该次改动，在回复中明示违反项与原因，然后按正确流程重做；**MUST NOT** 把违规产物当"已完成"交付。
+> **On violation**: revert the artefact, state which rule was broken and why, then redo it correctly. **MUST NOT** present a violating artefact as "done".
 
-## R1. 公式：只用 KaTeX 标准命令，写完必须自检
+## R1. Formulas: KaTeX standard commands only, always self-check before writing
 
-- **MUST** 在写入任何含公式的内容（备注/卡片标题/连线标签）前后调用 **`of_latex_check`**；`failed` 非空即**不得提交**，按 `hint` 修正后重查。
-- **MUST NOT** 使用 `\newcommand` 自造宏。合法集合 = KaTeX 内置 + 官方 `mhchem` 的 `\ce{}`。
-- **MUST** 用 `$$…$$` 包裹需要 `\tag{...}`、`aligned`、矩阵的公式（`\tag` 在行内 `$…$` 非法；系统会自动转文本编号，但不要依赖它兜底）。
-- **MUST** 保证花括号/`\left\right`/括号配对（未闭合会让**整段**编译失败）。
-- **MUST NOT** 在公式内写嵌套 `$`；中文要放进 `\text{…}`。
-- 需要**展示 LaTeX 源码本身**时，**MUST** 放进代码围栏 ```` ```…``` ````（围栏内容不参与校验）。
-- 系统防线：`writeNodeNote` 与所有图级写入（MCP `mutateGraph`、Web `mutateGraph`、`of_import_doc`）会**自动规范化**并**硬校验**——不通过的写入会被**拒绝**并返回逐条修法。这不是提示，是拦截。
+- **MUST** call **`of_latex_check`** before writing anything that contains math (note body, card title, edge label). A non-empty `failed` means **you must not commit** — fix per `hint` and re-check.
+- **MUST NOT** define macros with `\newcommand`. The legal set is KaTeX built-ins plus official `mhchem` `\ce{}`.
+- **MUST** wrap anything needing `\tag{...}`, `aligned` or matrices in `$$…$$` (`\tag` is illegal inline; the system auto-converts it to a text number, but never rely on that).
+- **MUST** keep braces, brackets and `\left`/`\right` balanced — one unclosed pair fails the **whole** fragment.
+- **MUST NOT** nest `$` inside a formula. Put Chinese (or any prose) inside `\text{…}`.
+- To **show LaTeX source itself**, **MUST** put it in a code fence ```` ```…``` ```` (fenced content is exempt from validation).
+- Every OmniFlow write channel (`of_set_note`, `of_add_node`, `of_patch_node`, `of_import_doc`, Studio editing) **normalises and hard-validates**: an invalid formula is **rejected** with per-fragment `hint`s. This is an interceptor, not a warning — **do not** try to slip content in first.
 
-## R2. 语义 id：跨图链接的对齐前提
+## R2. Semantic ids: the prerequisite for cross-graph links
 
-- 卡片 id **MUST** 采用 `{类型缩写}-{节}.{序号}`（`thm-2.1.1` / `def-2.3.4` / `eq-2.1.2`）；解析导入时自动生成，**不要手改**。
-- 缩写固定：`thm def prop lem cor ex rem eq`（`paper→ref`）。
-- 跨图链接的 `why` **MUST** 写清数学依据（不是"内容相关"）。
+- Card ids **MUST** follow `{type-abbrev}-{section}.{n}` (`thm-2.1.1` / `def-2.3.4` / `eq-2.1.2`); they are generated on import — **do not rename them by hand**.
+- Fixed abbreviations: `thm def prop lem cor ex rem eq` (papers → `ref`).
+- A cross-graph link's `why` **MUST** state the mathematical justification, not "related content".
 
-## R3. 写入前必须自检的三件事
+## R3. Three checks before every write
 
-1. `of_latex_check` 全绿（见 R1）。
-2. **不要用空/退化数据覆盖已有内容**：任何"整图写入"都不得在目标图非空时写入空图（服务端已有护栏，但**不要试探**）。
-3. 结构性改动后 `of_validate` 应通过（环是警告不是错误，允许）。
+1. `of_latex_check` is all green (see R1).
+2. **Never overwrite existing content with empty or degenerate data**: a whole-graph write must not put an empty graph over a non-empty one.
+3. After structural changes, `of_validate` passes (cycles are warnings, not errors — they are allowed).
 
-## R4. 改前端后必须走完「四步验证」（少一步就等于没改）
+## R4. Protect the data (MUST)
 
-> 现象：改了源码、`node --check` 通过、测试全绿，但浏览器行为没变。原因：`install.sh` 因 PATH 无 `node` 而**静默失败**，`~/.omni-flow` 里一直是旧副本。
-
-```bash
-export PATH="/Users/andylyu/.workbuddy/binaries/node/versions/22.22.2-3/bin:$PATH"
-bash install.sh                                               # ① 安装（已加固：自动定位 node）
-grep -c "<本次改动的关键标识>" ~/.omni-flow/studio/index.html  # ② 校验安装副本
-# ③ 只有改了 lib/*.mjs 或 studio/server.mjs 才需要重启 studio
-# ④ 浏览器带 ?v=<时间戳> 复核（强行绕过浏览器缓存）
-```
-
-- **MUST** 每步都做；**MUST NOT** 用 `install.sh > /dev/null` 掩盖失败。
-- **MUST** 第 ② 步 grep 计数 **> 0**；等于 0 就是安装副本仍是旧的，**禁止继续**，先排查。
-- **MUST**：改了 `lib/*.mjs` 或 `studio/server.mjs` → **重启 studio**；只改 `studio/index.html` → 无需重启（服务端每请求读盘），但浏览器**必须**带 `?v=`。
-- **MUST** 在交付报告里贴出第 ② 步的**真实数字**与浏览器实测输出（DOM 数量/类名/坐标），**MUST NOT** 只写"应该好了"。
-- **MUST** 改完 skill 本身后同样跑 `bash install.sh`（skill 以软链装入 `~/.workbuddy`、`~/.zcode`、`~/.claude`、`~/.codex`）。
-
-## R5. 不要写重复的顶层声明
-
-- `function foo(){}` 定义两次时**后者静默覆盖前者**，且无任何报错。本项目因此丢过功能（`renderDepList` 被旧版覆盖 → 上下游列表不显示）。
-- **MUST** 依赖 `node test/smoke.mjs` 的「无重复顶层声明」检查（已内置）。
-
-## R6. 取 DOM 元素：`getElementById` 不能吃 CSS 转义
-
-- `$("node-" + CSS.escape(id))` 是**错的**（`$` = `getElementById`）；含 `.` 的语义 id（`def-2.1.1`）会被转义成 `def-2\.1\.1` → 取不到元素。
-- **MUST** 用 `nodeEl(id)`（优先 `nodesLayer._map`，回退原始 id）；`CSS.escape` 只配 `querySelector`。
-
-## R7. 可选链与默认值
-
-- 新字段一律给默认值（`node.attachments ?? []`）；`normalizeGraph` **只保留白名单字段**，新增字段必须同步加进白名单，否则存盘即丢（`conversation`/`attachments`/`rect` 都踩过）。
-
-## R8. 备份优先
-
-- 任何"整图替换/清空/批量删除"前，**MUST** 先确认 `.bak/` 可用（本项目靠它从一次清空中恢复过 71 节点）。
-- **MUST NOT** 递归删除 `~/.omni-flow`、`Studio` 数据目录或个人目录。
+- **MUST NOT** overwrite an existing graph with empty or degenerate content: before clearing, replacing a whole graph, or bulk-deleting, record the **before** node/edge counts with `of_get_graph`.
+- Deletion **MUST** go through OmniFlow's own tools (`of_delete_node` / `of_delete_edge` / `of_delete_graph`, all recoverable from trash). **MUST NOT** hand-delete `graph.json`, `notes/` or graph directories under `~/.omni-flow/`.
+- **MUST NOT** recursively delete the storage root or any user directory.
+- If a graph "seems to have disappeared", **MUST** check the read path and the server first (storage self-heals on read) — **do not** delete files.
 
 # OmniFlow — Universal Flow Map
 
@@ -115,17 +85,17 @@ Pass it explicitly: `of_create_graph { "name": "...", "template": "theorem-deps"
 
 # ⛔ Iron Rules: MUST follow for ANY task using this skill
 
-> 中文对照见顶部「强制红线 R0–R8」。本节与其**同等强制**：违反任一条 = 任务失败（不是"瑕疵"）。
-> **执行前先声明合规**（R0），**交付前先跑验证协议**（文末「✅ 交付前验证协议」）。
+> Equivalent in force to the Hard rules R0–R4 above: violating one = task failed (not a "minor flaw").
+> **Declare first** (R0); **self-check before delivery** (see "✅ Pre-delivery self-check" at the end).
 
-1. **No skipping, no merging steps** — every numbered step in an SOP is a separate action. Combining two steps = violation. 禁止跳步、禁止合并步骤。
-2. **Never guess parameters** — node IDs must come from `of_get_graph`'s actual return; folder paths must come from `of_tree` or the user's exact words. Look up one more time rather than fabricate. 禁止臆造 id / 路径。
-3. **After every write (add/patch/move/set_note/replace), verify with `of_get_graph` or `of_get_note`** — node count, edge count and content must match expectations. Mismatch = fix immediately; never proceed on top of an error. 写入后必须读回核对。
+1. **No skipping, no merging steps** — every numbered step in an SOP is a separate action. Combining two steps is a violation.
+2. **Never guess parameters** — node IDs must come from `of_get_graph`'s actual return; folder paths must come from `of_tree` or the user's exact words. Look up one more time rather than fabricate.
+3. **After every write (add/patch/move/set_note/replace), verify with `of_get_graph` or `of_get_note`** — node count, edge count and content must match expectations. Mismatch = fix immediately; never proceed on top of an error.
 4. **Check the work log before filing** (`~/.omni-flow/WORKLOG.txt` or `of_tree`): user-specified folder → use exactly as given; existing same-topic folder → reuse it, never create a parallel one; genuinely new domain → create a semantic folder and inform the user.
-5. **Formula content is gated by `of_latex_check`** (see R1) — `failed` non-empty means you MUST NOT commit; fix per `hint` and re-check. 公式未通过校验不得写入。
-6. **Any image/PDF/LaTeX source dropped in by the user MUST be processed to the end** (unpack → understand → implement or map), never summarised away or left half-done. 用户给的材料必须处理到底。
-7. **Never destroy data**: before any bulk replace / clear / batch delete, confirm `.bak/` exists and record before/after node & edge counts (see R8). 禁止任何形式的数据破坏。
-8. **At task end, report using the Report Template** (see bottom) with the full verification-protocol output. Paths must be actual `of_*` return values, never hand-written. 结尾必须按模板报告，并附真实验证输出。
+5. **Formula content is gated by `of_latex_check`** (see R1): a non-empty `failed` means you MUST NOT commit; fix per `hint` and re-check.
+6. **Any image/PDF/LaTeX source the user drops in MUST be processed to the end** (unpack → understand → implement or map), never summarised away or left half-done.
+7. **Never destroy data**: before any bulk replace / clear / batch delete, record the before/after node & edge counts via `of_get_graph`, and delete only through OmniFlow's own tools (trash-recoverable). Never hand-delete files under the storage root (see R4).
+8. **At task end, report using the Report Template** (see bottom) together with the self-check results. Paths must be actual `of_*` return values, never hand-written.
 
 ---
 
@@ -219,7 +189,7 @@ of_import_mermaid { "text": "<full mermaid above>", "name": "Paper theorem deps"
 
 **Step 3** · `of_get_graph` to verify node count and edge directions.
 
-**Step 4** · Per-node `of_set_note` (same as SOP-A Step 5, don't skip). **含公式的备注必须先 `of_latex_check`**（R1）。
+**Step 4** · Per-node `of_set_note` (same as SOP-A Step 5, don't skip). **Notes containing formulas MUST pass `of_latex_check` first** (R1).
 
 **Step 5** · `of_validate` → `of_analyze` → Report.
 
@@ -381,16 +351,16 @@ Nilpotent Orbits in Semisimple Lie Algebras
 ```
 
 **Completeness self-check (mandatory — all four are required, in order)**:
-0. **Before writing**: `of_latex_check` on the note body when it contains math (R1) — `failed` must be empty. （含公式时不得跳过后置；这是写入前的硬门槛。）
+0. **Before writing**: run `of_latex_check` on the note body when it contains math (R1) — `failed` must be empty. This is a hard gate, not optional.
 1. `of_get_note` readback full text;
 2. Check: line count ≥ 8; **theorem/model/formula nodes must contain text math formula body**; paper nodes have DOI/arXiv + local path;
 3. Any criterion unmet → rewrite → re-verify. **Cannot proceed until readback passes**.
 
 ---
 
-# Live recording protocol — 「开启非线性对话」
+# Live recording protocol — non-linear conversation capture
 
-**Trigger phrases** (either language): 开启非线性对话 · 开始记录对话 · 开启对话记录 · record this conversation · start non-linear conversation
+**Trigger phrases** (match the user's language; the literal strings users type are): `开启非线性对话` · `开始记录对话` · `开启对话记录` · `record this conversation` · `start non-linear conversation`
 
 ## When the user says it
 
@@ -418,7 +388,7 @@ Rules:
 - Summarise long tool output instead of dumping it; put the essentials in `text`.
 - If you branch, pass `from` so the fork is visible in the graph.
 
-## When the user says 停止记录 / 结束记录 / stop recording
+## When the user says stop (`停止记录` / `结束记录` / stop recording)
 
 `of_live_stop` → the graph is preserved; they can reopen it any time, or say the trigger again to resume.
 
@@ -426,7 +396,7 @@ Rules:
 
 ## What the user gets
 
-Every conversation becomes a browsable DAG in the Studio: click any turn to see the full text, right-click to **从这里继续 / 分叉一轮 / 合并 / 标记状态 / 加附件**, use the conversation panel for 调度 · 待办 · 导出路径, and jump between branches with the sibling navigator (`‹ 1/3 ›`) or the keyboard (`k` parent · `j` child · `1-9` child n).
+Every conversation becomes a browsable DAG in the Studio: click any turn to see the full text; right-click for **Continue here / Fork a turn / Merge / Set status / ＋ Attach**; use the conversation panel for scheduling, pending work and export paths; and jump between branches with the sibling navigator (`‹ 1/3 ›`) or the keyboard (`k` parent · `j` child · `1-9` child n).
 
 # Multi-agent non-linear conversation (agent runtime)
 
@@ -485,7 +455,7 @@ A conversation is a **DAG**, not a list. Every turn is a node; edges carry the r
 # Importing a PDF / MinerU output (`of import-doc`)
 
 ```bash
-of import-doc <content_list.json | .md> --name "书名 第N章" [--pages <页面图目录>] [--assets-root <目录>] [--folder 归档路径]
+of import-doc <content_list.json | .md> --name "Book Chapter N" [--pages <page-image-dir>] [--assets-root <dir>] [--folder <archive-path>]
 ```
 
 Handles **both MinerU formats**:
@@ -515,95 +485,59 @@ Produces a **single self-contained HTML file** (≈0.6–0.8 MB): fully offline 
 
 # Formula rendering (KaTeX 0.18.7, offline) — MUST read before writing any math
 
-**强制流程（R1）**：写入前 `of_latex_check` → 修正到 `failed` 为空 → 才 `of_set_note` / 建卡。服务端在 `writeNodeNote` 与每次图级写入（MCP `mutateGraph`、Web `mutateGraph`、`of_import_doc`）后**规范化 + 硬校验**，不通过直接**拒绝写入**并返回逐条 `hint`。
+**Mandatory flow (R1)**: `of_latex_check` → fix until `failed` is empty → only then `of_set_note` / create the card. On every write OmniFlow normalises and hard-validates; content that fails is **rejected** with a per-fragment `hint`.
 
-| 类别 | 允许（会被编译） | 禁止 / 需改写 |
+| Category | Allowed (will compile) | Forbidden / must be rewritten |
 | --- | --- | --- |
-| 定界符 | `$…$`、`$$…$$`、`\(…\)`、`\[…\]`、**独立裸 LaTeX 段**、混排文本里的内联命令 | 公式内部再嵌 `$`（嵌套定界符） |
-| 命令来源 | **KaTeX 内置** + 官方 `mhchem` 的 `\ce{…}` | `\newcommand` / `\def` 自造宏；库里没有的命令（`\bm` 会被自动改写为 `\boldsymbol`，但不要主动写 `\bm`） |
-| 编号 | 显示模式（`$$…$$`）里的 `\tag{…}` | 行内 `$…$` 里的 `\tag{…}`（KaTeX 规定非法；系统会兜底转文本编号，但不要依赖） |
-| 环境 | `aligned` / `gathered` / 矩阵类（系统会把 `align`/`gather` 自动改写为 `aligned`/`gathered`） | TikZ、`\includegraphics`、`\begin{document}` 等文档级指令（会降级为可见占位） |
-| 文本 | 中文放进 `\text{…}` | 中文裸写在公式里 |
-| 论文残留 | — | `\label` / `\cite` / `\ref` / `\eqref`（会被剥离为纯文本）；`\SI{}{}` 会转文本单位 |
-| 展示源码 | 代码围栏 ```` ```…``` ```` 内的内容**不参与校验** | 用普通段落展示 LaTeX 源码（会被当公式渲染） |
-| 括号 | 花括号 `{}`、`\left`/`\right`、`()`/`[]` **必须配对** | 未闭合（会让**整段**编译失败） |
+| Delimiters | `$…$`, `$$…$$`, `\(…\)`, `\[…\]`, **standalone bare-LaTeX paragraphs**, inline commands inside mixed prose | Nesting `$` inside a formula |
+| Command source | **KaTeX built-ins** + official `mhchem` `\ce{…}` | `\newcommand` / `\def` self-defined macros; commands the library does not have (`\bm` is auto-rewritten to `\boldsymbol`, but do not write it yourself) |
+| Numbering | `\tag{…}` in display mode (`$$…$$`) | `\tag{…}` inline in `$…$` (illegal in KaTeX; the system falls back to a text number, but do not rely on it) |
+| Environments | `aligned` / `gathered` / matrix environments (`align`/`gather` are auto-rewritten to `aligned`/`gathered`) | TikZ, `\includegraphics`, `\begin{document}` and other document-level directives (they degrade to a visible placeholder) |
+| Text | Prose (including Chinese) inside `\text{…}` | Bare Chinese inside a formula |
+| Paper remnants | — | `\label` / `\cite` / `\ref` / `\eqref` (stripped to plain text); `\SI{}{}` becomes text units |
+| Showing source | Content inside a code fence ```` ```…``` ```` is **not validated** | Showing LaTeX source as a plain paragraph (it will be rendered as a formula) |
+| Brackets | `{}`, `\left`/`\right`, `()`/`[]` **must be balanced** | Unbalanced pairs (they fail the **whole** fragment) |
 
-**命令范式**：`\operatorname{Tr}` 而非 `\Tr`；`\mathbb{R}` 而非 `\RR`（`\RR` 会被简写表自动改写，但请直接写标准形式）。简写改写表在 `studio/index.html` 的 `SHORTHAND`，**不再使用 KaTeX 宏定义**。
+**Command patterns**: write `\operatorname{Tr}`, not `\Tr`; write `\mathbb{R}`, not `\RR` (common shorthands like `\RR` are auto-rewritten, but write the standard form directly). **MUST NOT** depend on any custom macro definition.
 
 **English summary**: allowed = `$…$` · `$$…$$` · `\(…\)` · `\[…\]` · bare LaTeX paragraphs · inline commands in mixed text (e.g. `\ce{2H2 + O2 -> 2H2O}`). Auto-normalised = `\bm`→`\boldsymbol`, `\SI{}{}`→text units, `align`/`gather`→`aligned`/`gathered`, `\tag` inline→text number, preamble/`\label`/`\cite`/`\ref` stripped. **Rejected** = self-defined macros, unknown control sequences, unbalanced braces/`\left`/`\right`, nested `$`. Unsupported constructs (TikZ, `\includegraphics`) degrade to a visible placeholder — **never an error, never lost content**. Run `of_latex_check` before writing.
 
 
-# 📕 失败案例库（症状 → 根因 → 强制动作）
+# 📕 Failure library (symptom → root cause → mandatory action)
 
-> 这一节是**用真实故障换来的**。遇到相似症状先查这里，不要重新试错。
+> Built from real incidents. When a symptom looks familiar, check here instead of re-experimenting.
 
-## 公式类
+## Formulas
 
-| 症状 | 根因 | 强制动作 |
+| Symptom | Root cause | Mandatory action |
 | --- | --- | --- |
-| 大量公式显示原文 + `⚠ LaTeX 未渲染` | 片段里有 `\tag{}` 被行内渲染（KaTeX 规定 `\tag` 只能显示模式） | 已自动转文本编号；新内容请用 `$$…$$` 包裹 |
-| 某条公式整段失败 | 花括号/`\left\right` 未配对 | `of_latex_check` 拿到 `hint`，补齐后重查 |
-| 报 `Undefined control sequence: \xxx` | 用了自定义宏或拼错命令 | 换成标准命令；范式：`\operatorname{Tr}` 而非 `\Tr` |
-| 化学式失败 | mhchem 未生效或写成 `$\ce{...}$` 混中文 | 用官方 `\ce{}`，中文移到公式外 |
-| 公式里的英文被当成公式渲染 | 行内裸公式误判散文 | 已加护栏（≥3 个英文单词不判为公式）；自己写时用显式 `$…$` |
+| Many formulas shown as raw source, with `⚠ LaTeX not rendered (source kept)` | `\tag{}` was rendered inline (KaTeX allows `\tag` only in display mode) | Already auto-converted to a text number; for new content wrap the formula in `$$…$$` |
+| One formula fails as a whole | Unbalanced braces, or unpaired `\left`/`\right` | Get the `hint` from `of_latex_check`, fix it, re-check |
+| `Undefined control sequence: \xxx` | Self-defined macro or misspelled command | Switch to a standard command; pattern: `\operatorname{Tr}`, not `\Tr` |
+| Chemistry fails | mhchem not applied, or `$\ce{...}$` mixed with prose | Use official `\ce{}` and move prose outside the formula |
+| English prose rendered as a formula | A bare inline formula misdetected as prose | A guard exists (≥3 English words is not treated as a formula); when in doubt use explicit `$…$` |
 
-## 数据与写入类
+## Cross-graph links, imports and layout
 
-| 症状 | 根因 | 强制动作 |
+| Symptom | Root cause | Mandatory action |
 | --- | --- | --- |
-| 图突然 0 节点 | 撤销时应用了**空快照**，`/replace` 无条件覆盖 | 已三重护栏（服务端拒空覆盖 / 空快照不留 / 空快照不应用）；改前确认 `.bak` |
-| 存了字段但读出来没有 | `normalizeGraph` 白名单未包含该字段 | 新字段**必须**同步加白名单 |
-| POST 的 body 读不到 | 某处预读消耗了请求流 | `readBody` 已改为可重入（WeakMap 缓存） |
-| MCP/HTTP 端点 404 | 路由被更早的守卫拦掉 | 顶层 API（`/api/live`、`/api/crosslinks`）必须排在 graph 守卫之前 |
+| Cross-graph links "unusable" | Only a corner badge is shown, with no way to create a link | Use the right-click menu (🔗 Cross-graph dependency…) or `of_xlink_add`; the inspector has a "＋ Add" button |
+| A cross-graph link cannot be opened | The target graph or node no longer exists | The inspector marks it "Target node no longer exists" — delete it with ✕ or recreate it |
+| Formulas garbled after import | MinerU v1/v2 mixed up, or `--pages` missing | Prefer v2's `content_list_v2.json`; supply page images with `--pages <dir>` |
+| Layout collapsed into one long line | Layered layout with TD semantics on a wide graph | Use `packedLayeredLayout` (already the import default) |
 
-## 前端类
+# ✅ Pre-delivery self-check (MUST · every item uses OmniFlow's own tools, so it is reproducible anywhere)
 
-| 症状 | 根因 | 强制动作 |
-| --- | --- | --- |
-| 改了没生效 | `install.sh` 静默失败 / studio 缓存 index.html | 走 R4 四步验证 |
-| 功能莫名消失 | 同名函数/常量被后来的定义覆盖 | 跑 smoke 的「无重复顶层声明」检查 |
-| 拖分组框时卡片不动 | `getElementById` + `CSS.escape` 组合查不到含 `.` 的 id | 用 `nodeEl(id)` |
-| 分组框标签上半被截断 | `contain: paint` 裁剪了浮在框外的元素 | 用 `contain: layout style`（不要 `paint`） |
-| 拖分组框整块画布跟着动 | 旧 DOM 平移处理器未在 canvas 模式下短路 | DOM-only 处理器必须 `if (CV.on) return` |
-| 撤销导致内容清空 | 见上表 | 见上表 |
-| 平移缩放闪烁、节点多就卡 | 渲染循环里有 fetch→render 回环；每帧重建整层 DOM | 用 rAF 合并渲染 + 增量渲染；大图才启用拖动期降级 |
+Before finishing any graph task, do all of the following in order and put the results in your report:
 
-## 工具与流程类
+1. **Formulas** — when the content contains math, `of_latex_check` first; `failed` must be empty (R1).
+2. **Read back every write** — after each write, use `of_get_graph` (or `of_get_note`) to confirm node/edge counts and content. **MUST NOT** trust a bare 200 response.
+3. **Structure** — `of_validate` reports no hard errors (cycles and orphan nodes are warnings and are allowed).
+4. **Scale and location** — take the path and counts from the **actual return value** of `of_get_graph` / `of_tree` and put them in the Report Template. **MUST NOT** hand-write paths.
+5. **Data-affecting changes** — report the before/after node and edge counts; delete only through OmniFlow's tools (trash-recoverable).
 
-| 症状 | 根因 | 强制动作 |
-| --- | --- | --- |
-| 跨图链接「用不了」 | 只有角标、没有创建入口 | 用右键菜单「🔗 跨图依赖…」或 `of_xlink_add`；界面 `＋ 添加` |
-| 跨图链接点不动 | 目标图/节点已不存在 | 检查器会标 `目标节点已不存在`，点 ✕ 删除或重建 |
-| 导入后公式全乱 | MinerU v1/v2 混用、未带 `--pages` | 优先 v2 的 `content_list_v2.json`；页面图用 `--pages <目录>` |
-| 布局拉成一条长线 | 用了 TD 语义的 layeredLayout | 用 `packedLayeredLayout`（导入已默认使用） |
-| `node test/xxx.mjs` 报 SyntaxError 但文件"看起来是脚本" | `test/` 里混进了非 JS 脚本（曾把 Python 脚本命名成 `.mjs`） | `test/` 只放 `.mjs`；一次性脚本放 `tools/`；smoke 已加守卫 |
-| 文档里的工具数写成旧值（如 37）、实现已是 61，agent 找不到新工具 | 硬编码计数随功能增长而漂移 | 数量以 `mcp-test.mjs` 断言为事实源；smoke 已加「文档计数一致」守卫 |
-| agent 说"已修复"但行为没变 | 只跑了 `node --check`，没装/没重启/没实测 | 走 SOP-G 五步；报告里必须贴出可观测证据 |
-| 分组几何/rect 相关回归 | 只改前端没同步 `normalizeGraph` 白名单 | 新字段**必须**加白名单（R7），否则存盘即丢 |
-
-
-# ✅ 交付前验证协议（MUST 全跑）
-
-任何涉及代码/数据的改动，**MUST** 按顺序跑完并如实报告结果：
-
-```bash
-export PATH="/Users/andylyu/.workbuddy/binaries/node/versions/22.22.2-3/bin:$PATH"
-node test/smoke.mjs        # 结构与静态审计：无重复声明 / id 绑定 / test 目录健全 / 文档计数不漂移
-node test/mcp-test.mjs     # MCP 协议全链路（工具数、tools/call、错误通道）
-node test/latex-guard.mjs  # LaTeX 防线端到端：非法必拒 / 合法必过 / 简写必规范化（R1 的可执行版）
-node test/conversation.mjs # 非线性对话（人类）
-node test/agent-conversation.mjs  # 多智能体会话
-node test/group-fix.mjs    # 分组几何持久化（需先 `of studio --no-open` 起服务，否则 ECONNREFUSED）
-bash install.sh            # 安装到 ~/.omni-flow（同时把 skill 软链到 ~/.workbuddy、~/.zcode、~/.claude、~/.codex）
-grep -c "<关键改动标识>" ~/.omni-flow/studio/index.html   # 安装副本校验（必须 > 0）
-```
-
-- 前端改动 **MUST** 追加浏览器实测（带 `?v=时间戳`），并把**实测输出**（DOM 数量/类名/坐标）写进报告，不能只说"应该好了"。
-- 数据类改动 **MUST** 先确认 `.bak` 存在，并在报告里给出**改动前/后**的节点与边数量。
-- 改 skill / 文档 / CLI help 后 **MUST** 复跑 `node test/smoke.mjs`（其中的「文档工具数量一致」守卫会核对所有文档与实现是否同步）。
-- 一次性装配脚本放 `tools/`（如 `tools/assemble-cards.py`），**不得放进 `test/`**（`test/` 只放可被 node 解析的 `.mjs`）。
-- **MUST NOT** 声称完成而未跑验证；**MUST NOT** 用"看起来没问题"替代实测。
-- **MUST** 在报告里诚实列出**未验证到的部分**（例如"未在 Windows 上验证"），不得留白让人误以为全覆盖。
+- **MUST NOT** claim completion without these checks; **MUST NOT** replace read-back results with "looks fine".
+- **MUST** honestly list anything you did **not** verify, so it is not mistaken for full coverage.
 
 # Report Template (output at end of every graph-related task)
 
@@ -635,30 +569,7 @@ of studio [--no-open]                 # canvas http://127.0.0.1:4319
 of tree                               # folder tree
 ```
 
-# SOP-G: 修改 Studio 前端 / 服务端代码（MUST 走完）
 
-> 适用：改 `studio/index.html`、`studio/server.mjs`、`lib/*.mjs`、`install.sh`、skill 自身。
-
-**Step 1 · 改动前存档**：`cp studio/index.html /tmp/index.html.bak`（或对目标文件）；确认 `~/.omni-flow/graphs/<id>/.bak/` 存在（涉及数据时）。
-
-**Step 2 · 改完立刻语法检查 + 静态审计**
-```bash
-export PATH="/Users/andylyu/.workbuddy/binaries/node/versions/22.22.2-3/bin:$PATH"
-node --check studio/server.mjs        # 或改动的 .mjs 文件
-node test/smoke.mjs                   # 含「无重复顶层声明」检查（R5）
-```
-
-**Step 3 · 装 & 校验副本**（R4）
-```bash
-bash install.sh
-grep -c "<关键标识>" ~/.omni-flow/studio/index.html    # 必须 > 0
-```
-
-**Step 4 · 重启 + 浏览器实测**：改了 `lib/*.mjs` 或 `studio/server.mjs` → 重启 `of studio`；打开 `http://127.0.0.1:4319/?v=<时间戳>`，**贴出实测证据**（DOM 数量 / class 名 / 元素坐标 / 控制台无报错）。仅"看起来好了"不算通过。
-
-**Step 5 · 报告**：按文末 Report Template，写明改了哪些文件、验证输出、以及**未验证到的部分**（诚实列出）。
-
-**硬性禁止**：`MUST NOT` 在未跑 Step 2–4 的情况下声称修复完成；`MUST NOT` 用 `> /dev/null` 掩盖安装失败；`MUST NOT` 递归删除 `~/.omni-flow` 或用户目录。
 
 ---
 
@@ -670,7 +581,4 @@ grep -c "<关键标识>" ~/.omni-flow/studio/index.html    # 必须 > 0
 4. **Check work log before filing**: reuse existing same-topic folders; create new only when genuinely new domain; user-specified paths always win.
 5. **Use clusters mode for grouped graphs**: layered layout destroys spatial clusters.
 6. **Double verification**: after every write/push, use readback API or contents sha comparison to confirm. Never trust a 200 return alone (empty-string comparisons create false positives).
-7. **Long templates / code with ${}**: use full-file write (Write tool), never inline regex replacement (${...} gets eaten).
-8. **不要硬编码"工具数量 / 端点数量"**：这类数字每次新增功能都会过期，且**过期文档会让 agent 误判能力边界**（本项目文档曾长期把工具总数写成旧值，实际已是 61，导致 agent 找不到 `of_latex_check` 这类新工具）。数量以 `test/mcp-test.mjs` 的断言为唯一事实源，且 `node test/smoke.mjs` 会**自动核对** SKILL / README / docs / CLI help / promo 是否与实现一致——改数量时一并改文档，否则 smoke 直接报错。`test/` 目录**只放可被 node 解析的 `.mjs`**（曾把一个 Python 脚本误命名成 `.mjs` 放进去，导致"跑全部测试"必然失败）。
-9. **静默失败是最贵的 bug**：`install.sh` 曾因 PATH 无 `node` 而静默失败、`function` 重名覆盖、`return` 漏写导致的空操作——都不会报错。防线是"每步都有可观测的校验输出"（grep 计数、DOM 数量、读回内容），而不是"没报错就是对了"。
-10. **If a graph disappears, check the server first — never delete files**: storage has corruption self-healing (trailing-junk repair on read + last 3 `.bak` snapshots). Before assuming data loss, confirm `of studio` is running the latest code (a stale process holds old code); do not manually delete graph directories.
+7. **If a graph seems to have disappeared, check the read path first — never delete files**: storage self-heals on read and keeps recent snapshots. Before assuming data loss, verify the graph through the API and make sure the Studio process is the current one; **never** delete graph directories by hand.
