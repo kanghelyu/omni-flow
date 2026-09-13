@@ -650,6 +650,28 @@ of studio [--no-open]                 # canvas http://127.0.0.1:4319
 of tree                               # folder tree
 ```
 
-
-
 ---
+
+# Release process (maintainers)
+
+The repo has **no `.git`** — GitHub `main` is synced file-by-file through the GitHub Contents
+API by `tools/audit-push.py`. The script is idempotent: transient GitHub API errors (Server
+Error / empty JSON) are retried by simply re-running it after ~15 s.
+
+1. **Bump the version** — edit `version` in `package.json` only. `bin/of.mjs` and
+   `lib/mcp-server.mjs` read it as the single source; never hard-code a VERSION constant again
+   (that dual-source drift shipped 0.1.0 banners during the 0.2.0 release once).
+2. **CHANGELOG.md** — add a `## X.Y.Z — YYYY-MM-DD` section at the top (Keep a Changelog
+   style, English).
+3. **Baseline** — `node test/smoke.mjs` must pass before pushing.
+4. **Sync to GitHub** — `python3 tools/audit-push.py` (from the repo root). It diffs local
+   files against remote blobs, pushes only what changed, and ends with a verify block; only
+   proceed when it reports `still out of sync: 0`.
+5. **GitHub release** — `gh release create vX.Y.Z --target main` with notes mirroring the new
+   CHANGELOG section (v0.2.0's notes are the house style: Highlights / Fixes + an
+   Install-upgrade block).
+6. **Local install** — `bash install.sh` refreshes the installed copy in `~/.omni-flow`;
+   `of --version` must print the new version afterwards. Studio is served from the installed
+   copy: a browser refresh picks up `studio/*` changes, but `lib/` changes need the
+   `of studio` process restarted (module cache).
+7. `promo/` never displays a version number — nothing to update there on release.
