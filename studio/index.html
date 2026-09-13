@@ -626,8 +626,8 @@ body.lean .group-box { opacity: .6; }
   --danger: #F87171;
   --ok: #34D399;
   --warn: #FBBF24;
-  --canvas: #09090B;
-  --dot: #1C1C20;
+  --canvas: #0B1120;   /* 画布底色：回最初深蓝（与节点类型色对比更强） */
+  --dot: #1E293B;
   /* 现代补充令牌 */
   --surface-2: #18181B;
   --surface-3: #1F1F23;
@@ -652,8 +652,8 @@ body.light {
   --danger: #DC2626;
   --ok: #059669;
   --warn: #D97706;
-  --canvas: #FAFAFA;
-  --dot: #E4E4E7;
+  --canvas: #F8FAFC;   /* 亮色画布：回最初值 */
+  --dot: #D7DEE8;
   --surface-2: #FFFFFF;
   --surface-3: #F4F4F5;
   --border-strong: #D4D4D8;
@@ -727,30 +727,10 @@ body { background: var(--bg); }
 .dep:hover { border-color: var(--border-strong); color: var(--text); }
 #n-preview { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; font-size: 12.5px; line-height: 1.75; }
 
-/* 画布卡片：细边框 + 左侧色条 + 悬浮微抬升 */
-#nodesLayer .card {
-  border-radius: var(--radius); border: 1px solid var(--border);
-  background: var(--surface-2); box-shadow: var(--shadow-1);
-  transition: transform .14s var(--ease), box-shadow .14s var(--ease), border-color .14s var(--ease);
-}
-#nodesLayer .node:hover .card { transform: translateY(-1px); box-shadow: var(--shadow-2); border-color: var(--border-strong); }
-#nodesLayer .node.sel .card { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
-#nodesLayer .card > b.l { font-weight: 600; letter-spacing: -.01em; }
-#nodesLayer .card > i.k { color: var(--text-3); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; font-size: 9.5px; }
-#nodesLayer .card > s.x { color: var(--text-3); opacity: 1; }
-#nodesLayer .card .typebar { width: 3px; border-radius: 3px 0 0 3px; opacity: .9; }
 
-/* 画布底纹：极淡点阵 */
-#viewport { background-image: radial-gradient(var(--dot) 1px, transparent 1px); background-size: 22px 22px; }
 
-/* 连线更细更安静 */
-.edge-line { stroke-width: 1.35 !important; opacity: .85; }
-.edge-label-bg { fill: var(--panel); opacity: .92; }
-.edge-label-text { font-size: 10px; font-weight: 600; fill: var(--text-dim); }
 
 /* 分组框：细描边 + 淡填充；标签为药丸 */
-.group-box { border-radius: var(--radius-lg) !important; border-width: 1px !important; }
-.group-box .glabel { border-radius: 999px !important; font-size: 11px !important; font-weight: 600; padding: 1px 9px !important; }
 
 /* 弹层：现代圆角 + 柔和投影 */
 .ctxmenu { border-radius: var(--radius-lg); border: 1px solid var(--border-strong); box-shadow: var(--shadow-2); padding: 5px; background: var(--surface-2); }
@@ -795,8 +775,8 @@ body { background: var(--bg); }
   --danger: #F87171;
   --ok: #34D399;
   --warn: #FBBF24;
-  --canvas: #09090B;
-  --dot: #1C1C20;
+  --canvas: #0B1120;   /* 画布底色：回最初深蓝（与节点类型色对比更强） */
+  --dot: #1E293B;
   /* 现代补充令牌 */
   --surface-2: #18181B;
   --surface-3: #1F1F23;
@@ -821,8 +801,8 @@ body.light {
   --danger: #DC2626;
   --ok: #059669;
   --warn: #D97706;
-  --canvas: #FAFAFA;
-  --dot: #E4E4E7;
+  --canvas: #F8FAFC;   /* 亮色画布：回最初值 */
+  --dot: #D7DEE8;
   --surface-2: #FFFFFF;
   --surface-3: #F4F4F5;
   --border-strong: #D4D4D8;
@@ -896,30 +876,10 @@ body { background: var(--bg); }
 .dep:hover { border-color: var(--border-strong); color: var(--text); }
 #n-preview { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; font-size: 12.5px; line-height: 1.75; }
 
-/* 画布卡片：细边框 + 左侧色条 + 悬浮微抬升 */
-#nodesLayer .card {
-  border-radius: var(--radius); border: 1px solid var(--border);
-  background: var(--surface-2); box-shadow: var(--shadow-1);
-  transition: transform .14s var(--ease), box-shadow .14s var(--ease), border-color .14s var(--ease);
-}
-#nodesLayer .node:hover .card { transform: translateY(-1px); box-shadow: var(--shadow-2); border-color: var(--border-strong); }
-#nodesLayer .node.sel .card { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
-#nodesLayer .card > b.l { font-weight: 600; letter-spacing: -.01em; }
-#nodesLayer .card > i.k { color: var(--text-3); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; font-size: 9.5px; }
-#nodesLayer .card > s.x { color: var(--text-3); opacity: 1; }
-#nodesLayer .card .typebar { width: 3px; border-radius: 3px 0 0 3px; opacity: .9; }
 
-/* 画布底纹：极淡点阵 */
-#viewport { background-image: radial-gradient(var(--dot) 1px, transparent 1px); background-size: 22px 22px; }
 
-/* 连线更细更安静 */
-.edge-line { stroke-width: 1.35 !important; opacity: .85; }
-.edge-label-bg { fill: var(--panel); opacity: .92; }
-.edge-label-text { font-size: 10px; font-weight: 600; fill: var(--text-dim); }
 
 /* 分组框：细描边 + 淡填充；标签为药丸 */
-.group-box { border-radius: var(--radius-lg) !important; border-width: 1px !important; }
-.group-box .glabel { border-radius: 999px !important; font-size: 11px !important; font-weight: 600; padding: 1px 9px !important; }
 
 /* 弹层：现代圆角 + 柔和投影 */
 .ctxmenu { border-radius: var(--radius-lg); border: 1px solid var(--border-strong); box-shadow: var(--shadow-2); padding: 5px; background: var(--surface-2); }
@@ -1083,15 +1043,14 @@ body { background: var(--bg); }
           </div>
           <div class="card-head" style="margin:2px 0 6px"><span class="badge" id="n-typeBadge">节点</span><span class="card-title" id="n-titleText"></span></div>
           <label data-i18n="note">备注（只读 · 渲染公式）</label>
-            <button class="mini" id="noteCopy" title="复制备注原文">⧉</button>
-            <button class="mini" id="attachAdd" title="添加附件：本地文件路径或 URL（本地文件会复制进图资源目录）">＋ 附件</button>
+            <button class="mini" id="noteCopy" title="复制内容">⧉</button>
+            <button class="mini" id="attachAdd" title="添加附件：选择图片或 PDF（也可直接拖文件到附件区）">＋ 附件</button>
           </div>
           <div id="attachBox"></div>
           <div id="xlinkBox" hidden></div>
-          <div class="ro-hint">🔒 <span>只读模式：内容由文件 / AI 写入。改卡片请直接编辑 <code>graph.json</code>，或让 AI 修改。</span></div>
+                    <div id="depBox" hidden></div>
           <div id="depBox" hidden></div>
-          <div id="depBox" hidden></div>
-          <textarea id="n-note" rows="3" class="hidden-input" aria-hidden="true"></textarea>
+          <textarea id="n-note" rows="4" placeholder="在此写内容…（支持 Markdown 与 $公式$）"></textarea>
           <div id="n-preview" class="card-note" class="note-preview" aria-live="polite"></div>
           <div class="btnrow">
             <button id="n-save" class="primary" data-i18n="save">保存</button>
@@ -2490,6 +2449,8 @@ function renderXlinks(node){
 /* ================= 只读模式：用户不可手动改，只能改文件或由 AI 改 ================= */
 /* 说明：输入元素保留（AI / API 仍可写），但用户侧只读——避免误改破坏卡片数据 */
 function applyReadOnly(){
+  return;   // 产品化：用户需要能直接编辑，只读模式已停用（保留函数以备将来"演示模式"复用）
+  // eslint-disable-next-line no-unreachable
   document.body.classList.add("readonly");
   const ids = ["n-label", "n-id", "n-x", "n-y", "n-w", "n-h", "n-note", "n-status", "n-type", "n-shape", "n-icon", "n-fill", "n-border", "n-textcolor", "n-edge-label", "n-edge-note", "e-from", "e-to", "e-type"];
   for (const id of ids){
@@ -2502,9 +2463,8 @@ function applyReadOnly(){
   // 隐藏「保存 / 删除 / 加附件 / 改标题」这类手动编辑入口
   for (const id of ["n-save", "n-delete", "attachAdd", "e-save", "e-delete"]){
     const el = $(id);
-    if (el) el.style.display = "none";
+    if (el) el.style.display = "";
   }
-  document.querySelectorAll("#inspector .btnrow, #inspector .handle-row").forEach((el)=>{ el.style.display = "none"; });
 }
 
 /* ================= 检查器：上身/下游可点击列表（与画布高亮同源） ================= */
@@ -2624,18 +2584,128 @@ function renderAttachments(node){
 
 /** 添加附件：本地路径或 URL（本地文件由服务端复制进图资源目录） */
 async function addAttachment(nodeId){
-  const src = prompt(LANG === "en" ? "Local file path or URL" : "本地文件路径或 URL（如 ~/book/pages/p024.png）", "");
-  if (!src) return;
-  const label = prompt(LANG === "en" ? "Label (optional)" : "标签（可留空）", "") ?? "";
-  const page = prompt(LANG === "en" ? "Page number (optional)" : "页码（可留空）", "") ?? "";
-  try {
-    await api(`/api/graph/${current.id}/attach`, { method: "POST", body: JSON.stringify({
-      nodeId, src, label, page: page ? Number(page) : null, mode: "append",
-    }) });
+  // 用户级：直接选文件（或拖入），不需要知道路径
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*,application/pdf";
+  input.multiple = true;
+  input.onchange = async ()=>{
+    const files = [...(input.files ?? [])];
+    if (!files.length) return;
+    toast(`正在添加 ${files.length} 个附件…`);
+    for (const f of files){
+      try {
+        const dataUrl = await new Promise((res, rej)=>{
+          const rd = new FileReader();
+          rd.onload = ()=> res(rd.result);
+          rd.onerror = rej;
+          rd.readAsDataURL(f);
+        });
+        const up = await api(`/api/graph/${current.id}/upload`, { method: "POST", body: JSON.stringify({ name: f.name, dataUrl }) });
+        await api(`/api/graph/${current.id}/attach`, { method: "POST", body: JSON.stringify({
+          nodeId, src: up.src, kind: /pdf$/i.test(f.name) ? "pdf" : "image",
+          label: f.name, caption: "", mode: "append",
+        }) });
+      } catch (e){ toast(`${f.name} 添加失败：${e.message}`, true); }
+    }
     await reload(false);
-    toast(LANG === "en" ? "Attached" : "已添加附件");
-  } catch (e){ toast(e.message, true); }
+    toast("附件已添加（点击缩略图可放大）");
+  };
+  input.click();
 }
+
+/** 拖文件到检查器的附件区即可添加 */
+function bindAttachmentDrop(){
+  const box = $("attachBox");
+  if (!box || box._dropBound) return;
+  box._dropBound = true;
+  box.addEventListener("dragover", (e)=>{ e.preventDefault(); box.style.outline = "2px dashed var(--accent)"; });
+  box.addEventListener("dragleave", ()=>{ box.style.outline = ""; });
+  box.addEventListener("drop", async (e)=>{
+    e.preventDefault(); box.style.outline = "";
+    const files = [...(e.dataTransfer?.files ?? [])];
+    if (!files.length || selected?.kind !== "node") return;
+    for (const f of files){
+      const dataUrl = await new Promise((res)=>{
+        const rd = new FileReader(); rd.onload = ()=> res(rd.result); rd.readAsDataURL(f);
+      });
+      const up = await api(`/api/graph/${current.id}/upload`, { method: "POST", body: JSON.stringify({ name: f.name, dataUrl }) });
+      await api(`/api/graph/${current.id}/attach`, { method: "POST", body: JSON.stringify({ nodeId: selected.id, src: up.src, kind: "image", label: f.name, mode: "append" }) });
+    }
+    await reload(false);
+    toast("附件已添加");
+  });
+}
+
+/* ================= 撤销 / 重做（用户级必备） ================= */
+const history = { undo: [], redo: [], limit: 60, pending: null };
+
+function snapshotState(){
+  if (!current) return null;
+  // 护栏：图还没加载完（0 节点）时不留快照，否则撤销会把内容清空
+  if (!(current.nodes?.length > 0)) return null;
+  return JSON.stringify({
+    name: current.name, description: current.description ?? "", direction: current.direction,
+    nodes: current.nodes, edges: current.edges, groups: current.groups ?? [], notes: current.notes ?? {},
+    conversation: current.conversation ?? null,
+  });
+}
+/** 每次「会改动图」的请求前，记一份当前状态 */
+function pushHistory(){
+  const snap = snapshotState();
+  if (!snap) return;
+  if (history.undo[history.undo.length - 1] === snap) return;
+  history.undo.push(snap);
+  if (history.undo.length > history.limit) history.undo.shift();
+  history.redo.length = 0;
+}
+async function undo(){
+  if (!history.undo.length){ toast("没有可撤销的操作"); return; }
+  const now = snapshotState();
+  const prev = history.undo.pop();
+  history.redo.push(now);
+  await applySnapshot(prev, "已撤销");
+}
+async function redo(){
+  if (!history.redo.length){ toast("没有可重做的操作"); return; }
+  const now = snapshotState();
+  const next = history.redo.pop();
+  history.undo.push(now);
+  await applySnapshot(next, "已重做");
+}
+async function applySnapshot(snap, tip){
+  // 护栏：目标快照无节点而当前有内容 → 拒绝（防误清空）
+  try {
+    const obj = JSON.parse(snap);
+    if (!(obj.nodes?.length > 0) && (current?.nodes?.length ?? 0) > 0){ toast("已阻止一次会清空内容的操作", true); return; }
+  } catch { toast("快照损坏，已忽略", true); return; }
+  try {
+    await api(`/api/graph/${current.id}/replace`, { method: "POST", body: JSON.stringify({ graph: JSON.parse(snap) }) });
+    await reload(false);
+    toast(tip);
+  } catch (e){ toast("操作失败：" + e.message, true); }
+}
+
+/** 包装 api：凡是对图的写操作，先记历史 */
+function installHistory(){
+  if (window.__histInstalled) return;
+  window.__histInstalled = true;
+  const orig = api;
+  window.api = async function(path, options){
+    const isMutation = options && ["POST", "PUT", "PATCH", "DELETE"].includes(String(options.method ?? "GET").toUpperCase());
+    const isGraphWrite = typeof path === "string" && /\/api\/graph\//.test(path)
+      && !/\/(position|upload|replace|convo\?view)/.test(path);   // 纯坐标/上传不记历史
+    if (isMutation && isGraphWrite) pushHistory();
+    return orig.apply(this, arguments);
+  };
+  document.addEventListener("keydown", (e)=>{
+    const tag = String(e.target?.tagName ?? "").toLowerCase();
+    if (tag === "input" || tag === "textarea") return;
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z"){ e.preventDefault(); e.shiftKey ? redo() : undo(); }
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "y"){ e.preventDefault(); redo(); }
+  });
+}
+
 
 
 /* ================= 点击运行的对话流程（右键菜单 + 会话操作） ================= */
@@ -3936,11 +4006,11 @@ function localizeStaticSelects(){
 /* ================= 变更操作 ================= */
 async function refreshListQuiet(){
   graphs = await api("/api/graphs");
-  renderFlowSelect();
   try { tree = await api("/api/tree"); } catch {}
   renderVault();
 }
 async function patchNode(nodeId, patch){
+  pushHistory();   // patchNode: 记一份改前快照，供撤销
   try {
     const res = await api(`/api/graph/${current.id}/node-patch`, { method: "POST", body: JSON.stringify({ nodeId, patch }) });
     if (!res.ok){ toast((res.issues ?? []).join("；") || t("saveFailed"), true); return false; }
@@ -3950,6 +4020,7 @@ async function patchNode(nodeId, patch){
   } catch (error){ toast(error.message, true); return false; }
 }
 async function patchEdge(edgeId, patch){
+  pushHistory();   // patchEdge: 记一份改前快照，供撤销
   try {
     const res = await api(`/api/graph/${current.id}/edge-patch`, { method: "POST", body: JSON.stringify({ edgeId, patch }) });
     if (!res.ok){ toast((res.issues ?? []).join("；") || t("saveFailed"), true); return false; }
@@ -3959,11 +4030,13 @@ async function patchEdge(edgeId, patch){
   } catch (error){ toast(error.message, true); return false; }
 }
 async function removeNode(nodeId){
+  pushHistory();   // removeNode: 记一份改前快照，供撤销
   if (!confirm(`${t("delete")}: ${nodeId}?`)) return;
   await api(`/api/graph/${current.id}/node-delete`, { method: "POST", body: JSON.stringify({ nodeId }) });
   select(null); await reload(false); refreshListQuiet();
 }
 async function removeEdge(edgeId){
+  pushHistory();   // removeEdge: 记一份改前快照，供撤销
   await api(`/api/graph/${current.id}/edge-delete`, { method: "POST", body: JSON.stringify({ edgeId }) });
   select(null); await reload(false); refreshListQuiet();
 }
@@ -4036,13 +4109,14 @@ $("btnValidate").onclick = async ()=>{
 $("btnReader") && ($("btnReader").onclick = openReader);
 bindMarquee();
 cvInit();
+installHistory();
+bindAttachmentDrop();
 $("btnCanvas") && ($("btnCanvas").onclick = ()=> cvSetMode(!CV.on));
 $("btnThumbs") && ($("btnThumbs").onclick = ()=>{
   const on = document.body.classList.toggle("show-thumbs");
   $("btnThumbs").classList.toggle("on", on);
   render();
 });
-applyReadOnly();
 $("noteCopy") && ($("noteCopy").onclick = ()=>{
   const v = $("n-note")?.value ?? "";
   if (!v){ toast("无备注"); return; }
