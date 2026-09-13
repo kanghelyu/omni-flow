@@ -62,6 +62,64 @@ const BASE = 'http://127.0.0.1:4319';
     return out;
   });
 
+  // ---- (4) every modal / context menu must be fully translated in EN ----
+  // create a throwaway graph so the modals that need `current` (export, xlink dialog) open for real
+  const created = await (await fetch(BASE + '/api/graphs', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'UI i18n check', template: 'blank' }) })).json();
+  await page.goto(BASE + '/#' + encodeURIComponent(created.id), { waitUntil: 'domcontentloaded' });
+  await sleep(2500);
+  await page.evaluate(() => window.dispatchEvent(new HashChangeEvent('hashchange')));
+  await sleep(1500);
+
+  const modalCjk = await page.evaluate(async () => {
+    const CJK = /[\u4e00-\u9fff]/;
+    const esc = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const grab = () => {
+      const clean = (el) => {
+        if (!el) return '';
+        const cl = el.cloneNode(true);
+        cl.querySelectorAll('select, option, textarea, input').forEach((x) => x.remove());   // 用户数据（图名/输入值）不算界面文案
+        return cl.innerText || '';
+      };
+      const m = document.querySelector('.modal-bg.show .modal');
+      const c = document.querySelector('.ctxmenu');
+      return (clean(m) + '\n' + clean(c)).trim();
+    };
+    const scanOne = async (open) => { open(); await wait(500); const text = grab(); esc(); await wait(250); return text; };
+    const hits = {};
+    hits.new = await scanOne(() => document.getElementById('btnNew')?.click());
+    hits.import = await scanOne(() => document.getElementById('btnImport')?.click());
+    hits.export = await scanOne(() => document.getElementById('btnExport')?.click());
+    // node context menu + the xlink dialog behind it
+    hits.nodeMenu = await scanOne(() => {
+      const el = document.querySelector('#nodesLayer .node');
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      el.dispatchEvent(new PointerEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + 10, clientY: r.top + 10 }));
+    });
+    hits.xlink = await (async () => {
+      const el = document.querySelector('#nodesLayer .node');
+      if (!el) return '';
+      const r = el.getBoundingClientRect();
+      el.dispatchEvent(new PointerEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + 10, clientY: r.top + 10 }));
+      await wait(350);
+      const btn = [...document.querySelectorAll('.ctxmenu button')].find((b) => /Cross-graph/.test(b.textContent));
+      if (!btn) { esc(); return '(menu button not found)'; }
+      btn.click();
+      await wait(700);
+      const text = grab();
+      esc();
+      await wait(250);
+      return text;
+    })();
+    const out = {};
+    for (const [k, text] of Object.entries(hits)) {
+      const m = text.match(/[^\n]*[\u4e00-\u9fff][^\n]*/g) ?? [];
+      out[k] = m.map((s) => s.trim().slice(0, 50));
+    }
+    return out;
+  });
+
   await browser.close();
 
   console.log('--- (1) Chinese left in the EN chrome ---');
@@ -70,9 +128,17 @@ const BASE = 'http://127.0.0.1:4319';
   console.log(scan.jargon.length ? scan.jargon.map((x) => '   ' + x).join('\n') : '   none');
   console.log('--- (3) toggle feedback ---');
   for (const t of toggles) console.log(`   ${t.id.padEnd(11)} label="${t.label}" changed=${t.changed} pressed ${t.pressedBefore}→${t.pressedAfter} bg ${t.before}→${t.after}`);
+  console.log('--- (4) CJK inside EN modals/menus ---');
+  let modalClean = true;
+  for (const [k, list] of Object.entries(modalCjk)) {
+    console.log(`   ${k.padEnd(9)} ${list.length ? list.join(' | ') : 'none'}`);
+    if (list.length) modalClean = false;
+  }
   console.log('--- page errors:', errs.length, errs.slice(0, 2).join(' | '));
 
-  const ok = scan.cjk.length === 0 && scan.jargon.length === 0 && toggles.every((t) => t.changed) && errs.length === 0;
+  const ok = scan.cjk.length === 0 && scan.jargon.length === 0 && toggles.every((t) => t.changed) && modalClean && errs.length === 0;
   console.log(ok ? '\nALL CLEAR' : '\nISSUES FOUND');
+  // cleanup throwaway graph
+  await fetch(BASE + '/api/graph/' + encodeURIComponent(created.id) + '/graph-delete', { method: 'POST', body: '{}' }).catch(() => {});
   process.exit(ok ? 0 : 1);
 })().catch((e) => { console.error('harness error:', e.message); process.exit(1); });
