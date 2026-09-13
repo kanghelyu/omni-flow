@@ -14,8 +14,10 @@ import { extractPythonData, buildGraphFromCards, buildOverviewFromFlow } from ".
 import { liveStart, liveLog, liveStop, liveStatus } from "../lib/live-conversation.js";
 import { addCrosslink, removeCrosslink, readCrosslinks, crosslinksForGraph, parseCrosslinkTable, pruneCrosslinks, assertLinkTargets } from "../lib/crosslinks.js";
 import { projectOverview, projectSections } from "../lib/project.js";
+import { readFileSync } from "node:fs";
 
-const VERSION = "0.1.0";
+// Single source of truth: package.json (a hardcoded copy drifted from releases before).
+const VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 const args = process.argv.slice(2);
 const command = args[0] ?? "help";
 
