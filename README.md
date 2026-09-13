@@ -1,6 +1,6 @@
 <h1 align="center">OmniFlow</h1>
 
-<p align="center"><strong>Everything is a graph. 一切关系皆可成图。</strong></p>
+<p align="center"><strong>Everything is a graph.</strong></p>
 
 <p align="center">A universal flow-map plugin: theorem dependencies, paper relations, task RACI, org structure, research collaboration, conversation maps — with every color, shape and arrow label customizable. Zero-dep CLI + visual Studio canvas.</p>
 
@@ -9,7 +9,7 @@
   <img alt="Zero dependencies" src="https://img.shields.io/badge/dependencies-zero-22C55E?style=flat-square">
 </p>
 
-<p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a> · 📖 <a href="docs/TUTORIAL.md">Complete tutorial</a> · <a href="docs/API.en.md">API reference</a></p>
+<p align="center">📖 <a href="docs/TUTORIAL.md">Complete tutorial</a> · <a href="docs/API.md">API reference</a> · <a href="docs/FORMULAS.md">Formula rules</a></p>
 
 <p align="center">
   <img src="docs/assets/studio-overview.jpg" alt="OmniFlow Studio — infinite canvas with typed nodes, labeled edges, colored group containers and a live inspector" width="100%">
@@ -178,10 +178,10 @@ Full reference: [docs/API.md](docs/API.md).
   ],
   "edges": [
     { "id": "e1", "source": "lem-1", "target": "thm-1",
-      "type": "depends-on", "label": "核心引理",
+      "type": "depends-on", "label": "core lemma",
       "color": "#2563EB", "style": "solid", "arrow": "one", "width": 2 }
   ],
-  "groups": [ { "label": "技术线", "color": "#2563EB", "members": ["d-dev"] } ]
+  "groups": [ { "label": "Technical track", "color": "#2563EB", "members": ["d-dev"] } ]
 }
 ```
 
