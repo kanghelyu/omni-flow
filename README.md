@@ -9,7 +9,7 @@
   <img alt="Zero dependencies" src="https://img.shields.io/badge/dependencies-zero-22C55E?style=flat-square">
 </p>
 
-<p align="center">📖 <a href="docs/TUTORIAL.md">Complete tutorial</a> · <a href="docs/API.md">API reference</a> · <a href="docs/FORMULAS.md">Formula rules</a></p>
+<p align="center">📖 <a href="docs/TUTORIAL.md">Complete tutorial</a> · <a href="docs/API.md">API reference</a> · <a href="docs/FORMULAS.md">Formula rules</a> · <a href="CHANGELOG.md">Changelog</a></p>
 
 <p align="center">
   <img src="docs/assets/studio-overview.jpg" alt="OmniFlow Studio — infinite canvas with typed nodes, labeled edges, colored group containers and a live inspector" width="100%">
