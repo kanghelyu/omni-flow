@@ -11,6 +11,8 @@ import { searchGraphs } from "../lib/search.mjs";
 import { suggestGroups } from "../lib/group-suggest.js";
 import { ensureConversationShape, appendTurn, setHead, mergeBranches, pathTo, conversationOverview, linearize, registerAgent, recordTurn, resolveTurn, pendingTurns, nextSpeaker, aggregateBranches, scaffoldTopology } from "../lib/conversation.js";
 import { liveStart, liveLog, liveStop, liveStatus } from "../lib/live-conversation.js";
+import { addCrosslink, removeCrosslink, crosslinksForGraph, parseCrosslinkTable } from "../lib/crosslinks.js";
+import { projectOverview, projectSections } from "../lib/project.js";
 import { loadGraph, saveGraph, listGraphs, deleteGraph, readNodeNote, writeNodeNote, makeGraphId, readJsonIfPresent } from "../lib/graph-service.mjs";
 import { createFolder, renameFolder, deleteFolder, moveGraph, readTree, updateLedger } from "../lib/vault.js";
 import { buildTemplateById, mergedTemplateSummaries, saveCustomTemplate, deleteCustomTemplate } from "../lib/templates.js";
@@ -275,6 +277,37 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         req.on("close", () => clients.delete(res));
         return;
       }
+      /* 跨图链接：GET ?graph=<id> 取该图相关；POST { fromGraph,… } 新增；DELETE ?id= */
+      if (url.pathname === "/api/crosslinks") {
+        if (req.method === "GET"){
+          const gid = url.searchParams.get("graph");
+          sendJson(res, 200, { links: gid ? await crosslinksForGraph(root, gid) : await (await import("../lib/crosslinks.js")).readCrosslinks(root) });
+          return;
+        }
+        if (req.method === "POST"){
+          const body2 = await readBody(req);
+          sendJson(res, 200, await addCrosslink(root, body2));
+          return;
+        }
+        if (req.method === "DELETE"){
+          sendJson(res, 200, await removeCrosslink(root, url.searchParams.get("id")));
+          return;
+        }
+      }
+
+      /* 实时对话记录：GET 状态 / POST { op: start|log|stop, … } */
+      if (url.pathname === "/api/live") {
+        if (req.method === "GET"){ sendJson(res, 200, await liveStatus(root)); return; }
+        const body = await readBody(req);
+        const op = String(body.op ?? "status");
+        if (op === "start"){ sendJson(res, 200, await liveStart(root, { topic: body.topic ?? null, folder: body.folder ?? null, lang: body.lang === "en" ? "en" : "zh", reuse: body.reuse !== false })); return; }
+        if (op === "log"){ sendJson(res, 200, await liveLog(root, { role: body.role ?? "agent", text: body.text ?? "", name: body.name ?? null, from: body.from ?? null, status: body.status ?? "done", id: body.id ?? null })); return; }
+        if (op === "stop"){ sendJson(res, 200, await liveStop(root, { id: body.id ?? null })); return; }
+        sendJson(res, 200, await liveStatus(root));
+        return;
+      }
+
+
       if (parts[0] !== "api" || parts[1] !== "graph" || !parts[2]) {
         sendJson(res, 404, { error: "not found" });
         return;
@@ -327,26 +360,19 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         sendJson(res, 200, { ok: true, attachments: result?.detail?.nodes?.find((n)=> n.id === nodeId)?.attachments ?? [] });
         return;
       }
-      /* 实时对话记录：GET 状态 / POST { op: start|log|stop, … } */
-      if (url.pathname === "/api/live") {
-        if (req.method === "GET"){ sendJson(res, 200, await liveStatus(root)); return; }
-        const body = await readBody(req);
-        const op = String(body.op ?? "status");
-        if (op === "start"){ sendJson(res, 200, await liveStart(root, { topic: body.topic ?? null, folder: body.folder ?? null, lang: body.lang === "en" ? "en" : "zh", reuse: body.reuse !== false })); return; }
-        if (op === "log"){ sendJson(res, 200, await liveLog(root, { role: body.role ?? "agent", text: body.text ?? "", name: body.name ?? null, from: body.from ?? null, status: body.status ?? "done", id: body.id ?? null })); return; }
-        if (op === "stop"){ sendJson(res, 200, await liveStop(root, { id: body.id ?? null })); return; }
-        sendJson(res, 200, await liveStatus(root));
-        return;
-      }
-      /* 实时对话记录：GET 状态 / POST { op: start|log|stop, … } */
-      if (url.pathname === "/api/live") {
-        if (req.method === "GET"){ sendJson(res, 200, await liveStatus(root)); return; }
-        const body = await readBody(req);
-        const op = String(body.op ?? "status");
-        if (op === "start"){ sendJson(res, 200, await liveStart(root, { topic: body.topic ?? null, folder: body.folder ?? null, lang: body.lang === "en" ? "en" : "zh", reuse: body.reuse !== false })); return; }
-        if (op === "log"){ sendJson(res, 200, await liveLog(root, { role: body.role ?? "agent", text: body.text ?? "", name: body.name ?? null, from: body.from ?? null, status: body.status ?? "done", id: body.id ?? null })); return; }
-        if (op === "stop"){ sendJson(res, 200, await liveStop(root, { id: body.id ?? null })); return; }
-        sendJson(res, 200, await liveStatus(root));
+      /* 分层投影：POST { kind: "overview"|"sections", … } */
+      if (action === "project" && req.method === "POST") {
+        const body3 = await readBody(req);
+        if (body3.kind === "overview"){
+          const r = await projectOverview(root, id, { name: body3.name ?? null });
+          r.graph.id = makeGraphId(r.graph.name);
+          await saveGraph(graphDirSafe(root, r.graph.id), r.graph);
+          if (body3.folder){ try { await moveGraph(root, r.graph.id, body3.folder); } catch { /* 归档失败不阻断 */ } }
+          sendJson(res, 200, { id: r.graph.id, name: r.graph.name, sections: r.graph.nodes.length, edges: r.graph.edges.length });
+          return;
+        }
+        const r2 = await projectSections(root, id, { minCards: body3.minCards ?? 3, only: body3.only ?? null, folder: body3.folder ?? null });
+        sendJson(res, 200, r2);
         return;
       }
       /* 非线性对话：GET 总览 / POST say|branch|merge */
