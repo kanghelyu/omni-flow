@@ -241,9 +241,21 @@ function select(kind, id){
       $("n-label").value = node.label; $("n-type").value = node.type; $("n-icon").value = node.icon ?? "";
       $("n-fill").value = node.fill; $("n-border").value = node.border; $("n-text").value = node.textColor;
       $("n-status").value = node.status ?? ""; $("n-note").value = current.notes?.[node.id] ?? node.note ?? ""; autoGrow($("n-note"));
-      // 详情区显示长文笔记的摘要行（全文在 notes/<id>.md，由「详情全文」按需加载）；
-      // 此前读的是 node.note（恒为空），导致选中卡片后详情区一片空白。
+      // 详情区先同步渲染摘要行（无闪烁），再按需拉取 notes/<id>.md 全文重渲——全文即详情。
+      // 到达时若已切换选中/换图则丢弃；拉取失败保留摘要（与阅读模式同一策略）。
       renderNotePreview();
+      {
+        const selId = node.id, gid = current.id;
+        npFullLoaded = false;
+        api(`/api/graph/${gid}/note/${encodeURIComponent(node.id)}`).then((full)=>{
+          if (!selected || selected.kind !== "node" || selected.id !== selId || current?.id !== gid) return;
+          const txt = full.content ?? "";
+          if (txt && txt !== $("n-note").value){
+            $("n-note").value = txt; autoGrow($("n-note")); renderNotePreview();
+          }
+          npFullLoaded = Boolean(txt);
+        }).catch(()=>{ npFullLoaded = false; });
+      }
       depFocus = depEnabled ? computeDeps(node.id) : null;
       renderDepList(node);
       $("n-titleText") && ($("n-titleText").textContent = String(node.label ?? "").slice(0, 60));
@@ -570,6 +582,9 @@ function renderMathIn(el, text){
 
 /** 检查框实时预览（防抖） */
 let notePreviewTimer = 0;
+/* 详情区全文是否已拉到：select() 拉取成功置位；「保存」只有在它为真时才回写笔记，
+ * 防止全文拉取失败时把 notes/<id>.md 的全文用摘要行覆盖掉。var 声明以便 select()（先定义后执行序）安全引用。 */
+var npFullLoaded = false;
 /** Grow a textarea to fit its content. The content box has no length limit, so it must not be
  *  capped to a fixed height either. */
 function autoGrow(el){
@@ -3388,11 +3403,17 @@ async function removeEdge(edgeId){
   select(null); await reload(false); refreshListQuiet();
 }
 
-$("n-save").onclick = ()=>{
-  patchNode(selected.id, {
+$("n-save").onclick = async ()=>{
+  const nodeId = selected.id;
+  // 详情框现在承载全文：npFullLoaded（全文确已拉到）才回写，经 POST /note 落到 notes/<id>.md
+  // （过公式门槛、回写 120 字摘要）；全文没拉到时不回写，防止用摘要把全文覆盖掉。
+  try {
+    if (npFullLoaded) await api(`/api/graph/${current.id}/note`, { method: "POST", body: JSON.stringify({ nodeId, content: $("n-note").value }) });
+  } catch (error){ toast(error.message, true); return; }
+  patchNode(nodeId, {
     label: $("n-label").value, type: $("n-type").value, icon: $("n-icon").value,
     fill: $("n-fill").value, border: $("n-border").value, textColor: $("n-text").value,
-    status: $("n-status").value || null, note: $("n-note").value
+    status: $("n-status").value || null
   });
 };
 $("e-save").onclick = ()=>{
