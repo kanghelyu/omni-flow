@@ -6,9 +6,9 @@ OmniFlow exposes **three fully equivalent standard interfaces** — any agent ca
 
 | Layer | Protocol | Size | Start |
 | --- | --- | --- | --- |
-| **MCP tools** | Model Context Protocol (stdio JSON-RPC 2.0), **36 tools** | full | `of mcp` |
-| **HTTP JSON API** | REST + SSE, **27 endpoints**, binds `127.0.0.1:4319` only | full | `of studio --no-open` |
-| **CLI** | shell, **19 subcommands** | full | direct |
+| **MCP tools** | Model Context Protocol (stdio JSON-RPC 2.0), **61 tools** | full | `of mcp` |
+| **HTTP JSON API** | REST + SSE, **50+ endpoints**, binds `127.0.0.1:4319` only | full | `of studio --no-open` |
+| **CLI** | shell, **20+ subcommands** | full | direct |
 
 Data layout: `~/.omni-flow/graphs/<id>/graph.json` (single source of truth) + `notes/<nodeId>.md` (node substance) + `templates/*.json` (custom templates).
 
@@ -27,7 +27,7 @@ Data layout: `~/.omni-flow/graphs/<id>/graph.json` (single source of truth) + `n
 | **Trash** | MCP `of_list_trash` / `of_restore_graph`; HTTP `GET /api/graph/:id/trash`, `POST /api/graph/:id/trash-restore`; CLI `of trash` / `of restore` | Deletion is recoverable |
 | **Canvas** | MCP `of_start_studio` | Launch the visual Studio in the background, returns URL |
 
-## I. MCP standard server (36 tools)
+## I. MCP standard server (61 tools)
 
 ```json
 { "mcpServers": { "omni-flow": { "command": "of", "args": ["mcp"] } } }
@@ -60,7 +60,7 @@ Env: `OF_HOME` (storage root, default `~/.omni-flow`), `AF_HOME` (for AgentFlow 
 
 `*` = required. All tools return JSON text; failures set `isError: true` with actionable messages.
 
-## II. HTTP JSON API (27 endpoints, `127.0.0.1:4319`)
+## II. HTTP JSON API (50+ endpoints, `127.0.0.1:4319`)
 
 | Method | Path | Purpose |
 | --- | --- | --- |
@@ -85,7 +85,7 @@ Env: `OF_HOME` (storage root, default `~/.omni-flow`), `AF_HOME` (for AgentFlow 
 
 Conventions: topology writes are normalized + validated before disk (hard errors → 400, nothing written); `position` only moves; SSE `change` signals file-level updates.
 
-## III. CLI (19 subcommands)
+## III. CLI (20+ subcommands)
 
 `create / templates / template-save / template-delete / list / read / validate / analyze / layout / export / import / import-af / meta / trash / restore / delete / studio / mcp / doctor` — see `of help`.
 
