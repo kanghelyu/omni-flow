@@ -952,7 +952,7 @@ function select(kind, id){
   } else if (selected.kind === "node"){
     const node = current?.nodes.find((n)=>n.id === selected.id);
     if (node){
-      $(`node-${CSS.escape(node.id)}`)?.classList.add("sel");
+      nodeEl(node.id)?.classList.add("sel");
       document.querySelector(`.docitem[data-node="${CSS.escape(node.id)}"]`)?.classList.add("active");
       $("insp-empty").style.display = "none"; $("insp-node").style.display = ""; $("insp-edge").style.display = "none"; $("insp-meta").style.display = "none";
       $("n-label").value = node.label; $("n-type").value = node.type; $("n-icon").value = node.icon ?? "";
@@ -1250,11 +1250,9 @@ function edgeGeometry(edge){
   const sh = s._h ?? s.h, th = t._h ?? t.h;
   const start = { x: sp.x + s.w, y: sp.y + sh / 2 };
   const end = { x: tp.x, y: tp.y + th / 2 };
-  // 弯距必须限幅：旧公式 bend ∝ 水平距离，远距离连线会被拉成跨半屏的"巨弧"
-  const dx = end.x - start.x, adx = Math.abs(dx), dy = Math.abs(end.y - start.y);
-  let bend = Math.min(110, Math.max(36, adx * 0.34));
-  if (dx < 0) bend = Math.min(84, Math.max(44, adx * 0.22));      // 回边：小弯绕行
-  if (dy > adx) bend = Math.min(bend, Math.max(28, adx * 0.5));    // 竖直拉开：进一步收弯
+  // 恢复原有曲线形态（此前误改过弯距限幅，形态变丑；曲线不是问题所在）
+  const forward = Math.max(54, Math.abs(end.x - start.x) * 0.46);
+  const bend = end.x >= start.x ? forward : Math.max(90, forward * 0.7);
   return { start, end, path: `M ${start.x} ${start.y} C ${start.x + bend} ${start.y}, ${end.x - bend} ${end.y}, ${end.x} ${end.y}` };
 }
 
@@ -2218,7 +2216,7 @@ function updateConnLive(){
   conn.setAttribute("d", `M ${a.x} ${a.y} C ${a.x + bend} ${a.y}, ${e.x - bend} ${e.y}, ${e.x} ${e.y}`);
   document.querySelectorAll(".node.hover-target").forEach((el)=>el.classList.remove("hover-target"));
   if (pendingLink.hover && pendingLink.hover !== pendingLink.sourceId){
-    $(`node-${CSS.escape(pendingLink.hover)}`)?.classList.add("hover-target");
+    nodeEl(pendingLink.hover)?.classList.add("hover-target");
   }
 }
 function renderEdges(){
@@ -2316,6 +2314,16 @@ document.addEventListener("click", (e)=>{
 }, true);
 
 /** 单节点元素：只读模式下不含 handle（每节点省 2 个 DOM） */
+
+/** 取节点元素：优先增量渲染维护的 map，其次 getElementById（**必须传原始 id**——
+ *  这里曾误用 CSS.escape，导致含 "." 的语义 id（def-2.1.1）查不到元素，
+ *  表现为「拖分类框时框和边动了、卡片不动」。 */
+function nodeEl(id){
+  const fromMap = nodesLayer?._map?.get?.(id);
+  if (fromMap && fromMap.isConnected) return fromMap;
+  return document.getElementById("node-" + id);
+}
+
 function buildNodeEl(node){
   const el = document.createElement("div");
   el.className = "node";
@@ -2498,7 +2506,7 @@ function renderGroups(){
         for (const m of members){
           const p = { x: origin.get(m.id).x + dx, y: origin.get(m.id).y + dy };
           map.set(m.id, p);
-          const el = $(`node-${CSS.escape(m.id)}`);
+          const el = nodeEl(m.id);
           if (el){ el.style.left = p.x + "px"; el.style.top = p.y + "px"; }
         }
         liveDrag = { map };
@@ -2560,13 +2568,13 @@ function beginNodeDrag(node, event){
   suppressSSEUntil = Date.now() + 60000;   // 拖拽期间抑制 SSE
   select("node", node.id);
   liveDrag = { map: new Map([[node.id, { x: node.x, y: node.y }]]) };
-  $(`node-${CSS.escape(node.id)}`)?.classList.add("dragging");
+  nodeEl(node.id)?.classList.add("dragging");
   const startX = event.clientX, startY = event.clientY, origin = { x: node.x, y: node.y };
   let latest = origin;
   const move = (e)=>{
     latest = { x: origin.x + (e.clientX - startX) / view.k, y: origin.y + (e.clientY - startY) / view.k };
     liveDrag = { map: new Map([[node.id, latest]]) };
-    const card = $(`node-${CSS.escape(node.id)}`);
+    const card = nodeEl(node.id);
     if (card){ card.style.left = latest.x + "px"; card.style.top = latest.y + "px"; }
     scheduleLiveFrame();
   };
@@ -2581,7 +2589,7 @@ function beginNodeDrag(node, event){
     // ② 再清拖拽状态并按「最终数据坐标」重绘相邻边——顺序不能反
     liveDrag = null;
     updateEdgesLive();
-    $(`node-${CSS.escape(node.id)}`)?.classList.remove("dragging");
+    nodeEl(node.id)?.classList.remove("dragging");
     if (moved){
       suppressSSEUntil = Date.now() + 900;        // 短抑制：服务端保存触发的 SSE 不再引发重建
       try { await api(`/api/graph/${current.id}/position`, { method: "POST", body: JSON.stringify({ nodeId: node.id, x: latest.x, y: latest.y }) }); } catch (e){ toast(e.message, true); await reload(false); }
@@ -2832,7 +2840,7 @@ function renderGroupList(){
       const members = (group.members ?? []).map((id)=>current.nodes.find((n)=>n.id === id)).filter(Boolean);
       if (!members.length) return;
       document.querySelectorAll(".node.search-hit").forEach((el)=>el.classList.remove("search-hit"));
-      for (const m of members) $(`node-${CSS.escape(m.id)}`)?.classList.add("search-hit");
+      for (const m of members) nodeEl(m.id)?.classList.add("search-hit");
       const minX = Math.min(...members.map((m)=>m.x)), minY = Math.min(...members.map((m)=>m.y));
       const maxX = Math.max(...members.map((m)=>m.x + m.w)), maxY = Math.max(...members.map((m)=>m.y + (m._h ?? m.h)));
       const rect = canvas.getBoundingClientRect();
