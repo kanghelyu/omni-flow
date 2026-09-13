@@ -5,7 +5,7 @@ import { homedir } from "node:os";
 import { join, resolve, extname, basename } from "node:path";
 import { spawn } from "node:child_process";
 import { readFile, copyFile, mkdir, readdir, unlink, stat } from "node:fs/promises";
-import { NODE_TYPES, EDGE_TYPES, normalizeGraph, validateGraph, newId, nodeTypeDef, setNodeAttachments } from "../lib/graph-core.js";
+import { NODE_TYPES, EDGE_TYPES, normalizeGraph, validateGraph, newId, nodeTypeDef, setNodeAttachments, setGroupRect, moveNodes } from "../lib/graph-core.js";
 import { layeredLayout, clusterLayout, forceLayout, gridLayout, analyzeGraph } from "../lib/graph-analysis.js";
 import { searchGraphs } from "../lib/search.mjs";
 import { suggestGroups } from "../lib/group-suggest.js";
@@ -509,6 +509,39 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         node.y = Math.round(y);
         await saveGraph(graphDirSafe(root, id), graph);
         sendJson(res, 200, { ok: true });
+        return;
+      }
+      /* 批量位置：一次 load/save 写多个节点（多选拖动），避免 N 个并发读改写互相覆盖 */
+      if (req.method === "POST" && action === "positions") {
+        const { graph } = await loadGraph(root, id);
+        const n = moveNodes(graph, body.moves ?? []);
+        await saveGraph(graphDirSafe(root, id), graph);
+        sendJson(res, 200, { ok: true, moved: n });
+        return;
+      }
+      /* 组框拖动事务：成员位移 + 框几何一次提交（rect 为覆盖式，旧位置被抹除） */
+      if (req.method === "POST" && action === "group-commit") {
+        const { graph } = await loadGraph(root, id);
+        const group = graph.groups.find((g)=> g.id === String(body.groupId ?? ""));
+        if (!group) { sendJson(res, 400, { error: "分组不存在" }); return; }
+        const moved = moveNodes(graph, body.moves ?? []);
+        let rect = null;
+        if (body.rect === null){ delete group.rect; }
+        else if (body.rect){ rect = setGroupRect(graph, group.id, body.rect); }
+        else {
+          // 未显式给 rect：按提交后的成员包围盒固定一次（这就是"记录此次位置"）
+          const ms = (group.members ?? []).map((mid)=> graph.nodes.find((x)=> x.id === mid)).filter(Boolean);
+          if (ms.length){
+            const pad = { x: 24, top: 34, bottom: 24 };
+            const minX = Math.min(...ms.map((m)=> m.x)) - pad.x;
+            const minY = Math.min(...ms.map((m)=> m.y)) - pad.top;
+            const maxX = Math.max(...ms.map((m)=> m.x + (m.w ?? 168))) + pad.x;
+            const maxY = Math.max(...ms.map((m)=> m.y + (m.h ?? 64))) + pad.bottom;
+            rect = setGroupRect(graph, group.id, { x: minX, y: minY, w: maxX - minX, h: maxY - minY });
+          }
+        }
+        await saveGraph(graphDirSafe(root, id), graph);
+        sendJson(res, 200, { ok: true, moved, rect });
         return;
       }
       if (req.method === "POST" && action === "layout") {
