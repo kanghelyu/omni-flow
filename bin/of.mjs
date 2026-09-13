@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { join, resolve, dirname, basename } from "node:path";
 import { mkdir, readFile, writeFile, readdir, stat } from "node:fs/promises";
 import { normalizeGraph, validateGraph } from "../lib/graph-core.js";
-import { computeLayout, analyzeGraph } from "../lib/graph-analysis.js";
+import { computeLayout, applyLayout, analyzeGraph } from "../lib/graph-analysis.js";
 import { loadGraph, saveGraphChecked, listGraphs, deleteGraph, makeGraphId } from "../lib/graph-service.mjs";
 import { buildTemplateById, mergedTemplateSummaries, saveCustomTemplate, deleteCustomTemplate } from "../lib/templates.js";
 import { ensureConversationShape, appendTurn, setHead, mergeBranches, conversationOverview, linearize, registerAgent, recordTurn, pendingTurns, nextSpeaker, aggregateBranches, scaffoldTopology } from "../lib/conversation.js";
@@ -12,7 +12,7 @@ import { toMermaid, fromMermaid, toDot, toMarkdownOutline, toPlainText, fromAgen
 import { buildGraphFromMineru, buildGraphFromMarkdown } from "../lib/import-doc.js";
 import { extractPythonData, buildGraphFromCards, buildOverviewFromFlow } from "../lib/import-cards.js";
 import { liveStart, liveLog, liveStop, liveStatus } from "../lib/live-conversation.js";
-import { addCrosslink, removeCrosslink, readCrosslinks, crosslinksForGraph, parseCrosslinkTable, pruneCrosslinks } from "../lib/crosslinks.js";
+import { addCrosslink, removeCrosslink, readCrosslinks, crosslinksForGraph, parseCrosslinkTable, pruneCrosslinks, assertLinkTargets } from "../lib/crosslinks.js";
 import { projectOverview, projectSections } from "../lib/project.js";
 
 const VERSION = "0.1.0";
@@ -95,11 +95,7 @@ async function cmdLayout() {
   const root = rootHome();
   const { graph } = await loadGraph(root, id);
   const mode = opt("--mode", "layered");
-  const positions = computeLayout(graph, mode);
-  for (const node of graph.nodes) {
-    const position = positions.get(node.id);
-    if (position) { node.x = position.x; node.y = position.y; }
-  }
+  applyLayout(graph, mode);              // also re-fits every group box to its members
   graph.revision += 1;
   await saveChecked(root, id, graph);
   console.log("✓ Auto-layout applied");
@@ -597,6 +593,8 @@ async function cmdXlink(){
   if (sub === "add"){
     const f = split(opt("--from")), t = split(opt("--to"));
     if (!f || !t){ console.error('usage: of xlink add --from GRAPH:NODE --to GRAPH:NODE --why "mathematical reason"'); process.exit(1); }
+    try { await assertLinkTargets(root, { fromGraph: f.graph, fromNode: f.node, toGraph: t.graph, toNode: t.node }); }
+    catch (error){ fail(error.message); }
     const r = await addCrosslink(root, { fromGraph: f.graph, fromNode: f.node, toGraph: t.graph, toNode: t.node, why: opt("--why", ""), kind: opt("--kind", "depends") });
     console.log(`${r.created ? "✓ Added" : "✓ Updated"} cross-graph link ${r.link.id}\n  ${f.graph}:${f.node} → ${t.graph}:${t.node}`);
     return;
