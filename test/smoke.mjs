@@ -35,7 +35,7 @@ await test("validateGraph rejects dangling edges and duplicate ids", () => {
   });
   const verdict = validateGraph(graph);
   assert.equal(verdict.ok, false);
-  assert.ok(verdict.issues.some((issue) => issue.includes("重复")));
+  assert.ok(verdict.issues.some((issue) => /duplicate/i.test(issue)), "expected a duplicate-id issue");
   assert.ok(verdict.issues.some((issue) => issue.includes("ghost")));
 });
 await test("validateGraph treats cycles as warnings, not errors", () => {
@@ -46,7 +46,7 @@ await test("validateGraph treats cycles as warnings, not errors", () => {
   const verdict = validateGraph(graph);
   assert.equal(verdict.ok, true);
   assert.equal(verdict.cyclic, true);
-  assert.ok(verdict.warnings.some((w) => w.includes("环")));
+  assert.ok(verdict.warnings.some((w) => /cycle/i.test(w)), "expected a cycle warning");
 });
 await test("custom node/edge type registries take effect", () => {
   const graph = normalizeGraph({
@@ -130,8 +130,8 @@ await test("DOT export contains styles and edge labels", () => {
 });
 await test("Markdown outline export groups by type", () => {
   const markdown = toMarkdownOutline(diamond);
-  assert.ok(markdown.includes("## 定理"));
-  assert.ok(markdown.includes("## 连线"));
+  assert.ok(markdown.includes("## Theorem"), "English headings by default");
+  assert.ok(markdown.includes("## Links"));
 });
 await test("agent-flow import: kind mapping and branch labels", async () => {
   const afFlow = {
@@ -152,7 +152,9 @@ await test("agent-flow import: kind mapping and branch labels", async () => {
   assert.equal(graph.nodes.find((n) => n.id === "n2").type, "task");
   assert.equal(graph.nodes.find((n) => n.id === "n3").type, "decision");
   const yesEdge = graph.edges.find((e) => e.id === "e3");
-  assert.equal(yesEdge.label, "是");
+  assert.equal(yesEdge.label, "yes");   // English is the documented default language
+  const zhFlow = await fromAgentFlow(afFlow, { lang: "zh" });
+  assert.equal(zhFlow.edges.find((e) => e.type === "yes").label, "是");
   assert.equal(yesEdge.type, "yes");
 });
 
