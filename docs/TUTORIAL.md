@@ -47,7 +47,7 @@ Canvas basics:
 
 ## 3. Studio tour
 
-- **Topbar**: graph switcher, status badge, ＋New (with all templates), Import, Export, ✓Validate, ◎Analyze, ⌗Tidy up, ☰Legend, theme, EN/ZH
+- **Topbar**: status badge (click it for validation details), ＋New (with all templates), Import, Export, 🔗Highlight deps, ?Formula rules, ⚡Canvas mode, 🖼Thumbs (only when the map carries page images), 📖Read, ◎Analyze (includes the type legend), ⌗Arrange, theme, EN/ZH. Every button carries a tooltip.
 - **Left rail**: every node of the current graph (icon + label + `type · id`); click to fly there; live search; collapsible (‹); drag-resizable
 - **Canvas**: infinite dot grid; zoom controls bottom-left, "New node" bottom-right
 - **Right inspector**: edits whatever is selected; shows graph properties when nothing is selected
