@@ -10,7 +10,10 @@ import { buildTemplateById, mergedTemplateSummaries, saveCustomTemplate, deleteC
 import { ensureConversationShape, appendTurn, setHead, mergeBranches, pathTo, conversationOverview, linearize, registerAgent, recordTurn, resolveTurn, pendingTurns, nextSpeaker, aggregateBranches, scaffoldTopology } from "../lib/conversation.js";
 import { toMermaid, fromMermaid, toDot, toMarkdownOutline, toPlainText, fromAgentFlow } from "../lib/converters.js";
 import { buildGraphFromMineru, buildGraphFromMarkdown } from "../lib/import-doc.js";
+import { extractPythonData, buildGraphFromCards, buildOverviewFromFlow } from "../lib/import-cards.js";
 import { liveStart, liveLog, liveStop, liveStatus } from "../lib/live-conversation.js";
+import { addCrosslink, removeCrosslink, readCrosslinks, crosslinksForGraph, crosslinkIndex, parseCrosslinkTable, pruneCrosslinks } from "../lib/crosslinks.js";
+import { projectOverview, projectSections } from "../lib/project.js";
 
 const VERSION = "0.1.0";
 const args = process.argv.slice(2);
@@ -286,7 +289,7 @@ function cmdHelp() {
   layout <id> [--mode layered|clusters]         布局：分层 / 分组聚簇
   export <id> --format mermaid|dot|md|txt|json|html [--out 文件] [--no-embed]
   import <文件> [--format mermaid|json] [--name 新名]
-  import-doc <content_list.json|.md> [--name 名] [--pages 页面图目录] [--folder 路径]  # MinerU/Markdown → 卡片图
+  import-doc <content_list.json|.md|build_data.py> [--name 名] [--pages 页面图目录] [--folder 路径]  # MinerU/Markdown/人工卡片表 → 图
   import-af <agent-flow-id>                    导入 agent-flow 工作流为图
   studio [--port N] [--no-open]                本地画布（默认 127.0.0.1:4319）
   mcp                                          MCP 标准服务（stdio，全量 33 个工具）
@@ -441,9 +444,17 @@ async function cmdImportDoc(){
   }
   // MinerU 的 image_source.path 相对 json 所在目录（或 mineru_native/）解析
   const assetsRoot = opt("--assets-root", dirname(resolve(file)));
-  const built = /\.json$/i.test(file)
-    ? buildGraphFromMineru({ contentList: JSON.parse(raw), pages, name, lang: opt("--lang", "zh") })
-    : buildGraphFromMarkdown({ markdown: raw, pages, name });
+  let built;
+  if (/\.py$/i.test(file)){
+    // 人工整理的卡片表（build_data.py 形态）：最高保真，含人工 deps 与带理由的节间流
+    const data = await extractPythonData(file, { python: opt("--python", "python3") });
+    built = buildGraphFromCards(data, { name, lang: opt("--lang", "zh") });
+    built.__flow = { data };
+  } else if (/\.json$/i.test(file)){
+    built = buildGraphFromMineru({ contentList: JSON.parse(raw), pages, name, lang: opt("--lang", "zh") });
+  } else {
+    built = buildGraphFromMarkdown({ markdown: raw, pages, name });
+  }
   built.graph.id = makeGraphId(built.graph.name);
   const verdict = validateGraph(built.graph);
   if (!verdict.ok) console.error(`⚠ 结构校验告警：${verdict.issues.slice(0, 3).join("；")}`);
@@ -511,10 +522,17 @@ async function cmdImportDoc(){
   console.log(`✓ 已从 ${file} 建图`);
   console.log(`  id: ${built.graph.id}`);
   console.log(`  卡片 ${built.stats.cards} 张（${Object.entries(built.stats.byType).map(([k, v])=> `${k} ${v}`).join(" · ")}）`);
-  console.log(`  解析格式 ${built.stats.format} · 依赖边 ${built.stats.edges} 条 · 页面 ${built.stats.pages} 页 · 章节分组 ${built.stats.groups} 个`);
+  console.log(`  解析格式 ${built.stats.format} · 依赖边 ${built.stats.edges} 条 · 章节分组 ${built.stats.groups} 个${built.stats.pages ? ` · 页面 ${built.stats.pages} 页` : ""}`);
   if (built.stats.inlineFormulas) console.log(`  行内公式保真 ${built.stats.inlineFormulas} 处`);
   if (attached) console.log(`  已挂载图片 ${attached} 张（MinerU 插图 + 页面图）`);
   console.log(`  存储: ${join(root, "graphs", built.graph.id, "graph.json")}${folder ? `\n  归档: ${folder}` : ""}`);
+  if (built.__flow?.data?.SECTION_FLOW?.length){
+    const ov = buildOverviewFromFlow(built.__flow.data, { name: `${name} · 章节总览`, sourceId: built.graph.id });
+    ov.graph.id = makeGraphId(ov.graph.name);
+    await saveGraph(join(root, "graphs", ov.graph.id), ov.graph);
+    if (folder){ try { await moveGraph(root, ov.graph.id, folder); } catch {} }
+    console.log(`  ↗ 章节总览图：${ov.stats.sections} 小节 · ${ov.stats.edges} 条带理由的节间依赖\n    id: ${ov.graph.id}`);
+  }
 }
 
 
@@ -553,9 +571,99 @@ async function cmdLive(){
    of live status                                   状态
 */
 
+
+/* ---------- 跨图链接（单一事实源 + 数学理由） ----------
+   of xlink add --from 图:节点 --to 图:节点 --why "理由"
+   of xlink import <crosslinks.py|json> [--map BOOK=图id,...]
+   of xlink list [图id] | of xlink rm <id>
+*/
+async function cmdXlink(){
+  const sub = args[1] ?? "list";
+  const root = rootHome();
+  const split = (v)=>{
+    const i = String(v ?? "").lastIndexOf(":");
+    return i > 0 ? { graph: v.slice(0, i), node: v.slice(i + 1) } : null;
+  };
+  if (sub === "add"){
+    const f = split(opt("--from")), t = split(opt("--to"));
+    if (!f || !t){ console.error('用法: of xlink add --from 图id:节点id --to 图id:节点id --why "数学理由"'); process.exit(1); }
+    const r = await addCrosslink(root, { fromGraph: f.graph, fromNode: f.node, toGraph: t.graph, toNode: t.node, why: opt("--why", ""), kind: opt("--kind", "depends") });
+    console.log(`${r.created ? "✓ 已新增" : "✓ 已更新"}跨图链接 ${r.link.id}\n  ${f.graph}:${f.node} → ${t.graph}:${t.node}`);
+    return;
+  }
+  if (sub === "import"){
+    const file = args[2];
+    if (!file){ console.error("用法: of xlink import <crosslinks.py|.json> [--map SAMUEL=图id,ALUFFI=图id]"); process.exit(1); }
+    const map = {};
+    for (const pair of String(opt("--map", "")).split(",").filter(Boolean)){
+      const [k, v] = pair.split("=");
+      if (k && v) map[k.trim()] = v.trim();
+    }
+    const rows = parseCrosslinkTable(await readFile(file, "utf8"), { bookToGraph: map });
+    let created = 0, updated = 0;
+    for (const r of rows){ const res = await addCrosslink(root, r); res.created ? created++ : updated++; }
+    console.log(`✓ 已导入跨图链接 ${rows.length} 条（新增 ${created} · 更新 ${updated}）`);
+    if (!Object.keys(map).length) console.log("  提示：用 --map BOOK=图id 把书代号映射到本地图 id");
+    return;
+  }
+  if (sub === "rm"){
+    const r = await removeCrosslink(root, args[2]);
+    console.log(`✓ 已删除 ${r.removed} 条`);
+    return;
+  }
+  if (sub === "prune"){
+    const r = await pruneCrosslinks(root, {
+      graphExists: async (gid)=> { try { await loadGraph(root, gid); return true; } catch { return false; } },
+      nodeExists: async (gid, nid)=> {
+        try { const { graph } = await loadGraph(root, gid); return graph.nodes.some((n)=> n.id === nid); }
+        catch { return false; }
+      },
+    });
+    console.log(`✓ 已清理陈旧跨图链接 ${r.removed} 条（保留 ${r.kept}/${r.total}）`);
+    return;
+  }
+  const gid = args[2];
+  const list = gid ? await crosslinksForGraph(root, gid) : (await readCrosslinks(root)).map((x)=> ({ ...x, view: "-", self: x.from, other: x.to }));
+  if (!list.length){ console.log("（无跨图链接）"); return; }
+  console.log(`共 ${list.length} 条：`);
+  for (const x of list.slice(0, 60)){
+    const arrow = x.view === "provides" ? "→ 外部引用" : x.view === "uses" ? "← 跨图依据" : "";
+    console.log(`  ${x.from.graph}:${x.from.node} → ${x.to.graph}:${x.to.node}  ${arrow}`);
+    if (x.why) console.log(`     理由：${String(x.why).slice(0, 110)}${x.why.length > 110 ? "…" : ""}`);
+  }
+}
+
+/* ---------- 分层投影 ----------
+   of project overview <图id> [--name 名] [--folder 路径]
+   of project sections <图id> [--min 3] [--only 小节名] [--folder 路径]
+*/
+async function cmdProject(){
+  const kind = args[1], id = args[2];
+  if (!kind || !id){ console.error("用法: of project overview|sections <图id> [--min 3] [--only 小节] [--folder 路径]"); process.exit(1); }
+  const root = rootHome();
+  const folder = opt("--folder");
+  if (kind === "overview"){
+    const r = await projectOverview(root, id, { name: opt("--name", null), folder });
+    r.graph.id = makeGraphId(r.graph.name);
+    await saveGraph(join(root, "graphs", r.graph.id), r.graph);
+    if (folder){ try { await moveGraph(root, r.graph.id, folder); } catch {} }
+    console.log(`✓ 章节总览：${r.graph.nodes.length} 个小节 · ${r.graph.edges.length} 条聚合依赖\n  id: ${r.graph.id}`);
+    if (r.crossLinks) console.log(`  含跨图依据 ${r.crossLinks} 条`);
+    return;
+  }
+  if (kind === "sections"){
+    const r = await projectSections(root, id, { minCards: Number(opt("--min", 3)), only: opt("--only", null), folder });
+    console.log(`✓ 已生成 ${r.created.length} 张小节图（源图 ${r.sections} 个小节）`);
+    for (const c of r.created) console.log(`  · ${c.name.slice(0, 38)} — ${c.cards} 卡 + ${c.ghosts} 幽灵 · ${c.edges} 边\n    id: ${c.id}`);
+    return;
+  }
+  console.error("用法: of project overview|sections <图id> …");
+  process.exit(1);
+}
+
 const commands = {
   create: cmdCreate, list: cmdList, read: cmdRead, validate: cmdValidate,
-  convo: cmdConvo, live: cmdLive, live: cmdLive, analyze: cmdAnalyze, layout: cmdLayout, export: cmdExport, import: cmdImport,
+  convo: cmdConvo, live: cmdLive, xlink: cmdXlink, project: cmdProject, live: cmdLive, analyze: cmdAnalyze, layout: cmdLayout, export: cmdExport, import: cmdImport,
   "import-af": cmdImportAf, "import-doc": cmdImportDoc, templates: cmdTemplates, delete: cmdDelete,
   "template-save": cmdTemplateSave, "template-delete": cmdTemplateDelete,
   meta: cmdMeta, trash: cmdTrash, restore: cmdRestore,
