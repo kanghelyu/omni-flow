@@ -1,6 +1,6 @@
 # OmniFlow — The Complete Tutorial
 
-> 中文版：[TUTORIAL.zh-CN.md](TUTORIAL.zh-CN.md) · Full API reference: [API.en.md](API.en.md)（中文：[API.md](API.md)）
+> Full API reference: [API.md](API.md) · Formula rules: [FORMULAS.md](FORMULAS.md)
 
 Everything from install to mastery in one pass. OmniFlow is a **universal flow map**: theorem dependencies, paper relations, task RACI, org structure, research collaboration, conversation maps — any "elements + relations" becomes a graph, with every box and arrow fully customizable (colors, shapes, arrow names).
 
@@ -47,7 +47,7 @@ Canvas basics:
 
 ## 3. Studio tour
 
-- **Topbar**: graph switcher, status badge, ＋New (with all templates), Import, Export, ✓Validate, ◎Analyze, ⌗Tidy up, ☰Legend, theme, EN/中文
+- **Topbar**: graph switcher, status badge, ＋New (with all templates), Import, Export, ✓Validate, ◎Analyze, ⌗Tidy up, ☰Legend, theme, EN/ZH
 - **Left rail**: every node of the current graph (icon + label + `type · id`); click to fly there; live search; collapsible (‹); drag-resizable
 - **Canvas**: infinite dot grid; zoom controls bottom-left, "New node" bottom-right
 - **Right inspector**: edits whatever is selected; shows graph properties when nothing is selected
@@ -180,6 +180,6 @@ Agent tip: mount MCP once, then `of_save_template` (distill templates), `of_patc
 - **Where is the skill**: `skills/omni-flow` under `~/.zcode`, `~/.claude`, `~/.codex` (symlinked to `~/.omni-flow/skills/omni-flow`)
 - **Do I still need the plugin after invoking the skill**: no — the skill IS the usage manual; the plugin's three interfaces are already installed alongside it
 
-> **Filing tip**: every tree change auto-updates the top-level `工作记录.txt` (graph → folder ledger). Agents must read it before creating: reuse an existing themed folder when one matches; create a new one only for a genuinely new domain; an explicit folder from you always wins. Groups: select nodes → "Group selection"; click a group in the inspector list to locate it on canvas.
+> **Filing tip**: every tree change auto-updates the top-level `WORKLOG.txt` (graph → folder ledger). Agents must read it before creating: reuse an existing themed folder when one matches; create a new one only for a genuinely new domain; an explicit folder from you always wins. Groups: select nodes → "Group selection"; click a group in the inspector list to locate it on canvas.
 
 > **Arrow direction rule**: always **source → result**. Whatever is earlier in time/logic, the provider, the cause, the mechanism, the superior = source; the derived thing, the receiver, the subordinate, the outcome = target. E.g. lemma → theorem (uses), cited paper → citing paper (cites), superior → subordinate (reports-to), cause → phenomenon (flow "leads to"). Self-check: read the edge as "A produces/supports B" — if it only reads the other way, flip it.
