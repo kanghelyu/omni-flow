@@ -264,6 +264,42 @@ of_delete_node { "id": "<graph-id>", "nodeId": "<node-id>" }
 
 ---
 
+# SOP-H: Cross-graph dependencies (link nodes in different maps)
+
+Use this when a card in one map depends on a card in another (a lemma in book A that supplies the
+criterion used by a theorem in book B, an experiment that validates another project's model, …).
+
+Every step is required, one call each:
+
+**Step 1 · find the two real node ids** — `of_get_graph` on both maps. Never invent an id: links
+must point at nodes that exist, and the interactive add **rejects** targets that do not exist.
+
+**Step 2 · add the link, with a mathematical reason**
+```json
+of_xlink_add { "fromGraph": "<A>", "fromNode": "<a-node>", "toGraph": "<B>", "toNode": "<b-node>",
+               "why": "A's Lemma 3.2 gives the coprimality criterion that B's Theorem 4.1 needs" }
+```
+- `from` = the side **providing** the support; `to` = the side **using** it. The arrow is always
+  `from → to`, whatever map you look from.
+- `why` is required and must state the justification — "related content" is not a reason.
+
+**Step 3 · verify from both sides**
+```json
+of_xlink_list { "graphId": "<A>" }   // this side is "provides" (it supports someone else)
+of_xlink_list { "graphId": "<B>" }   // this side is "uses" (it leans on someone else)
+```
+The Studio inspector shows the same list, marks broken links as "Target node no longer exists", and
+clicking a link jumps to the peer card.
+
+**Step 4 · report** the pair and the reason in the task output; keep the reason verbatim.
+
+Bulk route (a whole bibliography): `of_xlink_import { "file": "crosslinks.py|json", "map": { "BOOK": "<graphId>" } }`.
+Bulk import is deliberately permissive — it may reference books that are not imported yet — so run
+`of_validate` afterwards and clean up anything that stayed unresolved.
+
+Storage: `<root>/crosslinks.json` is the single source of truth, so a link never exists twice and the
+two maps can never disagree.
+
 # Arrow Direction Iron Rule: always "source → result"
 
 **Arrows point from "source" to "result"** — earlier in time/logic, provider, cause, mechanism, superior = source; later, derived, receiver, subordinate, result = target. **Never reverse in any domain.**
