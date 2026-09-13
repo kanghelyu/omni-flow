@@ -1,102 +1,179 @@
-# OmniFlow 接口参考（全量）
+# OmniFlow Interface Reference (complete)
 
-> English version: [API.en.md](API.en.md) · 完整教程：[TUTORIAL.zh-CN.md](TUTORIAL.zh-CN.md)
+> Tutorial: [TUTORIAL.md](TUTORIAL.md) · Formula rules: [FORMULAS.md](FORMULAS.md) · Skill: `skills/omni-flow/SKILL.md`
 
-OmniFlow 对外暴露**三层完全对等的标准接口**，任何 agent 按自身偏好任选：
+OmniFlow exposes **three fully equivalent standard interfaces** — any agent picks whichever it speaks:
 
-| 层 | 协议 | 规模 | 启动方式 |
+| Layer | Protocol | Size | Start |
 | --- | --- | --- | --- |
-| **MCP 工具** | Model Context Protocol（stdio JSON-RPC 2.0），**61 个工具** | 全量 | `of mcp` |
-| **HTTP JSON API** | REST + SSE，**50+ 个端点**，只绑 `127.0.0.1:4319` | 全量 | `of studio --no-open` |
-| **CLI** | shell，**20+ 个子命令** | 全量 | 直接调用 |
+| **MCP tools** | Model Context Protocol (stdio JSON-RPC 2.0) | **61 tools** | `of mcp` |
+| **HTTP JSON API** | REST + SSE, binds `127.0.0.1:4319` only | **50+ endpoints** | `of studio --no-open` |
+| **CLI** | shell | **20+ subcommands** | direct |
 
-数据目录：`~/.omni-flow/graphs/<id>/graph.json`（拓扑事实源）+ `notes/<nodeId>.md`（节点领域内容）+ `templates/*.json`（自定义模板）。
+Data layout: `~/.omni-flow/graphs/<id>/graph.json` (single source of truth) + `notes/<nodeId>.md` (node substance) + `templates/*.json` (custom templates) + `tree.json` (folder tree) + `WORKLOG.txt` (graph → folder ledger).
 
 ---
 
-## 自定义开放面（agent / 用户可自己添加的东西）
+## Customization surface (everything agents/users may add)
 
-| 可自定义项 | 通道 | 说明 |
+| Item | Channels | Notes |
 | --- | --- | --- |
-| **自定义模板** | MCP `of_save_template` / `of_delete_template`；HTTP `POST /api/templates`、`POST /api/templates-delete/:id`；CLI `of template-save` / `of template-delete` | 从现有图一键沉淀（`fromGraph`）或内联 nodes/edges 创建；之后 `of create --template <id>` / `of_create_graph{template}` 直接复用；存 `~/.omni-flow/templates/` |
-| **自定义节点类型** | MCP `of_patch_node_type`；HTTP `POST /api/graph/:id/node-type-patch`；或编辑 graph.json 的 `nodeTypes` | 每图独立的类型注册表：名称（双语）、颜色三件套、形状、图标；内置类型可覆盖 |
-| **自定义连线语义类型** | MCP `of_patch_edge_type`；HTTP `POST /api/graph/:id/edge-type-patch`；或编辑 `edgeTypes` | 名称（双语）+ 颜色 + 线型，如 `资金流向`、`攻击` |
-| **图元信息** | MCP `of_patch_graph_meta`；HTTP `POST /api/graph/:id/meta`；CLI `of meta` | 名称、描述、方向 TD/LR |
-| **节点领域内容** | MCP `of_set_note` / `of_get_note`；HTTP `/note`；Studio「备注全文」 | Markdown 短而密：定理表述、论文 DOI/arXiv + 本地文件路径、人员 CV、任务验收标准（见 SKILL） |
-| **分组** | MCP `of_add_group` / `of_delete_group` | 彩色子图容器 |
-| **回收站** | MCP `of_list_trash` / `of_restore_graph`；HTTP `GET /api/graph/:id/trash`、`POST /api/graph/:id/trash-restore`；CLI `of trash` / `of restore` | 删除可恢复 |
-| **画布** | MCP `of_start_studio` | 后台拉起可视化画布并返回 URL |
+| **Custom templates** | MCP `of_save_template` / `of_delete_template`; HTTP `POST /api/templates`, `POST /api/templates-delete/:id`; CLI `of template-save` / `of template-delete` | Distill from an existing graph (`fromGraph`) or inline nodes/edges; reuse via `of create --template <id>`; stored in `~/.omni-flow/templates/` |
+| **Custom node types** | MCP `of_patch_node_type`; HTTP `POST /api/graph/:id/node-type-patch`; or edit `nodeTypes` in graph.json | Per-graph registry: bilingual names, fill/border/text, shape, icon; built-ins may be overridden |
+| **Custom edge types** | MCP `of_patch_edge_type`; HTTP `POST /api/graph/:id/edge-type-patch`; or edit `edgeTypes` | Bilingual name + color + style (e.g. `funds-flow`, `attacks`) |
+| **Graph meta** | MCP `of_patch_graph_meta`; HTTP `POST /api/graph/:id/meta`; CLI `of meta` | name, description, direction TD/LR |
+| **Node substance** | MCP `of_set_note` / `of_get_note`; HTTP `/note`; Studio "Full note" | Markdown, short but dense: theorem statements, DOI/arXiv + local paths, CVs, acceptance criteria |
+| **Groups** | MCP `of_add_group` / `of_delete_group` | Colored subgraph containers with persisted geometry |
+| **Cross-graph links** | MCP `of_xlink_add` / `of_xlink_list` / `of_xlink_rm` / `of_xlink_import`; Studio right-click menu | Typed dependency edges between nodes of *different* graphs |
+| **Trash** | MCP `of_list_trash` / `of_restore_graph`; HTTP `GET /api/graph/:id/trash`, `POST /api/graph/:id/trash-restore`; CLI `of trash` / `of restore` | Deletion is recoverable |
+| **Canvas** | MCP `of_start_studio` | Launch the visual Studio in the background, returns its URL |
 
-## 一、MCP 标准服务（61 个工具）
+---
+
+## I. MCP standard server (61 tools)
 
 ```json
 { "mcpServers": { "omni-flow": { "command": "of", "args": ["mcp"] } } }
 ```
 
-| 工具 | 说明 |
+Env: `OF_HOME` (storage root, default `~/.omni-flow`), `AF_HOME` (root of a local agent-flow install, for workflow import).
+
+### Graphs, types and folders
+
+| Tool | Purpose |
 | --- | --- |
-| `of_list_graphs` | 列出全部图 |
-| `of_node_types` / `of_edge_types` | 内置节点/连线类型注册表 |
-| `of_templates` | 内置 + 自定义模板清单 |
-| `of_save_template` / `of_delete_template` | 沉淀 / 删除自定义模板 |
-| `of_create_graph` | 按模板建图（含自定义模板） |
-| `of_get_graph` | 读图全量数据 + 校验状态 |
-| `of_validate` | 结构校验 |
-| `of_analyze` | 环 / 度中心性瓶颈 / 孤立点 / 依赖闭包 |
-| `of_add_node` / `of_patch_node` / `of_move_node` / `of_delete_node` | 节点增改移删（全样式） |
-| `of_add_edge` / `of_patch_edge` / `of_delete_edge` | 连线增改删（箭头命名/颜色/线型/箭头方向） |
-| `of_layout` | 分层自动布局（容忍环） |
-| `of_add_group` / `of_delete_group` | 分组 |
-| `of_set_note` / `of_get_note` | 节点 Markdown 领域内容 |
-| `of_export` | 导出 mermaid / dot / md / json |
-| `of_import_mermaid` / `of_import_json` / `of_import_agentflow` | 三种导入 |
-| `of_tree` / `of_create_folder` / `of_move_graph` | Obsidian 式文件夹树（建夹 / 图归档） |
-| `of_patch_node_type` / `of_patch_edge_type` | 自定义类型注册表 |
-| `of_patch_graph_meta` | 图名称/描述/方向 |
-| `of_start_studio` | 后台启动可视化画布 |
-| `of_list_trash` / `of_restore_graph` | 回收站 |
+| `of_list_graphs` | List all graphs (node/edge counts, validation state, update time) |
+| `of_node_types` / `of_edge_types` | Built-in type registries (colors, shapes, icons, line styles) |
+| `of_templates` / `of_save_template` / `of_delete_template` | List / distill / delete templates (built-in and custom) |
+| `of_search` | Full-text search across graphs and notes |
+| `of_create_graph` | Create from a template (built-ins and custom ids) |
+| `of_get_graph` | Full graph data plus validation state |
+| `of_patch_graph_meta` | name / description / direction |
+| `of_delete_graph` / `of_list_trash` / `of_restore_graph` | Delete into trash / inspect / restore |
+| `of_tree` / `of_create_folder` / `of_move_graph` | Obsidian-style folder tree |
+| `of_patch_node_type` / `of_patch_edge_type` | Extend or override the type registries |
 
-## 二、HTTP JSON API（50+ 个端点，`127.0.0.1:4319`）
+### Nodes, edges, groups and notes
 
-| 方法 | 路径 | 说明 |
+| Tool | Purpose |
+| --- | --- |
+| `of_add_node` / `of_patch_node` / `of_move_node` / `of_delete_node` | Node CRUD with full styling |
+| `of_add_edge` / `of_patch_edge` / `of_delete_edge` | Edge CRUD (label / color / style / arrows) |
+| `of_layout` | Auto-layout: `layered` (default) / `clusters` / `force` / `grid` |
+| `of_add_group` / `of_delete_group` | Colored groups |
+| `of_set_note` / `of_get_note` | Node Markdown substance (validated) |
+| `of_validate` | Structure validation (hard errors block, warnings do not) |
+| `of_analyze` | Cycles / centrality bottlenecks / orphans / dependency closure + `trace` |
+
+### Import, export and documents
+
+| Tool | Purpose |
+| --- | --- |
+| `of_import_mermaid` / `of_import_json` / `of_import_agentflow` | Import Mermaid, OmniFlow JSON, or an agent-flow workflow |
+| `of_import_doc` | Import MinerU output / Markdown / a hand-written card table as a graph |
+| `of_export` | Export mermaid / dot / md / txt / json / standalone html |
+| `of_start_studio` | Launch the visual canvas in the background |
+
+### Formulas
+
+| Tool | Purpose |
+| --- | --- |
+| `of_latex_check` | Validate every math fragment before writing (returns a per-fragment `hint`) |
+| `of_latex_normalize` | Preview what normalisation would do (macro / shorthand / environment rewriting) |
+
+### Non-linear conversation (DAG sessions)
+
+| Tool | Purpose |
+| --- | --- |
+| `of_convo_new` | Create a conversation graph (the topic becomes the root) |
+| `of_convo_say` | Append a turn at head, or fork from `parentId` |
+| `of_convo_branch` | Move head back to any node — the next `say` forks there |
+| `of_convo_merge` | Converge 2+ branches into a merge node |
+| `of_convo_path` | Root→node turns (branch-isolated context) plus linearised text |
+| `of_convo_open` | Overview: head, open threads, forks, deepest path, speakers |
+| `of_convo_linearize` | Export one path as md/txt |
+| `of_convo_scaffold` | Register agents and open one parallel branch per worker |
+| `of_agent_next` / `of_agent_record` / `of_agent_done` | Agent runtime: who acts next, the exact context, record the outcome |
+| `of_convo_vote` | Aggregate branch tips: majority / weighted / judge |
+| `of_convo_pending` | Pending work per branch (running / waiting-human / pending) |
+
+### Live conversation capture
+
+| Tool | Purpose |
+| --- | --- |
+| `of_live_start` / `of_live_log` / `of_live_stop` / `of_live_status` | Start recording a conversation, log every turn, stop, inspect |
+
+### Cross-graph dependencies and book-scale projects
+
+| Tool | Purpose |
+| --- | --- |
+| `of_xlink_add` / `of_xlink_list` / `of_xlink_rm` / `of_xlink_import` | Create / list / remove / bulk-import links between nodes of different graphs |
+| `of_project_overview` | Build a "chapter overview" graph: nodes = sections, edges = aggregated cross-section dependencies |
+| `of_project_sections` | Split a large graph into one graph per section, keeping external dependencies as ghost cards |
+
+All tools return JSON text; failures set `isError: true` with an actionable message.
+
+---
+
+## II. HTTP JSON API (50+ endpoints, `127.0.0.1:4319`)
+
+| Method | Path | Purpose |
 | --- | --- | --- |
-| GET | `/api/graphs` | 图列表 |
+| GET | `/api/graphs` | List graphs |
 | POST | `/api/graphs` | `{name, template?, lang?, description?}` |
-| GET | `/api/templates?lang=` | 内置 + 自定义模板（`custom` 标记） |
+| GET | `/api/search?q=` | Full-text search |
+| GET | `/api/templates?lang=` | Built-in + custom templates (`custom` flag) |
 | POST | `/api/templates` | `{fromGraph? \| nodes/edges, templateId?, name, nameEn?, desc?, descEn?, direction?}` |
-| GET | `/api/tree` | 文件夹树（folders + assign） |
-| POST | `/api/tree/folder` · `/tree/folder-rename` · `/tree/folder-delete` · `/tree/move` | 建夹 / 重命名（子树跟随）/ 删夹（图上移）/ 移动图归属 |
-| POST | `/api/templates-delete/:id` | 删除自定义模板 |
+| POST | `/api/templates-delete/:id` | Delete a custom template |
+| GET | `/api/tree` | Folder tree (folders + assign) |
+| POST | `/api/tree/folder` · `/tree/folder-rename` · `/tree/folder-delete` · `/tree/move` | Create / rename (subtree follows) / delete (graphs move up) / move graph |
 | POST | `/api/import` | `{format: mermaid\|json\|af, text?/data?/afId?, name?}` |
-| GET | `/api/events` | SSE 变更流 |
-| GET | `/api/graph/:id` | 全量详情 |
-| GET | `/api/graph/:id/validate` · `/analyze?trace=` | 校验 / 分析 |
-| GET | `/api/graph/:id/export?format=html|` · `/note/:nodeId` | 导出 / 读备注 |
-| POST | `/api/graph/:id/note` · `/meta` · `/node-type-patch` · `/edge-type-patch` | 写备注 / 图元 / 类型注册表 |
-| POST | `/api/graph/:id/node-add` · `node-patch` · `node-delete` | 节点 |
-| POST | `/api/graph/:id/edge-add` · `edge-patch` · `edge-delete` | 连线 |
-| POST | `/api/graph/:id/position` · `/layout` · `/group-add` · `/group-delete` | 布局与分组 |
-| GET | `/api/graph/:id/trash` · POST `/api/graph/:id/trash-restore` | 回收站 |
-| POST | `/api/graph/:id/graph-delete` | 删除（进 trash） |
+| GET | `/api/events` | SSE change stream |
+| GET | `/api/live` | Live-recording status |
+| GET/POST/DELETE | `/api/crosslinks` | Cross-graph link table |
+| GET | `/api/graph/:id` | Full detail |
+| GET | `/api/graph/:id/validate` · `/analyze?trace=` | Validate / analyze |
+| GET | `/api/graph/:id/export?format=html` · `/note/:nodeId` · `/asset/:name` | Export / read note / fetch attachment |
+| POST | `/api/graph/:id/note` · `/meta` · `/node-type-patch` · `/edge-type-patch` | Write note / meta / registries |
+| POST | `/api/graph/:id/node-add` · `node-patch` · `node-delete` | Nodes |
+| POST | `/api/graph/:id/edge-add` · `edge-patch` · `edge-delete` | Edges |
+| POST | `/api/graph/:id/position` · `positions` · `layout` · `group-add` · `group-delete` · `group-commit` | Layout, groups, transactional group drag |
+| POST | `/api/graph/:id/attach` · `upload` · `project` · `replace` · `graph-delete` | Attachments, uploads, section splitting, whole-graph replace, delete |
+| DELETE | `/api/graph/:id/node/:nodeId` | Delete a node (also removes its edges, note and group membership) |
+| GET | `/api/graph/:id/trash` · POST `/api/graph/:id/trash-restore` | Trash bin |
 
-## 三、CLI（20+ 个子命令）
+Conventions: topology writes are normalised and validated before hitting disk (hard errors → HTTP 400 and nothing is written); `position` only moves nodes; SSE `change` signals file-level updates.
 
-`create / templates / template-save / template-delete / list / read / validate / analyze / layout / export / import / import-af / meta / trash / restore / delete / studio / mcp / doctor` — 见 `of help`。
+### Non-linear conversation
 
-## 非线性对话（Non-linear conversation）
-
-| 方法 | 路径 | 说明 |
+| Method | Path | Purpose |
 | --- | --- | --- |
-| GET | `/api/graph/<id>/convo` | 总览：head / 主线 / 开放分支（叶子）/ 分叉点 / 发言人 |
-| POST | `/api/graph/<id>/convo` | `{ op:"say", text, speaker?, type?, parentId?, edgeType? }` 追加发言（`parentId` = 从该节点开新支）<br>`{ op:"branch", nodeId }` 移动 head<br>`{ op:"merge", sources:[...], label?, text? }` 汇合分支 |
-| GET | `/api/graph/<id>/convo-path?node=<节点id>&format=md|txt` | 根→节点的活跃路径与线性化文本 |
+| GET | `/api/graph/<id>/convo` | Overview: head / mainline / open threads (leaves) / forks / speakers |
+| POST | `/api/graph/<id>/convo` | `{ op:"say", text, speaker?, type?, parentId?, edgeType? }` append a turn (`parentId` forks from that node)<br>`{ op:"branch", nodeId }` move head<br>`{ op:"merge", sources:[...], label?, text? }` converge branches |
+| GET | `/api/graph/<id>/convo-path?node=<nodeId>&format=md\|txt` | Active root→node path and its linearised text |
 
-### 多智能体（agent）扩展
+### Multi-agent (agent runtime) extensions
 
-| 方法 | 路径 | 说明 |
+| Method | Path | Purpose |
 | --- | --- | --- |
-| GET | `/api/graph/<id>/convo?view=next` | 调度：`nextSpeaker` + 应发送上下文（agent 运行时用） |
-| GET | `/api/graph/<id>/convo?view=pending` | 待办分支（running / waiting-human / pending） |
-| POST | `/api/graph/<id>/convo` | 追加 op：`scaffold`（拓扑骨架）/ `record`（记录产出，支持 `handoffTo`）/ `resolve`（完成分支）/ `vote`（聚合：majority·weighted·judge） |
+| GET | `/api/graph/<id>/convo?view=next` | Scheduling: `nextSpeaker` plus the context to send |
+| GET | `/api/graph/<id>/convo?view=pending` | Pending branches (running / waiting-human / pending) |
+| POST | `/api/graph/<id>/convo` | Extra ops: `scaffold` (topology), `record` (outcome, supports `handoffTo`), `resolve` (finish a branch), `vote` (majority · weighted · judge) |
 
-节点状态扩展：`pending` · `running` · `waiting-human` · `done` · `failed` · `aborted`。
+Node status vocabulary: `pending` · `running` · `waiting-human` · `done` · `failed` · `aborted`.
+
+---
+
+## III. CLI (20+ subcommands)
+
+`create / templates / template-save / template-delete / list / read / validate / analyze / layout / export / import / import-doc / import-af / meta / trash / restore / delete / studio / mcp / doctor` — plus the `convo` and `live` namespaces. Run `of help`.
+
+---
+
+## Tips for agents
+
+1. **Mount MCP once**; fall back to HTTP or the CLI when MCP is unavailable — the three layers are equivalent.
+2. **Validate math before writing**: `of_latex_check` (see [FORMULAS.md](FORMULAS.md)).
+3. **Read back after every write**: `of_get_graph` / `of_get_note`. Never trust a bare 200.
+4. **Batch-build**: `of_import_mermaid` in one shot, then `of_patch_node` / `of_patch_edge` to polish styles.
+5. **Insight**: `of_analyze` for RACI single-points-of-failure; `trace` for proof chains.
