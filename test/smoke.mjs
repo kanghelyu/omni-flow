@@ -242,7 +242,13 @@ await test("index.html 顶层 $() 绑定与静态 id 一致", async () => {
   const html = readFileSync(new URL("../studio/index.html", import.meta.url), "utf8");
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
   const htmlPart = html.slice(0, html.indexOf("<script>"));
-  const dynamicIds = new Set(["note-save", "note-edit", "note-close", "new-create", "new-name", "new-folder", "imp-af", "imp-text", "imp-go", "imp-name", "imp-afid", "imp-data", "exp-text", "exp-copy", "exp-dl", "arrow"]);
+  const dynamicIds = new Set(["note-save", "note-edit", "note-close", "note-preview", "depLegend", "depOff", "depBar", "typeFilterBar", "convoHead", "convoMerge", "convoThreads", "convoNext", "convoPending", "convoLinear", "convoSayBtn", "convoStats", "convoHeadLine", "convoPanel",
+    "lightbox", "lb-stage", "lb-img", "lb-title", "lb-cap", "lb-prev", "lb-next", "lb-zoomin", "lb-zoomout", "lb-fit", "lb-open", "lb-close",
+    "attachBox", "attachAdd", "convo-text", "convo-copy", "convo-close2",
+    "turn-agent", "turn-agents", "turn-text", "turn-status", "turn-type", "turn-parent", "turn-handoff", "turn-save", "turn-cancel", "convoHead", "convoMerge", "convoThreads", "convoNext", "convoPending", "convoLinear", "convoSayBtn", "convoStats", "convoHeadLine", "convoPanel",
+    "lightbox", "lb-stage", "lb-img", "lb-title", "lb-cap", "lb-prev", "lb-next", "lb-zoomin", "lb-zoomout", "lb-fit", "lb-open", "lb-close",
+    "attachBox", "attachAdd", "convo-text", "convo-copy", "convo-close2",
+    "turn-agent", "turn-agents", "turn-text", "turn-status", "turn-type", "turn-parent", "turn-handoff", "turn-save", "turn-cancel", "depLegend", "depOff", "depBar", "typeFilterBar", "new-create", "new-name", "new-folder", "imp-af", "imp-text", "imp-go", "imp-name", "imp-afid", "imp-data", "exp-text", "exp-copy", "exp-dl", "arrow"]);
   const referenced = [...script.matchAll(/\$\("([\w-]+)"\)/g)].map((m) => m[1]);
   const missing = [...new Set(referenced)].filter((id) => !dynamicIds.has(id) && !new RegExp(`id="${id}"`).test(htmlPart));
   assert.deepEqual(missing, [], `以下 id 在 HTML 中不存在（会导致顶层 TypeError、boot 静默失败）: ${missing.join(", ")}`);
