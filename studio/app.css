@@ -769,3 +769,7 @@ body.interacting { user-select: none; -webkit-user-select: none; cursor: grabbin
 .edge-group.dep-down .edge-line { stroke: #F87171; }
 .edge-group.dep-dim { opacity: .18; }
 .edge-group.dep-dim .edge-hit { pointer-events: stroke; }
+
+/* Only one rendering surface may be visible at a time: the DOM cards, or the canvas. */
+body:not(.canvas-mode) #scene { display: none; }
+body.canvas-mode #scene { display: block; }
