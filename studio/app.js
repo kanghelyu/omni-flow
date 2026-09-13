@@ -234,7 +234,9 @@ function select(kind, id){
       $("insp-empty").style.display = "none"; $("insp-node").style.display = ""; $("insp-edge").style.display = "none"; $("insp-meta").style.display = "none";
       $("n-label").value = node.label; $("n-type").value = node.type; $("n-icon").value = node.icon ?? "";
       $("n-fill").value = node.fill; $("n-border").value = node.border; $("n-text").value = node.textColor;
-      $("n-status").value = node.status ?? ""; $("n-note").value = node.note ?? ""; autoGrow($("n-note"));
+      $("n-status").value = node.status ?? ""; $("n-note").value = current.notes?.[node.id] ?? node.note ?? ""; autoGrow($("n-note"));
+      // 详情区显示长文笔记的摘要行（全文在 notes/<id>.md，由「详情全文」按需加载）；
+      // 此前读的是 node.note（恒为空），导致选中卡片后详情区一片空白。
       renderNotePreview();
       depFocus = depEnabled ? computeDeps(node.id) : null;
       renderDepList(node);
@@ -2881,7 +2883,7 @@ function renderVault(){
   if (!box) return;
   box.innerHTML = "";   // 修复：先清空再重建，否则每次调用都会叠加一整棵树（重复行元凶）
   if (!graphs){ return; }
-  const activeId = decodeURIComponent(location.hash.slice(1));
+  const activeId = hashParts().graph;
   const byFolder = new Map();
   for (const g of graphs){
     const f = tree.assign[g.id] ?? "";
@@ -2941,7 +2943,7 @@ function renderVault(){
       row.querySelector('[data-act="del"]').onclick = async (e)=>{
         e.stopPropagation();
         if (!confirm(t("confirmDeleteGraph"))) return;
-        try { await api(`/api/graph/${g.id}/graph-delete`, { method: "POST", body: "{}" }); await refreshTree(); if (location.hash.slice(1) === g.id) location.hash = ""; }
+        try { await api(`/api/graph/${g.id}/graph-delete`, { method: "POST", body: "{}" }); await refreshTree(); if (hashParts().graph === g.id) location.hash = ""; }
         catch (error){ toast(error.message, true); }
       };
       wrap.appendChild(row);
@@ -3048,7 +3050,7 @@ function openSearchResult(r2){
   closeGs();
   $("globalSearch").value = "";
   pendingFocusNode = r2.nodeId ?? null;
-  if (decodeURIComponent(location.hash.slice(1)) === r2.graphId && current){ focusPendingNode(); }
+  if (hashParts().graph === r2.graphId && current){ focusPendingNode(); }
   else { location.hash = r2.graphId; }
 }
 function renderGsResults(list){
@@ -3169,13 +3171,23 @@ $("leftSplitter").addEventListener("pointerdown", (event)=>{
   window.addEventListener("pointerup", up);
 });
 
+/* hash 格式：#<graphId> 或 #<graphId>/<nodeId>（跨图链接「跳到对方节点」用的就是后者）。
+ * 图 id 本身不含 "/"，所以在第一个 "/" 处切开是安全的。此前 hashchange 只认图 id，
+ * 带 /节点 的跳转会以 "bad graph id" 告终——跨图跳转因此完全不可用。 */
+function hashParts(){
+  const raw = decodeURIComponent(location.hash.slice(1));
+  const i = raw.indexOf("/");
+  return i < 0 ? { graph: raw, node: null } : { graph: raw.slice(0, i), node: raw.slice(i + 1) || null };
+}
+
 /* ================= 数据加载 ================= */
 async function reloadNow(resetView){
   graphs = await api("/api/graphs");
   tree = await api("/api/tree");
   renderVault();
-  const id = decodeURIComponent(location.hash.slice(1));
+  const { graph: id, node: hashNode } = hashParts();
   if (!id){ current = null; renderChrome(); return; }
+  if (hashNode) pendingFocusNode = hashNode;   // #graph/node：载入后直接定位到目标节点
   current = await api(`/api/graph/${encodeURIComponent(id)}`);
   buildTypeSelects();
   renderChrome();
