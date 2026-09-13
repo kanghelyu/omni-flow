@@ -1,6 +1,6 @@
 #!/bin/zsh
-# OmniFlow Studio 启动器（macOS / Linux）——双击即可运行
-# 自动定位 Node.js、自动选择空闲端口、自动打开浏览器；关掉窗口即停止。
+# OmniFlow Studio launcher (macOS / Linux) — double-click to run
+# Locates Node.js, picks a free port and opens the browser; closing the window stops the server.
 
 cd "$(dirname "$0")"
 
@@ -18,14 +18,14 @@ find_node() {
 NODE_BIN="$(find_node)"
 if [ -z "$NODE_BIN" ]; then
   echo ""
-  echo "  ✗ 未找到 Node.js 18 或更高版本。"
-  echo "    请到 https://nodejs.org/ 下载并安装 LTS 版后重试。"
+  echo "  ✗ Node.js 18 or newer was not found."
+  echo "    Install the LTS build from https://nodejs.org/ and try again."
   echo ""
-  read -r "?  按回车键关闭…"
+  read -r "?  Press Enter to close…"
   exit 1
 fi
 
-# 从 4319 起找空闲端口
+# Look for a free port starting at 4319
 PORT="${OF_STUDIO_PORT:-4319}"
 while [ "$PORT" -lt 4400 ]; do
   if ! "$NODE_BIN" -e "require('net').createServer().once('error',()=>process.exit(1)).once('listening',function(){this.close();process.exit(0)}).listen($PORT,'127.0.0.1')" 2>/dev/null; then
@@ -36,7 +36,7 @@ done
 
 echo ""
 echo "  OmniFlow Studio  →  http://127.0.0.1:$PORT"
-echo "  关闭此窗口（或按 Ctrl+C）即停止服务。"
+echo "  Close this window (or press Ctrl+C) to stop the server."
 echo ""
 
 exec "$NODE_BIN" ./bin/of.mjs studio --port "$PORT"
