@@ -2,6 +2,25 @@
 
 All notable changes to OmniFlow are documented here. Formats: Keep a Changelog, SemVer.
 
+## 0.2.1 — 2026-09-13
+
+### Studio fixes
+- **Fluid mode right-edge tearing fixed**: the canvas bitmap now re-syncs whenever the
+  viewport changes (side-panel toggle, split drag, reading mode), not only on window resize.
+  A `ResizeObserver` on `#viewport` with rAF-coalesced resizing eliminates the smeared
+  stale-frame stripe that appeared at the right edge after those operations.
+- **Inspector details now show the full note**: selecting a card renders the 120-char summary
+  instantly, then fetches `notes/<nodeId>.md` and re-renders the full Markdown + KaTeX view.
+  Switching cards discards stale responses; a failed fetch keeps the summary (same policy as
+  reading mode). Saving routes the note through the long-note endpoint — LaTeX gate applied,
+  summary regenerated — and refuses to write when the full text was never loaded, so a failed
+  fetch can never overwrite the full note with its summary. The legacy `node.note` field is no
+  longer written by the inspector (no second full-text copy inside `graph.json`).
+
+### Docs
+- The **release process** (version single-source, CHANGELOG, smoke baseline, audit-push,
+  `gh release create`, local install) is documented in `skills/omni-flow/SKILL.md`.
+
 ## 0.2.0 — 2026-09-13
 
 ### Layout engine
