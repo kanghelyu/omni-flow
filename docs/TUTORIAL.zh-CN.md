@@ -165,9 +165,9 @@ of import-af <agent-flow-id>                    # agent-flow 工作流转图
 
 | 层 | 规模 | 接入 |
 | --- | --- | --- |
-| MCP | **37 个工具** | `{"mcpServers":{"omni-flow":{"command":"of","args":["mcp"]}}}` |
+| MCP | **61 个工具** | `{"mcpServers":{"omni-flow":{"command":"of","args":["mcp"]}}}` |
 | HTTP | 27 端点 + SSE | `of studio --no-open` → `127.0.0.1:4319` |
-| CLI | 19 个子命令 | `of help` |
+| CLI | 20+ 个子命令 | `of help` |
 
 agent 建议挂 MCP：`of_save_template`（沉淀模板）、`of_patch_node_type`（扩类型）、`of_set_note`（逐节点填内容）、`of_analyze`（洞察）一条龙。
 
