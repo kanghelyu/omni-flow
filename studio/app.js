@@ -4,7 +4,7 @@
 "use strict";
 /* ================= i18n ================= */
 const I18N = {
-  zh: { tipNew:"新建一张图（可选模板）", tipImport:"导入 Mermaid / JSON 文件", tipExport:"导出为 Mermaid、Markdown 或单文件网页", tipAnalyze:"看环、瓶颈、孤立点与依赖链", tipLayout:"一键排布：分层 / 聚簇 / 力导向 / 网格", tipTheme:"切换浅色 / 深色", tipLang:"切换中文 / English", tipDocrail:"收起或展开左侧文件树", gstatTip:"点击查看校验详情（结构问题与警告）", legendNodeTypes:"节点类型", legendEdgeTypes:"连线类型", attachPickNode:"请先选中一张卡片，再添加附件", expandTree:"展开文件树", expandInspector:"展开检查器", depToggle:"🔗 高亮依赖", depToggleTip:"选中卡片后：蓝色=它的上游依据，红色=它的下游结果；再点一次关闭", depOnMsg:"已开启依赖高亮", depOffMsg:"已关闭依赖高亮", depUpLegend:"上游（支撑它）", depDownLegend:"下游（它支撑）", depSelfLegend:"当前节点", depHide:"隐藏", fxHelp:"? 公式规则", fxHelpTip:"公式怎么写才能正常显示（编译不出来时看这里）", readerTip:"阅读模式：按章节列出卡片，可折叠、可跳转依赖", splitterTip:"拖动调节上下两块的高度", appTitle:"OmniFlow Studio — 万用流程图", convoSetHeadTip:"把选中的卡片设为当前位置，之后的新内容从这里接下去", convoMergeTip:"把几条线合并到一个结论", convoThreadsTip:"列出还没走完的分支", convoNextTip:"下一步该谁接着写，以及该带上哪些上下文", convoPendingTip:"还没完成的分支（进行中 / 等人）", convoLinearTip:"把从开头到当前位置的对话导出成文本", turnSpeaker:"发言人", turnSpeakerPh:"如：我 / 张三 / 评审", turnContent:"内容", turnContentPh:"粘进来即可（支持 $公式$）", turnRecord:"记录", turnForkTitle:"从此外推一轮（分叉）", turnInsertTitle:"在此后插入一轮", turnContentLong:"内容（首行进卡片，全文可写备注）", turnContentLongPh:"把这一轮的内容粘进来（支持 $公式$）", turnStatus:"状态", turnType:"类型", turnParent:"接在哪之后", turnParentPh:"留空 = 当前位置", turnHandoff:"移交给谁（可选）", turnHandoffPh:"如：人 / 张三", stDone:"已完成", stRunning:"进行中", stPending:"待产出", stWaiting:"等人工", stFailed:"失败", tyTurn:"发言", tyQuestion:"提问", tyAnswer:"回答", tyIdea:"想法", tyDecision:"结论", xlinkBadgeProvides:"本卡支撑了其他图的 {n} 个结论（点击前往）", xlinkBadgeUses:"本卡依赖其他图的 {n} 个结论（点击前往）", xlinkDelTitle:"删除此链接", xlinkWhyLabel:"为什么相关（数学理由，写清依据）", sectionLabel:"小节", cardsCount:"{n} 张", edgeDeps:"依赖", edgeUses:"被用于", readerPage:"第 {n} 页", reader:"阅读模式", readerOpen:"📖 阅读", readerExpandAll:"全部展开", readerCollapseAll:"全部折叠", readerClose:"关闭 (Esc)", readerSearch:"搜索卡片…", readerNoGraph:"没有打开的图", readerNoMatch:"没有匹配的卡片", readerDeps:"依赖", readerUses:"被用于", pageN:"第 {n} 页", note:"详情（只读 · 渲染公式）", noteCopy:"复制详情原文", attachAdd:"＋ 附件", attachAddTip:"添加附件：选择图片或 PDF（也可直接拖到附件区）", attachNoAttach:"（无附件）", attachAdding:"正在添加 {n} 个附件…", attachAdded:"附件已添加（点击缩略图可放大）", attachFailed:"{name} 添加失败：{msg}", xlinkSection:"跨图依赖（{n}）", xlinkAdd:"＋ 添加", xlinkDirUses:"依赖对方", xlinkDirProvides:"对方依赖我", xlinkBroken:"目标节点已不存在", xlinkNone:"尚未与其他图建立依赖。点「＋ 添加」可跨图关联。", xlinkBrokenHint:"目标已不存在，可点 ✕ 删除该链接", xlinkDialogTitle:"链接到其他图", xlinkSource:"源节点", xlinkTargetGraph:"目标图", xlinkSearchNode:"搜索目标节点", xlinkFilterPh:"输入标题关键字过滤…", xlinkWhy:"为什么相关（数学理由，写清依据）", xlinkWhyPh:"例：本卡给出可操作判据 f 与 f′ 互素，正好补上对方缺的判别步骤", xlinkDirection:"方向", xlinkDirTo:"我依赖对方（对方是依据）", xlinkDirFrom:"对方依赖我（我提供依据）", xlinkCreate:"建立链接", xlinkCreated:"已建立跨图链接", xlinkRemoved:"已删除链接", xlinkPickNode:"请先选择一个目标节点", xlinkNeedWhy:"请写明理由（这是跨图依赖最关键的信息）", xlinkNoMatch:"该图没有匹配的节点", cancel:"取消", depUpstream:"上游（谁支撑它）", depDownstream:"下游（它支撑谁）", depMore:"+{n} 展开", depLess:"收起", depNone:"— 无", multiHint:"已选中 {n} 个节点 · 右键可合并 / Delete 删除 / Esc 取消", selNodes:"已选中 {n} 个节点", selNone:"未选中节点", deletedNodes:"已删除 {n} 个节点", groupPinned:"已固定分组位置", groupRefit:"已取消固定，按内容自动贴合", groupPinNow:"已固定当前几何", groupFocus:"聚焦到该组", linkCanceled:"未落到节点上，已取消", undoEmpty:"没有可撤销的操作", undoDone:"已撤销", redoEmpty:"没有可重做的操作", redoDone:"已重做", opFailed:"操作失败：{msg}", blockedWipe:"已阻止一次会清空内容的操作", snapCorrupt:"快照损坏，已忽略", canvasMode:"⚡ 画布模式", canvasModeTip:"大图用画布绘制，平移缩放更流畅；关闭回到卡片样式", thumbsToggle:"🖼 缩略图", thumbsToggleTip:"在卡片上显示原书页面缩略图（只有导入 PDF 的图才有）", noteFull:"详情全文", traceBtn:"依赖追踪", makeGroupBtn:"从选中建组", convoTitle:"对话", convoSay:"＋ 记录一轮发言", convoHead:"当前位置", convoSetHead:"从这里继续", convoMerge:"合并分支", convoThreads:"开放分支", convoNext:"下一步", convoPending:"未完成", convoLinear:"导出这段对话", latexUnsupported:"网页不支持该环境，此处省略", latexUnparsed:"KaTeX 无法解析该片段", latexKept:"⚠ LaTeX 未渲染（原文保留）", unsectioned:"（未分节）", newGraph:"＋ 新建", templates:"模板", import:"📥 导入", share:"📤 分享", export:"📤 导出", validate:"✓ 校验", analyze:"◎ 分析", layout:"⌗ 一键整理", legend:"☰ 图例", fit:"适应", deleteGraph:"删除图", folderOpt:"文件夹（可选，a/b 可嵌套）",
+  zh: { tipNew:"新建一张图（可选模板）", tipImport:"导入 Mermaid / JSON 文件", tipExport:"导出为 Mermaid、Markdown 或单文件网页", tipAnalyze:"看环、瓶颈、孤立点与依赖链", tipLayout:"一键排布：分层 / 聚簇 / 力导向 / 网格", tipTheme:"切换浅色 / 深色", tipLang:"切换中文 / English", tipDocrail:"收起或展开左侧文件树", gstatTip:"点击查看校验详情（结构问题与警告）", legendNodeTypes:"节点类型", legendEdgeTypes:"连线类型", attachPickNode:"请先选中一张卡片，再添加附件", expandTree:"展开文件树", expandInspector:"展开检查器", depToggle:"🔗 高亮依赖", depToggleTip:"选中卡片后：蓝色=它的上游依据，红色=它的下游结果；再点一次关闭", depOnMsg:"已开启依赖高亮", depOffMsg:"已关闭依赖高亮", depUpLegend:"上游（支撑它）", depDownLegend:"下游（它支撑）", depSelfLegend:"当前节点", depHide:"隐藏", fxHelp:"? 公式规则", fxHelpTip:"公式怎么写才能正常显示（编译不出来时看这里）", readerTip:"阅读模式：按章节列出卡片，可折叠、可跳转依赖", splitterTip:"拖动调节上下两块的高度", appTitle:"OmniFlow Studio — 万用流程图", convoSetHeadTip:"把选中的卡片设为当前位置，之后的新内容从这里接下去", convoMergeTip:"把几条线合并到一个结论", convoThreadsTip:"列出还没走完的分支", convoNextTip:"下一步该谁接着写，以及该带上哪些上下文", convoPendingTip:"还没完成的分支（进行中 / 等人）", convoLinearTip:"把从开头到当前位置的对话导出成文本", turnSpeaker:"发言人", turnSpeakerPh:"如：我 / 张三 / 评审", turnContent:"内容", turnContentPh:"粘进来即可（支持 $公式$）", turnRecord:"记录", turnForkTitle:"从此外推一轮（分叉）", turnInsertTitle:"在此后插入一轮", turnContentLong:"内容（首行进卡片，全文可写备注）", turnContentLongPh:"把这一轮的内容粘进来（支持 $公式$）", turnStatus:"状态", turnType:"类型", turnParent:"接在哪之后", turnParentPh:"留空 = 当前位置", turnHandoff:"移交给谁（可选）", turnHandoffPh:"如：人 / 张三", stDone:"已完成", stRunning:"进行中", stPending:"待产出", stWaiting:"等人工", stFailed:"失败", tyTurn:"发言", tyQuestion:"提问", tyAnswer:"回答", tyIdea:"想法", tyDecision:"结论", xlinkBadgeProvides:"本卡支撑了其他图的 {n} 个结论（点击前往）", xlinkBadgeUses:"本卡依赖其他图的 {n} 个结论（点击前往）", xlinkDelTitle:"删除此链接", xlinkWhyLabel:"为什么相关（数学理由，写清依据）", sectionLabel:"小节", cardsCount:"{n} 张", edgeDeps:"依赖", edgeUses:"被用于", readerPage:"第 {n} 页", reader:"阅读模式", readerOpen:"📖 阅读", readerExpandAll:"全部展开", readerCollapseAll:"全部折叠", readerClose:"关闭 (Esc)", readerSearch:"搜索卡片…", readerNoGraph:"没有打开的图", readerNoMatch:"没有匹配的卡片", readerDeps:"依赖", readerUses:"被用于", pageN:"第 {n} 页", note:"详情（只读 · 渲染公式）", noteCopy:"复制详情原文", attachAdd:"＋ 附件", attachAddTip:"添加附件：选择图片或 PDF（也可直接拖到附件区）", attachNoAttach:"（无附件）", attachAdding:"正在添加 {n} 个附件…", attachAdded:"附件已添加（点击缩略图可放大）", attachFailed:"{name} 添加失败：{msg}", xlinkSection:"跨图依赖（{n}）", xlinkAdd:"＋ 添加", xlinkDirUses:"依赖对方", xlinkDirProvides:"对方依赖我", xlinkBroken:"目标节点已不存在", xlinkNone:"尚未与其他图建立依赖。点「＋ 添加」可跨图关联。", xlinkBrokenHint:"目标已不存在，可点 ✕ 删除该链接", xlinkDialogTitle:"链接到其他图", xlinkSource:"源节点", xlinkTargetGraph:"目标图", xlinkSearchNode:"搜索目标节点", xlinkFilterPh:"输入标题关键字过滤…", xlinkWhy:"为什么相关（数学理由，写清依据）", xlinkWhyPh:"例：本卡给出可操作判据 f 与 f′ 互素，正好补上对方缺的判别步骤", xlinkDirection:"方向", xlinkDirTo:"我依赖对方（对方是依据）", xlinkDirFrom:"对方依赖我（我提供依据）", xlinkCreate:"建立链接", xlinkCreated:"已建立跨图链接", xlinkRemoved:"已删除链接", xlinkPickNode:"请先选择一个目标节点", xlinkNeedWhy:"请写明理由（这是跨图依赖最关键的信息）", xlinkNoMatch:"该图没有匹配的节点", cancel:"取消", depUpstream:"上游（谁支撑它）", depDownstream:"下游（它支撑谁）", depMore:"+{n} 展开", depLess:"收起", depNone:"— 无", multiHint:"已选中 {n} 个节点 · 右键可合并 / Delete 删除 / Esc 取消", selNodes:"已选中 {n} 个节点", selNone:"未选中节点", deletedNodes:"已删除 {n} 个节点", groupPinned:"已固定分组位置", groupRefit:"已取消固定，按内容自动贴合", groupPinNow:"已固定当前几何", groupFocus:"聚焦到该组", linkCanceled:"未落到节点上，已取消", undoEmpty:"没有可撤销的操作", undoDone:"已撤销", redoEmpty:"没有可重做的操作", redoDone:"已重做", opFailed:"操作失败：{msg}", blockedWipe:"已阻止一次会清空内容的操作", snapCorrupt:"快照损坏，已忽略", canvasMode:"⚡ 流畅模式", canvasModeTip:"大图用流畅模式绘制，平移缩放更顺滑；关闭回到卡片样式", thumbsToggle:"🖼 缩略图", thumbsToggleTip:"在卡片上显示原书页面缩略图（只有导入 PDF 的图才有）", noteFull:"详情全文", traceBtn:"依赖追踪", makeGroupBtn:"从选中建组", convoTitle:"对话", convoSay:"＋ 记录一轮发言", convoHead:"当前位置", convoSetHead:"从这里继续", convoMerge:"合并分支", convoThreads:"开放分支", convoNext:"下一步", convoPending:"未完成", convoLinear:"导出这段对话", latexUnsupported:"网页不支持该环境，此处省略", latexUnparsed:"KaTeX 无法解析该片段", latexKept:"⚠ LaTeX 未渲染（原文保留）", unsectioned:"（未分节）", newGraph:"＋ 新建", templates:"模板", import:"📥 导入", share:"📤 分享", export:"📤 导出", validate:"✓ 校验", analyze:"◎ 分析", layout:"⌗ 一键整理", legend:"☰ 图例", fit:"适应", deleteGraph:"删除图", folderOpt:"文件夹（可选，a/b 可嵌套）",
     vaultTitle:"文件树", docTitle:"当前图节点", nodesWord:"节点", newFolder:"新建文件夹", rootName:"根目录（未归档）",
     globalSearchPh:"搜索图 / 节点 / 备注…（⌘K）", treeSearchPh:"搜索标题…", collapseInspector:"收起/展开检查器", groupsTitle:"分组",
     searchNodes:"搜索名称/备注/标签…", inspector:"检查器",
@@ -29,7 +29,7 @@ const I18N = {
     convoThreadsN:"开放分支 ({n})", convoPendingN:"待办分支 ({n})",
     convoNextHead:"下一步该谁产出", convoReason:"理由", convoTopology:"拓扑", convoAwaiting:"待办", convoCtx:"— 应发送的上下文 —",
     formulaPlaceholder:"⟨公式⟩", groupRefitMenu:"⤢ 重新贴合内容", groupPinMenu:"📌 记住当前几何", noteEmpty:"（无备注）", noteCopied:"已复制备注原文", resizeNote:"拖动调整详情高度" },
-  en: { tipNew:"Create a new map (pick a template)", tipImport:"Import a Mermaid or JSON file", tipExport:"Export as Mermaid, Markdown or a single-file page", tipAnalyze:"Cycles, bottlenecks, isolated cards and dependency chains", tipLayout:"Arrange: layered / clusters / force / grid", tipTheme:"Switch light / dark", tipLang:"Switch 中文 / English", tipDocrail:"Collapse or expand the file tree", gstatTip:"Click for validation details (structural problems and warnings)", legendNodeTypes:"Card types", legendEdgeTypes:"Link types", attachPickNode:"Select a card first, then attach a file", thumbsToggle:"🖼 Thumbs", thumbsToggleTip:"Show source-page thumbnails on cards (only for maps imported from a PDF)", expandTree:"Show the file tree", expandInspector:"Show the inspector", depToggle:"🔗 Highlight deps", depToggleTip:"With a card selected: blue = what it depends on, red = what depends on it; click again to turn off", depOnMsg:"Dependency highlighting on", depOffMsg:"Dependency highlighting off", depUpLegend:"upstream (supports it)", depDownLegend:"downstream (it supports)", depSelfLegend:"selected node", depHide:"Hide", fxHelp:"? Formula rules", fxHelpTip:"How to write formulas that render (read this when one fails to compile)", readerTip:"Reading mode: cards grouped by section, collapsible, with dependency jumps", splitterTip:"Drag to resize the two panels", appTitle:"OmniFlow Studio — universal flow maps", convoSetHeadTip:"Make the selected card the current position; new content continues from there", convoMergeTip:"Merge several threads into one conclusion", convoThreadsTip:"List the threads that are still open", convoNextTip:"Who should write next, and what context to send with it", convoPendingTip:"Threads not finished yet (in progress / waiting)", convoLinearTip:"Export the conversation up to here as text", turnSpeaker:"Speaker", turnSpeakerPh:"e.g. me / Alice / reviewer", turnContent:"Content", turnContentPh:"Paste anything (supports $math$)", turnRecord:"Record", turnForkTitle:"Branch out from here", turnInsertTitle:"Insert a turn after this", turnContentLong:"Content (first line becomes the card, the rest becomes the note)", turnContentLongPh:"Paste this turn (supports $math$)", turnStatus:"Status", turnType:"Type", turnParent:"Continue after", turnParentPh:"blank = current position", turnHandoff:"Hand over to (optional)", turnHandoffPh:"e.g. human / Bob", stDone:"done", stRunning:"in progress", stPending:"to do", stWaiting:"waiting for a human", stFailed:"failed", tyTurn:"statement", tyQuestion:"question", tyAnswer:"answer", tyIdea:"idea", tyDecision:"conclusion", xlinkBadgeProvides:"This card supports {n} conclusion(s) in other maps (click to go)", xlinkBadgeUses:"This card depends on {n} conclusion(s) in other maps (click to go)", xlinkDelTitle:"Remove this link", xlinkWhyLabel:"Why related (state the mathematical reason)", sectionLabel:"Section", cardsCount:"{n} cards", edgeDeps:"Depends on", edgeUses:"Used by", readerPage:"p. {n}", reader:"Reader", readerOpen:"📖 Read", readerExpandAll:"Expand all", readerCollapseAll:"Collapse all", readerClose:"Close (Esc)", readerSearch:"Search cards…", readerNoGraph:"No graph open", readerNoMatch:"No matching cards", readerDeps:"Depends on", readerUses:"Used by", pageN:"p. {n}", note:"Details (read-only · formulas rendered)", noteCopy:"Copy raw text", attachAdd:"＋ Attach", attachAddTip:"Add attachment: pick images/PDF (or drop into the box)", attachNoAttach:"(no attachments)", attachAdding:"Adding {n} attachment(s)…", attachAdded:"Added (click a thumbnail to zoom)", attachFailed:"Failed to add {name}: {msg}", xlinkSection:"Cross-graph links ({n})", xlinkAdd:"＋ Add", xlinkDirUses:"depends on", xlinkDirProvides:"is used by", xlinkBroken:"Target node no longer exists", xlinkNone:"No cross-graph links yet. Click “＋ Add” to relate nodes across maps.", xlinkBrokenHint:"Target is gone — click ✕ to remove this link", xlinkDialogTitle:"Link to another map", xlinkSource:"Source node", xlinkTargetGraph:"Target map", xlinkSearchNode:"Search target node", xlinkFilterPh:"Filter by title…", xlinkWhy:"Why related (state the mathematical reason)", xlinkWhyPh:"e.g. this card gives the operational criterion (f coprime to f′), filling the missing step", xlinkDirection:"Direction", xlinkDirTo:"I depend on it (it is the basis)", xlinkDirFrom:"It depends on me (I am the basis)", xlinkCreate:"Create link", xlinkCreated:"Cross-graph link created", xlinkRemoved:"Link removed", xlinkPickNode:"Pick a target node first", xlinkNeedWhy:"Please state the reason (the key part of a cross-graph link)", xlinkNoMatch:"No matching nodes in that map", cancel:"Cancel", depUpstream:"Upstream (what supports it)", depDownstream:"Downstream (what it supports)", depMore:"+{n} more", depLess:"Collapse", depNone:"— none", multiHint:"{n} nodes selected · right-click to merge / Delete to remove / Esc to cancel", selNodes:"{n} nodes selected", selNone:"No node selected", deletedNodes:"Deleted {n} node(s)", groupPinned:"Group position pinned", groupRefit:"Unpinned — snapping back to content", groupPinNow:"Current geometry pinned", groupFocus:"Focus this group", linkCanceled:"Dropped on empty space — cancelled", undoEmpty:"Nothing to undo", undoDone:"Undone", redoEmpty:"Nothing to redo", redoDone:"Redone", opFailed:"Failed: {msg}", blockedWipe:"Blocked an operation that would have erased content", snapCorrupt:"Snapshot corrupted — ignored", canvasMode:"⚡ Canvas", canvasModeTip:"Draw big maps on a canvas for smoother panning; turn off to go back to cards", noteFull:"Full details", traceBtn:"Trace", makeGroupBtn:"Group selection", convoTitle:"Conversation", convoSay:"＋ Record a turn", convoHead:"Current position", convoSetHead:"Continue from here", convoMerge:"Merge branches", convoThreads:"Open threads", convoNext:"Next step", convoPending:"Unfinished", convoLinear:"Export this thread", latexUnsupported:"not supported in the browser — omitted", latexUnparsed:"KaTeX could not parse this fragment", latexKept:"⚠ LaTeX not rendered (source kept)", unsectioned:"(no section)", newGraph:"＋ New", templates:"Templates", import:"📥 Import", share:"📤 Share", export:"📤 Export", validate:"✓ Validate", analyze:"◎ Analyze", layout:"⌗ Tidy up", legend:"☰ Legend", fit:"Fit", deleteGraph:"Delete graph", folderOpt:"Folder (optional, a/b nests)",
+  en: { tipNew:"Create a new map (pick a template)", tipImport:"Import a Mermaid or JSON file", tipExport:"Export as Mermaid, Markdown or a single-file page", tipAnalyze:"Cycles, bottlenecks, isolated cards and dependency chains", tipLayout:"Arrange: layered / clusters / force / grid", tipTheme:"Switch light / dark", tipLang:"Switch 中文 / English", tipDocrail:"Collapse or expand the file tree", gstatTip:"Click for validation details (structural problems and warnings)", legendNodeTypes:"Card types", legendEdgeTypes:"Link types", attachPickNode:"Select a card first, then attach a file", thumbsToggle:"🖼 Thumbs", thumbsToggleTip:"Show source-page thumbnails on cards (only for maps imported from a PDF)", expandTree:"Show the file tree", expandInspector:"Show the inspector", depToggle:"🔗 Highlight deps", depToggleTip:"With a card selected: blue = what it depends on, red = what depends on it; click again to turn off", depOnMsg:"Dependency highlighting on", depOffMsg:"Dependency highlighting off", depUpLegend:"upstream (supports it)", depDownLegend:"downstream (it supports)", depSelfLegend:"selected node", depHide:"Hide", fxHelp:"? Formula rules", fxHelpTip:"How to write formulas that render (read this when one fails to compile)", readerTip:"Reading mode: cards grouped by section, collapsible, with dependency jumps", splitterTip:"Drag to resize the two panels", appTitle:"OmniFlow Studio — universal flow maps", convoSetHeadTip:"Make the selected card the current position; new content continues from there", convoMergeTip:"Merge several threads into one conclusion", convoThreadsTip:"List the threads that are still open", convoNextTip:"Who should write next, and what context to send with it", convoPendingTip:"Threads not finished yet (in progress / waiting)", convoLinearTip:"Export the conversation up to here as text", turnSpeaker:"Speaker", turnSpeakerPh:"e.g. me / Alice / reviewer", turnContent:"Content", turnContentPh:"Paste anything (supports $math$)", turnRecord:"Record", turnForkTitle:"Branch out from here", turnInsertTitle:"Insert a turn after this", turnContentLong:"Content (first line becomes the card, the rest becomes the note)", turnContentLongPh:"Paste this turn (supports $math$)", turnStatus:"Status", turnType:"Type", turnParent:"Continue after", turnParentPh:"blank = current position", turnHandoff:"Hand over to (optional)", turnHandoffPh:"e.g. human / Bob", stDone:"done", stRunning:"in progress", stPending:"to do", stWaiting:"waiting for a human", stFailed:"failed", tyTurn:"statement", tyQuestion:"question", tyAnswer:"answer", tyIdea:"idea", tyDecision:"conclusion", xlinkBadgeProvides:"This card supports {n} conclusion(s) in other maps (click to go)", xlinkBadgeUses:"This card depends on {n} conclusion(s) in other maps (click to go)", xlinkDelTitle:"Remove this link", xlinkWhyLabel:"Why related (state the mathematical reason)", sectionLabel:"Section", cardsCount:"{n} cards", edgeDeps:"Depends on", edgeUses:"Used by", readerPage:"p. {n}", reader:"Reader", readerOpen:"📖 Read", readerExpandAll:"Expand all", readerCollapseAll:"Collapse all", readerClose:"Close (Esc)", readerSearch:"Search cards…", readerNoGraph:"No graph open", readerNoMatch:"No matching cards", readerDeps:"Depends on", readerUses:"Used by", pageN:"p. {n}", note:"Details (read-only · formulas rendered)", noteCopy:"Copy raw text", attachAdd:"＋ Attach", attachAddTip:"Add attachment: pick images/PDF (or drop into the box)", attachNoAttach:"(no attachments)", attachAdding:"Adding {n} attachment(s)…", attachAdded:"Added (click a thumbnail to zoom)", attachFailed:"Failed to add {name}: {msg}", xlinkSection:"Cross-graph links ({n})", xlinkAdd:"＋ Add", xlinkDirUses:"depends on", xlinkDirProvides:"is used by", xlinkBroken:"Target node no longer exists", xlinkNone:"No cross-graph links yet. Click “＋ Add” to relate nodes across maps.", xlinkBrokenHint:"Target is gone — click ✕ to remove this link", xlinkDialogTitle:"Link to another map", xlinkSource:"Source node", xlinkTargetGraph:"Target map", xlinkSearchNode:"Search target node", xlinkFilterPh:"Filter by title…", xlinkWhy:"Why related (state the mathematical reason)", xlinkWhyPh:"e.g. this card gives the operational criterion (f coprime to f′), filling the missing step", xlinkDirection:"Direction", xlinkDirTo:"I depend on it (it is the basis)", xlinkDirFrom:"It depends on me (I am the basis)", xlinkCreate:"Create link", xlinkCreated:"Cross-graph link created", xlinkRemoved:"Link removed", xlinkPickNode:"Pick a target node first", xlinkNeedWhy:"Please state the reason (the key part of a cross-graph link)", xlinkNoMatch:"No matching nodes in that map", cancel:"Cancel", depUpstream:"Upstream (what supports it)", depDownstream:"Downstream (what it supports)", depMore:"+{n} more", depLess:"Collapse", depNone:"— none", multiHint:"{n} nodes selected · right-click to merge / Delete to remove / Esc to cancel", selNodes:"{n} nodes selected", selNone:"No node selected", deletedNodes:"Deleted {n} node(s)", groupPinned:"Group position pinned", groupRefit:"Unpinned — snapping back to content", groupPinNow:"Current geometry pinned", groupFocus:"Focus this group", linkCanceled:"Dropped on empty space — cancelled", undoEmpty:"Nothing to undo", undoDone:"Undone", redoEmpty:"Nothing to redo", redoDone:"Redone", opFailed:"Failed: {msg}", blockedWipe:"Blocked an operation that would have erased content", snapCorrupt:"Snapshot corrupted — ignored", canvasMode:"⚡ Fluid", canvasModeTip:"Fluid mode draws big maps smoothly at any zoom; turn off to go back to cards", noteFull:"Full details", traceBtn:"Trace", makeGroupBtn:"Group selection", convoTitle:"Conversation", convoSay:"＋ Record a turn", convoHead:"Current position", convoSetHead:"Continue from here", convoMerge:"Merge branches", convoThreads:"Open threads", convoNext:"Next step", convoPending:"Unfinished", convoLinear:"Export this thread", latexUnsupported:"not supported in the browser — omitted", latexUnparsed:"KaTeX could not parse this fragment", latexKept:"⚠ LaTeX not rendered (source kept)", unsectioned:"(no section)", newGraph:"＋ New", templates:"Templates", import:"📥 Import", share:"📤 Share", export:"📤 Export", validate:"✓ Validate", analyze:"◎ Analyze", layout:"⌗ Tidy up", legend:"☰ Legend", fit:"Fit", deleteGraph:"Delete graph", folderOpt:"Folder (optional, a/b nests)",
     vaultTitle:"Files", docTitle:"Nodes", nodesWord:"NODES", newFolder:"New folder", rootName:"Root (unfiled)",
     globalSearchPh:"Search graphs / nodes / notes… (⌘K)", treeSearchPh:"Search titles…", collapseInspector:"Collapse / expand inspector", groupsTitle:"Groups",
     searchNodes:"Search label / note / tag…", inspector:"Inspector",
@@ -716,15 +716,20 @@ function renderReader(){
       </div>${cards}</section>`;
   }).join("") : `<div class="rd-empty">${t("readerNoMatch")}</div>`;
 
-  // 备注：懒渲染（展开时才编译公式，避免 87 张卡一次性重排）
+  // 备注：懒渲染（展开时才编译公式，避免 87 张卡一次性重排）。
+  // 先渲染摘要占位，随后拉取全文重渲——阅读模式与详情一样呈现完整 .md（含公式），而非 120 字摘要。
   body.querySelectorAll("details.rd-card").forEach((d)=>{
     d.addEventListener("toggle", ()=>{
       if (!d.open) return;
       const host = d.querySelector(".rd-note");
       if (host.dataset.done) return;
+      host.dataset.done = "1";
       const id = host.dataset.note;
       renderMathIn(host, noteOf(id));
-      host.dataset.done = "1";
+      const gid = current?.id;
+      api(`/api/graph/${encodeURIComponent(gid)}/note/${encodeURIComponent(id)}`)
+        .then((r)=>{ if (r?.content && current?.id === gid) renderMathIn(host, r.content); })
+        .catch(()=>{ /* 拉不到全文就保留摘要，不丢内容 */ });
     }, { once: true });
   });
   body.querySelectorAll(".rd-dep").forEach((el)=>{
@@ -1150,17 +1155,22 @@ function cvStartNodeDrag(node, e){
   const sx = e.clientX, sy = e.clientY;
   let moved = false;
   beginInteract();
+  // SSE 重载会整体替换 current 与节点对象：拖拽必须按 id 实时解析当前对象再写坐标，
+  // 否则提交的是过期引用上的坐标，会把旧布局写回服务器（卡片成堆的根因）。
+  const live = ()=> nodeById(node.id) ?? node;
   const finish = (restore)=>{
     endInteract();
-    if (restore){ node.x = origin.x; node.y = origin.y; cvDraw(); return; }
+    const n = live();
+    if (restore){ n.x = origin.x; n.y = origin.y; cvDraw(); return; }
     if (!moved) return;
-    commitNodePosition(node.id, { x: node.x, y: node.y });
+    commitNodePosition(node.id, { x: n.x, y: n.y });
   };
   startPointerDrag(e, {
     onMove: (ev)=>{
+      const n = live();
       const dx = (ev.clientX - sx) / view.k, dy = (ev.clientY - sy) / view.k;
       if (Math.abs(dx) > 2 || Math.abs(dy) > 2) moved = true;
-      node.x = Math.round(origin.x + dx); node.y = Math.round(origin.y + dy);
+      n.x = Math.round(origin.x + dx); n.y = Math.round(origin.y + dy);
       cvDraw();
     },
     onEnd: ()=> finish(false),
@@ -1169,38 +1179,47 @@ function cvStartNodeDrag(node, e){
 }
 function cvStartGroupDrag({ g, ms }, e){
   const origin = new Map(ms.map((n)=> [n.id, { x: n.x, y: n.y }]));
+  const ids = ms.map((n)=> n.id);
+  // 与 cvStartNodeDrag 同理：SSE 重载会整体替换 current，成员与组都必须按 id 实时解析，
+  // 拖拽与提交才不会把过期坐标写回服务器。
+  const live = ()=> ids.map((id)=> nodeById(id)).filter(Boolean);
+  const liveGroup = ()=> (current.groups ?? []).find((x)=> x.id === g.id) ?? g;
   const sx = e.clientX, sy = e.clientY;
   beginInteract();
   const mv = (ev)=>{
     const dx = (ev.clientX - sx) / view.k, dy = (ev.clientY - sy) / view.k;
-    for (const n of ms){
+    for (const n of live()){
       const o = origin.get(n.id);
       n.x = Math.round(o.x + dx); n.y = Math.round(o.y + dy);
     }
-    g._dragging = true;      // 拖动期间按成员实时包围盒绘制，松手后固化为新 rect
+    liveGroup()._dragging = true;      // 拖动期间按成员实时包围盒绘制，松手后固化为新 rect
     cvDraw();
   };
   const finish = async (restore)=>{
     endInteract();
-    g._dragging = false;
+    const grp = liveGroup();
+    grp._dragging = false;
+    const cur = live();
     if (restore){                        // a cancelled pointer puts every member back
-      for (const n of ms){ const o = origin.get(n.id); n.x = o.x; n.y = o.y; }
+      for (const n of cur){ const o = origin.get(n.id); if (!o) continue; n.x = o.x; n.y = o.y; }
       cvDraw();
       return;
     }
-    const n0 = ms[0];
-    const dx = n0.x - origin.get(n0.id).x, dy = n0.y - origin.get(n0.id).y;
+    const n0 = cur[0];
+    if (!n0){ cvDraw(); return; }
+    const o0 = origin.get(n0.id) ?? { x: n0.x, y: n0.y };
+    const dx = n0.x - o0.x, dy = n0.y - o0.y;
     if (!dx && !dy){ selectGroup(g.id); return; }   // pointer 未移动 = 点击选中（镜像 beginNodeDrag 的 moved 语义）
-    const prevRect = g.rect ? { ...g.rect } : null;
-    const rect = groupRectOf(ms);       // same geometry helper as the DOM path
-    g.rect = rect;                      // optimistic local sync — the box never redraws at the old rect
+    const prevRect = grp.rect ? { ...grp.rect } : null;
+    const rect = groupRectOf(cur);       // same geometry helper as the DOM path
+    grp.rect = rect;                      // optimistic local sync — the box never redraws at the old rect
     try {
       await api(`/api/graph/${current.id}/group-commit`, { method: "POST",
-        body: JSON.stringify({ groupId: g.id, moves: ms.map((n)=> ({ nodeId: n.id, x: n.x, y: n.y })), rect }) });
+        body: JSON.stringify({ groupId: g.id, moves: cur.map((n)=> ({ nodeId: n.id, x: n.x, y: n.y })), rect }) });
       toast(t("groupPinned"));
     } catch (err){
-      for (const n of ms){ const o = origin.get(n.id); n.x = o.x; n.y = o.y; }
-      if (prevRect) g.rect = prevRect; else delete g.rect;
+      for (const n of cur){ const o = origin.get(n.id); if (!o) continue; n.x = o.x; n.y = o.y; }
+      if (prevRect) grp.rect = prevRect; else delete grp.rect;
       toast(err.message, true);
     }
     cvDraw();
@@ -2654,11 +2673,13 @@ function renderGroups(){
       const g0 = (current.groups ?? []).find((x)=> x.id === group.id);
       const startX = e.clientX, startY = e.clientY;
       const origin = new Map(members.map((n)=>[n.id, { x: n.x, y: n.y }]));
+      const ids = members.map((m)=> m.id);
+      const live = ()=> ids.map((id)=> nodeById(id)).filter(Boolean);   // SSE 重载替换 current 后仍写当前对象
       const move = (ev)=>{
         const dx = (ev.clientX - startX) / view.k, dy = (ev.clientY - startY) / view.k;
         lastDx = dx; lastDy = dy;
         const map = new Map();
-        for (const m of members){
+        for (const m of live()){
           const p = { x: origin.get(m.id).x + dx, y: origin.get(m.id).y + dy };
           map.set(m.id, p);
           const el = nodeEl(m.id);
@@ -2667,15 +2688,16 @@ function renderGroups(){
         liveDrag = { map };
         // 整组 + 组内连线的实时跟随（rAF 帧同步，性能有上限）
         scheduleLiveFrame();
-        const minX = Math.min(...members.map((m)=>livePos(m).x)) - GROUP_PAD.x, minY = Math.min(...members.map((m)=>livePos(m).y)) - GROUP_PAD.top;
-        const maxX = Math.max(...members.map((m)=>livePos(m).x + m.w)) + GROUP_PAD.x, maxY = Math.max(...members.map((m)=>livePos(m).y + (m._h ?? m.h))) + GROUP_PAD.bottom;
+        const cur = live();
+        const minX = Math.min(...cur.map((m)=>livePos(m).x)) - GROUP_PAD.x, minY = Math.min(...cur.map((m)=>livePos(m).y)) - GROUP_PAD.top;
+        const maxX = Math.max(...cur.map((m)=>livePos(m).x + m.w)) + GROUP_PAD.x, maxY = Math.max(...cur.map((m)=>livePos(m).y + (m._h ?? m.h))) + GROUP_PAD.bottom;
         box.style.left = minX + "px"; box.style.top = minY + "px";
         box.style.width = (maxX - minX) + "px"; box.style.height = (maxY - minY) + "px";
       };
       let lastDx = 0, lastDy = 0;   // 跟踪最后一次有效位移（pointercancel 坐标不可信）
       const finish = async (restore)=>{
         if (restore){
-          for (const m of members){ const o = origin.get(m.id); m.x = o.x; m.y = o.y; }
+          for (const m of live()){ const o = origin.get(m.id); if (!o) continue; m.x = o.x; m.y = o.y; }
           liveDrag = null; updateEdgesLive(); renderGroups();
           suppressSSEUntil = 0;
           return;
@@ -2683,14 +2705,15 @@ function renderGroups(){
         // ① 用最后有效位移提交（不用事件坐标——pointercancel 可能是 0,0）
         const dx = lastDx, dy = lastDy;
         const moved = Math.abs(dx) >= 2 || Math.abs(dy) >= 2;
-        if (moved){ for (const m of members){ m.x = origin.get(m.id).x + dx; m.y = origin.get(m.id).y + dy; } }
+        const cur = live();
+        if (moved){ for (const m of cur){ const o = origin.get(m.id); m.x = o.x + dx; m.y = o.y + dy; } }
         // ② Clear the drag state, then re-render from data. The rect must already hold the NEW
         //    geometry at this point: rendering here with the old rect is what made the box snap
         //    back for one round-trip (and stay there if the request failed).
         liveDrag = null;
         updateEdgesLive();
         if (!moved){ selectGroup(group.id); return; }   // 原地点击 = 选中该组（不拖动）
-        const ms = members.map((m)=> nodeById(m.id)).filter(Boolean);
+        const ms = cur.filter(Boolean);
         const prevRect = g0?.rect ? { ...g0.rect } : null;
         const rect = ms.length ? groupRectOf(ms) : null;
         if (g0 && rect) g0.rect = rect;              // optimistic: the new position covers the old one
