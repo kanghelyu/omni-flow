@@ -28,7 +28,7 @@ const I18N = {
     convoStats:"主线 {a} · 开放 {b} · 待办 {c}", convoHeadLabel:"当前点头", pickNodeFirst:"请先选中一个节点",
     convoThreadsN:"开放分支 ({n})", convoPendingN:"待办分支 ({n})",
     convoNextHead:"下一步该谁产出", convoReason:"理由", convoTopology:"拓扑", convoAwaiting:"待办", convoCtx:"— 应发送的上下文 —",
-    formulaPlaceholder:"⟨公式⟩", groupRefitMenu:"⤢ 重新贴合内容", groupPinMenu:"📌 记住当前几何", noteEmpty:"（无备注）", noteCopied:"已复制备注原文" },
+    formulaPlaceholder:"⟨公式⟩", groupRefitMenu:"⤢ 重新贴合内容", groupPinMenu:"📌 记住当前几何", noteEmpty:"（无备注）", noteCopied:"已复制备注原文", resizeNote:"拖动调整详情高度" },
   en: { tipNew:"Create a new map (pick a template)", tipImport:"Import a Mermaid or JSON file", tipExport:"Export as Mermaid, Markdown or a single-file page", tipAnalyze:"Cycles, bottlenecks, isolated cards and dependency chains", tipLayout:"Arrange: layered / clusters / force / grid", tipTheme:"Switch light / dark", tipLang:"Switch 中文 / English", tipDocrail:"Collapse or expand the file tree", gstatTip:"Click for validation details (structural problems and warnings)", legendNodeTypes:"Card types", legendEdgeTypes:"Link types", attachPickNode:"Select a card first, then attach a file", thumbsToggle:"🖼 Thumbs", thumbsToggleTip:"Show source-page thumbnails on cards (only for maps imported from a PDF)", expandTree:"Show the file tree", expandInspector:"Show the inspector", depToggle:"🔗 Highlight deps", depToggleTip:"With a card selected: blue = what it depends on, red = what depends on it; click again to turn off", depOnMsg:"Dependency highlighting on", depOffMsg:"Dependency highlighting off", depUpLegend:"upstream (supports it)", depDownLegend:"downstream (it supports)", depSelfLegend:"selected node", depHide:"Hide", fxHelp:"? Formula rules", fxHelpTip:"How to write formulas that render (read this when one fails to compile)", readerTip:"Reading mode: cards grouped by section, collapsible, with dependency jumps", splitterTip:"Drag to resize the two panels", appTitle:"OmniFlow Studio — universal flow maps", convoSetHeadTip:"Make the selected card the current position; new content continues from there", convoMergeTip:"Merge several threads into one conclusion", convoThreadsTip:"List the threads that are still open", convoNextTip:"Who should write next, and what context to send with it", convoPendingTip:"Threads not finished yet (in progress / waiting)", convoLinearTip:"Export the conversation up to here as text", turnSpeaker:"Speaker", turnSpeakerPh:"e.g. me / Alice / reviewer", turnContent:"Content", turnContentPh:"Paste anything (supports $math$)", turnRecord:"Record", turnForkTitle:"Branch out from here", turnInsertTitle:"Insert a turn after this", turnContentLong:"Content (first line becomes the card, the rest becomes the note)", turnContentLongPh:"Paste this turn (supports $math$)", turnStatus:"Status", turnType:"Type", turnParent:"Continue after", turnParentPh:"blank = current position", turnHandoff:"Hand over to (optional)", turnHandoffPh:"e.g. human / Bob", stDone:"done", stRunning:"in progress", stPending:"to do", stWaiting:"waiting for a human", stFailed:"failed", tyTurn:"statement", tyQuestion:"question", tyAnswer:"answer", tyIdea:"idea", tyDecision:"conclusion", xlinkBadgeProvides:"This card supports {n} conclusion(s) in other maps (click to go)", xlinkBadgeUses:"This card depends on {n} conclusion(s) in other maps (click to go)", xlinkDelTitle:"Remove this link", xlinkWhyLabel:"Why related (state the mathematical reason)", sectionLabel:"Section", cardsCount:"{n} cards", edgeDeps:"Depends on", edgeUses:"Used by", readerPage:"p. {n}", reader:"Reader", readerOpen:"📖 Read", readerExpandAll:"Expand all", readerCollapseAll:"Collapse all", readerClose:"Close (Esc)", readerSearch:"Search cards…", readerNoGraph:"No graph open", readerNoMatch:"No matching cards", readerDeps:"Depends on", readerUses:"Used by", pageN:"p. {n}", note:"Details (read-only · formulas rendered)", noteCopy:"Copy raw text", attachAdd:"＋ Attach", attachAddTip:"Add attachment: pick images/PDF (or drop into the box)", attachNoAttach:"(no attachments)", attachAdding:"Adding {n} attachment(s)…", attachAdded:"Added (click a thumbnail to zoom)", attachFailed:"Failed to add {name}: {msg}", xlinkSection:"Cross-graph links ({n})", xlinkAdd:"＋ Add", xlinkDirUses:"depends on", xlinkDirProvides:"is used by", xlinkBroken:"Target node no longer exists", xlinkNone:"No cross-graph links yet. Click “＋ Add” to relate nodes across maps.", xlinkBrokenHint:"Target is gone — click ✕ to remove this link", xlinkDialogTitle:"Link to another map", xlinkSource:"Source node", xlinkTargetGraph:"Target map", xlinkSearchNode:"Search target node", xlinkFilterPh:"Filter by title…", xlinkWhy:"Why related (state the mathematical reason)", xlinkWhyPh:"e.g. this card gives the operational criterion (f coprime to f′), filling the missing step", xlinkDirection:"Direction", xlinkDirTo:"I depend on it (it is the basis)", xlinkDirFrom:"It depends on me (I am the basis)", xlinkCreate:"Create link", xlinkCreated:"Cross-graph link created", xlinkRemoved:"Link removed", xlinkPickNode:"Pick a target node first", xlinkNeedWhy:"Please state the reason (the key part of a cross-graph link)", xlinkNoMatch:"No matching nodes in that map", cancel:"Cancel", depUpstream:"Upstream (what supports it)", depDownstream:"Downstream (what it supports)", depMore:"+{n} more", depLess:"Collapse", depNone:"— none", multiHint:"{n} nodes selected · right-click to merge / Delete to remove / Esc to cancel", selNodes:"{n} nodes selected", selNone:"No node selected", deletedNodes:"Deleted {n} node(s)", groupPinned:"Group position pinned", groupRefit:"Unpinned — snapping back to content", groupPinNow:"Current geometry pinned", groupFocus:"Focus this group", linkCanceled:"Dropped on empty space — cancelled", undoEmpty:"Nothing to undo", undoDone:"Undone", redoEmpty:"Nothing to redo", redoDone:"Redone", opFailed:"Failed: {msg}", blockedWipe:"Blocked an operation that would have erased content", snapCorrupt:"Snapshot corrupted — ignored", canvasMode:"⚡ Canvas", canvasModeTip:"Draw big maps on a canvas for smoother panning; turn off to go back to cards", noteFull:"Full details", traceBtn:"Trace", makeGroupBtn:"Group selection", convoTitle:"Conversation", convoSay:"＋ Record a turn", convoHead:"Current position", convoSetHead:"Continue from here", convoMerge:"Merge branches", convoThreads:"Open threads", convoNext:"Next step", convoPending:"Unfinished", convoLinear:"Export this thread", latexUnsupported:"not supported in the browser — omitted", latexUnparsed:"KaTeX could not parse this fragment", latexKept:"⚠ LaTeX not rendered (source kept)", unsectioned:"(no section)", newGraph:"＋ New", templates:"Templates", import:"📥 Import", share:"📤 Share", export:"📤 Export", validate:"✓ Validate", analyze:"◎ Analyze", layout:"⌗ Tidy up", legend:"☰ Legend", fit:"Fit", deleteGraph:"Delete graph", folderOpt:"Folder (optional, a/b nests)",
     vaultTitle:"Files", docTitle:"Nodes", nodesWord:"NODES", newFolder:"New folder", rootName:"Root (unfiled)",
     globalSearchPh:"Search graphs / nodes / notes… (⌘K)", treeSearchPh:"Search titles…", collapseInspector:"Collapse / expand inspector", groupsTitle:"Groups",
@@ -53,7 +53,7 @@ const I18N = {
     convoStats:"Main {a} · open {b} · pending {c}", convoHeadLabel:"Current head", pickNodeFirst:"Select a node first",
     convoThreadsN:"Open threads ({n})", convoPendingN:"Pending ({n})",
     convoNextHead:"Who should produce next", convoReason:"Reason", convoTopology:"Topology", convoAwaiting:"Awaiting", convoCtx:"— Context to send —",
-    formulaPlaceholder:"⟨formula⟩", groupRefitMenu:"⤢ Refit to content", groupPinMenu:"📌 Pin current geometry", noteEmpty:"(no note)", noteCopied:"Note copied" },
+    formulaPlaceholder:"⟨formula⟩", groupRefitMenu:"⤢ Refit to content", groupPinMenu:"📌 Pin current geometry", noteEmpty:"(no note)", noteCopied:"Note copied", resizeNote:"Drag to resize the details pane" },
 };
 let LANG = localStorage.getItem("of-lang") || "zh";
 function t(key){ return (I18N[LANG] ?? I18N.zh)[key] ?? I18N.zh[key] ?? key; }
@@ -424,72 +424,65 @@ function splitLineInline(line){
   return parts;
 }
 
-/** 把普通文本块按空行切段；公式行/行内公式均标记为数学段 */
-function pushPlainBlock(out, block){
-  if (!block.trim()) { out.push({ math: false, body: block }); return; }
-  const paras = block.split(/(\n\s*\n)/);
-  for (const para of paras){
-    if (!para.trim()) { out.push({ math: false, body: para }); continue; }
-    const lines = para.split("\n");
-    let buffer = [];
-    const flush = ()=>{ if (buffer.length){ out.push({ math: false, body: buffer.join("\n") }); buffer = []; } };
-    for (const line of lines){
-      if (looksLikeMath(line)){
-        // 整行是公式 → 显示模式
-        flush();
-        out.push({ math: true, body: line.trim(), display: true, raw: line.trim() });
-        continue;
-      }
-      // 行内混排：切出数学跨度（如「化学：\ce{2H2 + O2 -> 2H2O} 的焓变」）
-      const segs = splitLineInline(line);
-      if (segs.some((x)=> x.math)){
-        flush();
-        for (const sg of segs) out.push(sg);
-      } else buffer.push(line);
-    }
-    flush();
-  }
-}
-
-/** 极简 Markdown → HTML（先转义，防注入）：粗体/斜体/行内代码/标题/列表/链接 */
-function miniMarkdown(src){
-  const inline = (t)=> t
-    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
-    .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<i>$2</i>")
-    .replace(/`([^`\n]+)`/g, "<code>$1</code>")
-    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+/** Markdown → HTML（先转义，防注入）：标题/引用/有序无序列表/表格/分隔线/行内 code/bold/italic/strike/highlight/链接。
+ *  连续非空行合并为同一段落（换行 → <br>，同 Obsidian）。占位符（\u0000X0\u0000）按普通文本原样通过。 */
+function mdToHtml(src){
+  const inline = (t)=>{
+    let s = escapeHtml(t);
+    s = s.replace(/`([^`\n]+)`/g, "<code>$1</code>")
+      .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+      .replace(/(^|[^*\w])\*([^*\n]+)\*/g, "$1<i>$2</i>")
+      .replace(/~~([^~]+)~~/g, "<del>$1</del>")
+      .replace(/==([^=]+)==/g, "<mark>$1</mark>")
+      .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    return s;
+  };
+  const cells = (row)=> row.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c)=> c.trim());
+  const lines = String(src ?? "").split(/\r?\n/);
   const out = [];
-  let inList = false;
-  const closeList = ()=>{ if (inList){ out.push("</ul>"); inList = false; } };
-  for (const raw of String(src ?? "").split(/\r?\n/)){
-    const line = raw.trimEnd();
+  let para = [], list = null;
+  const flushPara = ()=>{ if (para.length){ out.push(`<p>${para.map(inline).join("<br>")}</p>`); para = []; } };
+  const closeList = ()=>{ if (list){ out.push(list === "ul" ? "</ul>" : "</ol>"); list = null; } };
+  for (let i = 0; i < lines.length; i++){
+    const line = lines[i];
+    if (/^\s*$/.test(line)){ flushPara(); closeList(); continue; }
     const h = line.match(/^(#{1,6})\s+(.*)$/);
-    const li = line.match(/^\s*[-*+]\s+(.*)$/);
-    if (h){ closeList(); const lv = Math.min(3, h[1].length); out.push(`<h${lv}>${inline(h[2])}</h${lv}>`); continue; }
-    if (li){ if (!inList){ out.push("<ul>"); inList = true; } out.push(`<li>${inline(li[1])}</li>`); continue; }
-    closeList();
-    out.push(line.trim() ? `<p>${inline(line)}</p>` : "");
+    if (h){ flushPara(); closeList(); const lv = Math.min(6, h[1].length); out.push(`<h${lv}>${inline(h[2])}</h${lv}>`); continue; }
+    if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)){ flushPara(); closeList(); out.push("<hr>"); continue; }
+    if (/^\s*>/.test(line)){   // 连续引用行合并为同一个 blockquote
+      flushPara(); closeList();
+      const buf = [line.replace(/^\s*>\s?/, "")];
+      while (i + 1 < lines.length && /^\s*>/.test(lines[i + 1])){ buf.push(lines[i + 1].replace(/^\s*>\s?/, "")); i++; }
+      out.push(`<blockquote>${buf.map(inline).join("<br>")}</blockquote>`);
+      continue;
+    }
+    const ul = line.match(/^\s*[-*+]\s+(.*)$/);
+    const ol = line.match(/^\s*\d+[.)]\s+(.*)$/);
+    if (ul || ol){
+      flushPara();
+      const want = ul ? "ul" : "ol";
+      if (list !== want){ closeList(); out.push(want === "ul" ? "<ul>" : "<ol>"); list = want; }
+      out.push(`<li>${inline((ul || ol)[1])}</li>`);
+      continue;
+    }
+    if (/^\s*\|.*\|\s*$/.test(line) && i + 1 < lines.length && /^\s*\|[\s:|-]+\|\s*$/.test(lines[i + 1])){   // 表格
+      flushPara(); closeList();
+      const head = cells(line);
+      i += 1;
+      const body = [];
+      while (i + 1 < lines.length && /^\s*\|.*\|\s*$/.test(lines[i + 1])){ body.push(cells(lines[i + 1])); i++; }
+      out.push(`<table><thead><tr>${head.map((c)=> `<th>${inline(c)}</th>`).join("")}</tr></thead><tbody>${
+        body.map((r)=> `<tr>${head.map((_, ci)=> `<td>${inline(r[ci] ?? "")}</td>`).join("")}</tr>`).join("")}</tbody></table>`);
+      continue;
+    }
+    para.push(line.trim());   // 连续行合并为一段
   }
+  flushPara();
   closeList();
   return out.join("\n");
 }
 
-/** 把文本切成 [普通文本 | 数学段] 序列（定界符 + 裸公式双通道） */
-function splitMathSegments(text){
-  const src = normalizeLatex(text);
-  const out = [];
-  const re = /\$\$([\s\S]*?)\$\$|\\\[([\s\S]*?)\\\]|\\\(([\s\S]*?)\\\)|\$([^$\n]+?)\$/g;
-  let last = 0, m;
-  while ((m = re.exec(src))){
-    if (m.index > last) pushPlainBlock(out, src.slice(last, m.index));
-    const display = m[1] !== undefined || m[2] !== undefined;
-    const body = m[1] ?? m[2] ?? m[3] ?? m[4] ?? "";
-    out.push({ math: true, body, display, raw: m[0] });
-    last = re.lastIndex;
-  }
-  if (last < src.length) pushPlainBlock(out, src.slice(last));
-  return out;
-}
+/** Markdown → HTML（先转义，防注入）：粗体/斜体/行内代码/标题/列表/链接 */
 
 /** 渲染单个数学段：成功返回节点；失败降级为「原文 + 提示」，绝不丢内容 */
 function renderMathNode(seg){
@@ -526,22 +519,53 @@ function renderMathNode(seg){
   return host;
 }
 
-/** 整段富文本渲染（Markdown + 公式，带降级） */
+/** 整段富文本渲染（Obsidian 风格 Markdown + 公式，带降级）。
+ *  管线：① 代码围栏/行内代码最先抽出（其中的 $ 不再当公式）→ ② normalizeLatex 归一 →
+ *  ③ 定界公式抽成占位符 → ④ 裸公式双通道（整行像公式=显示模式；行内 \ce 等命令=行内公式，
+ *  复用 looksLikeMath / splitLineInline）→ ⑤ mdToHtml 排版 → ⑥ TreeWalker 把占位符
+ *  还原为代码块 / KaTeX 节点。占位符用 ⟦M12⟧ 形式——不能用 \u0000：innerHTML 解析会
+ *  丢弃 NUL 字符，占位符就没了。 */
 function renderMathIn(el, text){
   if (!el) return;
   const source = text ?? el.dataset.src ?? "";
   el.dataset.src = source;
   if (!String(source).trim()){ el.innerHTML = ""; return; }
-  const frag = document.createDocumentFragment();
-  for (const seg of splitMathSegments(source)){
-    if (seg.math){ frag.appendChild(renderMathNode(seg)); continue; }
-    const div = document.createElement("div");
-    div.className = "md-plain";
-    div.innerHTML = miniMarkdown(escapeHtml(seg.body));
-    frag.appendChild(div);
+  const tokens = [];   // {kind:'code'|'icode'|'math', body, display, lang, raw}
+  const tok = (t)=> `⟦${t.kind === "math" ? "M" : t.kind === "icode" ? "K" : "C"}${tokens.push(t) - 1}⟧`;
+  let work = String(source).replace(/```([^\n`]*)\n([\s\S]*?)```/g, (_, lang, body)=> tok({ kind: "code", lang: String(lang ?? "").trim(), body }));
+  work = work.replace(/`([^`\n]+)`/g, (_, body)=> tok({ kind: "icode", body }));
+  work = normalizeLatex(work);
+  work = work.replace(/\$\$([\s\S]*?)\$\$|\\\[([\s\S]*?)\\\]|\\\(([\s\S]*?)\\\)|\$([^$\n]+?)\$/g, (m, d1, d2, d3, d4)=>{
+    const display = d1 !== undefined || d2 !== undefined;
+    return tok({ kind: "math", body: d1 ?? d2 ?? d3 ?? d4 ?? "", display, raw: m });
+  });
+  // 裸公式双通道：块级标记行（引用/列表/表格/标题）不做整行判定，行内命令仍可切出
+  work = work.split(/\r?\n/).map((line)=>{
+    if (!line.trim() || /⟦/.test(line)) return line;
+    const blockish = /^\s*(>|#|-|\*|\+|\d+[.)]|\|)/.test(line);
+    if (!blockish && looksLikeMath(line)) return tok({ kind: "math", body: line.trim(), display: true, raw: line.trim() });
+    const segs = splitLineInline(line);
+    if (segs.some((x)=> x.math)) return segs.map((sg)=> sg.math ? tok({ kind: "math", body: sg.body, display: false, raw: sg.raw ?? sg.body }) : sg.body).join("");
+    return line;
+  }).join("\n");
+  el.innerHTML = mdToHtml(work);
+  // 还原占位符：文本节点里切开，替换为代码块 / KaTeX 节点
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  const hosts = [];
+  while (walker.nextNode()){ if (walker.currentNode.nodeValue.includes("⟦")) hosts.push(walker.currentNode); }
+  for (const node of hosts){
+    const parts = node.nodeValue.split(/⟦([CMK])(\d+)⟧/);
+    const frag = document.createDocumentFragment();
+    for (let k = 0; k < parts.length; k += 3){
+      if (parts[k]) frag.appendChild(document.createTextNode(parts[k]));
+      const tk = tokens[Number(parts[k + 2])];
+      if (!tk || !parts[k + 1]) continue;
+      if (tk.kind === "math") frag.appendChild(renderMathNode({ math: true, body: tk.body, display: tk.display, raw: tk.raw }));
+      else if (tk.kind === "icode"){ const c = document.createElement("code"); c.textContent = tk.body; frag.appendChild(c); }
+      else { const pre = document.createElement("pre"); pre.className = "md-code"; if (tk.lang) pre.dataset.lang = tk.lang; const c = document.createElement("code"); c.textContent = tk.body; pre.appendChild(c); frag.appendChild(pre); }
+    }
+    node.parentNode.replaceChild(frag, node);
   }
-  el.innerHTML = "";
-  el.appendChild(frag);
 }
 
 /** 检查框实时预览（防抖） */
@@ -3359,6 +3383,29 @@ $("n-group").onclick = async ()=>{
   } catch (error){ toast(error.message, true); }
 };
 $("n-note")?.addEventListener("input", ()=>{ autoGrow($("n-note")); clearTimeout(notePreviewTimer); notePreviewTimer = setTimeout(renderNotePreview, 120); });
+/* 详情框高度可拖调：底边手柄拖动，记忆在 localStorage（160–900px）。 */
+const NP_H_KEY = "of-np-h";
+function applyNoteHeight(){
+  const box = $("n-preview");
+  if (!box) return;
+  const h = Math.max(160, Math.min(900, Number(localStorage.getItem(NP_H_KEY)) || 320));
+  box.style.height = h + "px";
+}
+$("npResize")?.addEventListener("pointerdown", (e)=>{
+  e.preventDefault();
+  const box = $("n-preview");
+  if (!box) return;
+  const startY = e.clientY, startH = box.getBoundingClientRect().height;
+  const mv = (ev)=>{
+    const h = Math.max(160, Math.min(900, Math.round(startH + (ev.clientY - startY))));
+    box.style.height = h + "px";
+    localStorage.setItem(NP_H_KEY, String(h));
+  };
+  const up = ()=>{ window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", up); };
+  window.addEventListener("pointermove", mv);
+  window.addEventListener("pointerup", up);
+});
+applyNoteHeight();
 $("n-note-full").onclick = async ()=>{
   const nodeId = selected.id;
   const note = await api(`/api/graph/${current.id}/note/${encodeURIComponent(nodeId)}`);
