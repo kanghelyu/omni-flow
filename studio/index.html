@@ -147,6 +147,13 @@ main { flex: 1; display: flex; min-width: 0; min-height: 0; }
 .splitter::after { content: ""; width: 3px; height: 42px; border-radius: 99px; background: var(--border); box-shadow: 0 -7px 0 var(--border), 0 7px 0 var(--border); }
 .splitter:hover::before { background: var(--accent); }
 
+/* ===== 框选（marquee） ===== */
+#marquee { position: absolute; border: 1px dashed var(--accent); background: rgba(56,189,248,.12);
+  border-radius: 4px; pointer-events: none; z-index: 8; display: none; }
+.multi-hint { position: absolute; left: 50%; transform: translateX(-50%); bottom: 14px; z-index: 9;
+  background: var(--panel); border: 1px solid var(--accent); color: var(--accent); border-radius: 999px;
+  padding: 4px 12px; font-size: 11.5px; display: none; }
+
 /* ===== 阅读模式（对照 chapter2_cards.html：章节分组 + 可折叠卡片 + 依赖 chip） ===== */
 #reader { position: fixed; inset: 0; z-index: 70; background: var(--bg); display: flex; flex-direction: column; }
 #reader[hidden] { display: none; }
@@ -502,6 +509,8 @@ main { flex: 1; display: flex; min-width: 0; min-height: 0; }
 
     <div id="canvasWrap">
       <div id="depBar"></div>
+      <div id="marquee"></div>
+      <div class="multi-hint" id="multiHint"></div>
       <div id="viewport">
         <div id="world">
           <svg id="edgeLayer"></svg>
@@ -1226,6 +1235,86 @@ function renderReader(){
   });
 }
 
+
+/* ================= 框选（marquee）：Shift+拖拽矩形多选 ================= */
+let multiSel = new Set();
+
+function paintMulti(){
+  nodesLayer.querySelectorAll(".node").forEach((el)=> el.classList.toggle("sel", multiSel.has(el.dataset.id)));
+  const hint = $("multiHint");
+  if (!hint) return;
+  hint.style.display = multiSel.size > 1 ? "block" : "none";
+  hint.textContent = `已选中 ${multiSel.size} 个节点 · 右键可合并 / Delete 删除 / Esc 取消`;
+}
+function clearMulti(){ multiSel.clear(); paintMulti(); }
+
+/** 画布空白处 Shift+拖拽 = 框选 */
+function bindMarquee(){
+  const vp = $("viewport"), box = $("marquee");
+  if (!vp || !box) return;
+  vp.addEventListener("pointerdown", (e)=>{
+    if (!(e.shiftKey || e.metaKey) || e.button !== 0) return;
+    if (e.target.closest(".node")) return;          // 节点上不动
+    e.preventDefault(); e.stopPropagation();
+    const r0 = vp.getBoundingClientRect();
+    const sx = e.clientX - r0.left, sy = e.clientY - r0.top;
+    box.style.display = "block";
+    const draw = (ev)=>{
+      const x = ev.clientX - r0.left, y = ev.clientY - r0.top;
+      box.style.left = Math.min(sx, x) + "px"; box.style.top = Math.min(sy, y) + "px";
+      box.style.width = Math.abs(x - sx) + "px"; box.style.height = Math.abs(y - sy) + "px";
+    };
+    paintClear();
+    const up = (ev)=>{
+      window.removeEventListener("pointermove", draw);
+      window.removeEventListener("pointerup", up);
+      box.style.display = "none";
+      const x = ev.clientX - r0.left, y = ev.clientY - r0.top;
+      const x1 = Math.min(sx, x), x2 = Math.max(sx, x), y1 = Math.min(sy, y), y2 = Math.max(sy, y);
+      if (Math.abs(x2 - x1) < 6 && Math.abs(y2 - y1) < 6){ clearMulti(); return; }
+      // 命中判定：节点在画布坐标系下的包围盒与矩形相交
+      const hits = [];
+      for (const n of current.nodes){
+        const p = livePos(n);
+        const nx1 = p.x * view.k + view.x, ny1 = p.y * view.k + view.y;
+        const nx2 = nx1 + (n.w ?? 168) * view.k, ny2 = ny1 + (n.h ?? 64) * view.k;
+        if (nx2 >= x1 && nx1 <= x2 && ny2 >= y1 && ny1 <= y2) hits.push(n.id);
+      }
+      multiSel = new Set(hits);
+      paintMulti();
+      toast(hits.length ? `已选中 ${hits.length} 个节点` : "未选中节点");
+    };
+    window.addEventListener("pointermove", draw);
+    window.addEventListener("pointerup", up);
+  }, true);
+
+  paintClear();
+  function paintClear(){ box.style.display = "none"; }
+
+  // Shift+点击节点：切换选中
+  nodesLayer.addEventListener("click", (e)=>{
+    const card = e.target.closest?.(".node");
+    if (!card || !(e.shiftKey || e.metaKey)) return;
+    e.preventDefault(); e.stopPropagation();
+    const id = card.dataset.id;
+    if (multiSel.has(id)) multiSel.delete(id); else multiSel.add(id);
+    paintMulti();
+  }, true);
+
+  // Esc 取消多选；Delete 删除选中
+  document.addEventListener("keydown", (e)=>{
+    if (e.key === "Escape" && multiSel.size){ clearMulti(); return; }
+    if ((e.key === "Delete" || e.key === "Backspace") && multiSel.size && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA"){
+      e.preventDefault();
+      const ids = [...multiSel];
+      (async ()=>{
+        for (const id of ids){ try { await api(`/api/graph/${current.id}/node/${encodeURIComponent(id)}`, { method: "DELETE" }); } catch { /* 逐条忽略 */ } }
+        clearMulti(); await reload(false); toast(`已删除 ${ids.length} 个节点`);
+      })();
+    }
+  });
+}
+
 /* ================= 跨图链接（单一事实源：<root>/crosslinks.json） ================= */
 let xlinks = { items: [], byNode: new Map() };
 
@@ -1434,7 +1523,7 @@ function openNodeMenu(node, x, y){
       if (a === "continue"){ await post({ op: "branch", nodeId: node.id }); toast("已设为当前点头"); return; }
       if (a === "branch" || a === "branchFrom"){ recordTurnAt(node.id, a === "branch"); return; }
       if (a === "merge"){
-        const sel = [...nodesLayer.querySelectorAll(".node.sel")].map((el)=> el.dataset.id);
+        const sel = [...multiSel];
         const sources = sel.length >= 2 ? sel : (convo?.leaves ?? []);
         if (sources.length < 2){ toast("至少需要 2 条分支", true); return; }
         await post({ op: "merge", sources, label: "汇合" }); toast("已汇合"); return;
@@ -1508,7 +1597,7 @@ function renderConvoActions(node){
       if (a === "continue"){ await post({ op: "branch", nodeId: node.id }); toast("已设为当前点头"); }
       else if (a === "branch"){ recordTurnAt(node.id, true); }
       else if (a === "merge"){
-        const sel = [...nodesLayer.querySelectorAll(".node.sel")].map((el)=> el.dataset.id);
+        const sel = [...multiSel];
         const sources = sel.length >= 2 ? sel : (convo?.leaves ?? []);
         if (sources.length < 2){ toast("至少需要 2 条分支", true); return; }
         await post({ op: "merge", sources, label: "汇合" }); toast("已汇合");
@@ -1608,7 +1697,7 @@ function renderConvoPanel(){
     post({ op: "branch", nodeId: selected.id }, LANG === "en" ? "Head moved" : "已设为当前点头");
   };
   $("convoMerge").onclick = ()=>{
-    const sel = [...nodesLayer.querySelectorAll(".node.sel")].map((el)=> el.dataset.id);
+    const sel = [...multiSel];
     const sources = sel.length >= 2 ? sel : (convo?.leaves ?? []);
     if (sources.length < 2){ toast(LANG === "en" ? "Need 2+ branches" : "至少需要 2 条分支", true); return; }
     post({ op: "merge", sources, label: LANG === "en" ? "Merge" : "汇合" }, LANG === "en" ? "Merged" : "已汇合");
@@ -2663,6 +2752,7 @@ $("btnValidate").onclick = async ()=>{
     : `❌ ${verdict.issues.map(escapeHtml).join("<br>")}<br><br>${verdict.warnings.map(escapeHtml).join("<br>")}`}</div></div>`);
 };
 $("btnReader") && ($("btnReader").onclick = openReader);
+bindMarquee();
 $("rd-close") && ($("rd-close").onclick = closeReader);
 $("rd-search") && ($("rd-search").addEventListener("input", ()=>{ renderReader(); }));
 $("rd-expand") && ($("rd-expand").onclick = ()=>{ document.querySelectorAll("#rd-body details").forEach((d)=>{ d.open = true; d.dispatchEvent(new Event("toggle")); }); });
