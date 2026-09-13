@@ -197,9 +197,33 @@ Long notes live at `graphs/<id>/notes/<nodeId>.md` (Markdown-first).
 - Zero dependencies: Node ≥ 18 standard library only.
 - `graph.json` is the source of truth — edit it directly if you like; validation runs on every write.
 
-## License
+## Repository layout
 
-[CC BY-NC 4.0](LICENSE)
+Where to change what. Everything under `lib/` is shared by all three interfaces (MCP, HTTP, CLI),
+so a fix there reaches every entry point at once.
+
+| Path | What lives there | Change it when… |
+| --- | --- | --- |
+| `lib/graph-core.js` | Graph model: defaults, node/edge type registries, validation | adding a field or a type |
+| `lib/graph-service.mjs` | Storage **and the one write pipeline** (`mutateGraph`, `saveGraphChecked`), the formula gate, backups | changing how a write is validated or persisted |
+| `lib/graph-analysis.js` | Layout (`computeLayout`) and analysis | adding a layout mode |
+| `lib/latex.js` | KaTeX validation, normalisation, per-fragment hints | the formula rules change |
+| `lib/mcp-server.mjs` | MCP tool registry and handlers | exposing a new capability to agents |
+| `lib/templates.js`, `lib/vault.js`, `lib/converters.js`, `lib/import-*.js`, `lib/project.js`, `lib/crosslinks.js`, `lib/search.mjs`, `lib/group-suggest.js` | Templates, folder tree, import/export, document import, section projection, cross-graph links, search | the corresponding feature changes |
+| `lib/conversation.js`, `lib/live-conversation.js` | Non-linear conversation (DAG sessions) and live capture | the conversation model changes |
+| `lib/export-html.js` | Standalone offline HTML canvas | the single-file export changes |
+| `bin/of.mjs` | CLI surface | adding a subcommand |
+| `studio/server.mjs` | Local HTTP + SSE server, request routing | adding an endpoint |
+| `studio/index.html` | Markup only (~220 lines) | adding UI structure |
+| `studio/app.css` | All styles | styling |
+| `studio/app.js` | All client behaviour; `I18N.zh` / `I18N.en` live here | behaviour or copy |
+| `skills/omni-flow/SKILL.md` | The agent-facing guide | instructions for agents |
+| `test/` | Dependency-free checks, run with `node test/<name>.mjs` | guarding a behaviour |
+| `tools/` | Dev helpers (GitHub push, browser checks) — see `tools/README.md` | release/verification tooling |
+
+Conventions worth keeping: **one pipeline** for writes, **one dispatcher** for layouts, **one
+source** for geometry constants, and every visible string routed through `data-i18n`. `node
+test/smoke.mjs` asserts all four.
 
 ## License
 
