@@ -395,6 +395,37 @@ await test("computeLayout supports all four modes distinctly", async () => {
   assert.equal(new Set(results).size, 4, `modes must produce distinct layouts, got ${new Set(results).size}`);
   assert.ok(results.every((r) => r.length > 0), "every mode must place the nodes");
 });
+// —— Layout quality bar: no mode may ribbon out or stack cards on top of each other ——
+await test("computeLayout: every mode is overlap-free and bounded 6:1 on a shallow-wide graph", async () => {
+  const { computeLayout } = await import("../lib/graph-analysis.js");
+  // 40 nodes, 5 levels × 8 per level (the shape that used to make "layered" a long ribbon)
+  const nodes = [], edges = [];
+  for (let l = 0; l < 5; l++) for (let i = 0; i < 8; i++) {
+    const id = `n${l}_${i}`;
+    nodes.push({ id, type: "process", label: id.toUpperCase(), x: 0, y: 0 });
+    if (l > 0) edges.push({ id: `e${l}_${i}`, source: `n${l - 1}_${i}`, target: id, type: "flow" });
+  }
+  const graph = normalizeGraph({ name: "shallow-wide", direction: "TD", nodes, edges });
+  for (const mode of ["layered", "clusters", "force", "grid"]) {
+    const pos = computeLayout(graph, mode);
+    assert.equal(pos.size, nodes.length, `${mode}: every node placed`);
+    const rects = nodes.map((n) => ({ ...pos.get(n.id), w: n.w ?? 168, h: n.h ?? 64 }));
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity, overlaps = 0;
+    for (const r of rects) {
+      minX = Math.min(minX, r.x); minY = Math.min(minY, r.y);
+      maxX = Math.max(maxX, r.x + r.w); maxY = Math.max(maxY, r.y + r.h);
+    }
+    for (let i = 0; i < rects.length; i++) for (let j = i + 1; j < rects.length; j++) {
+      const a = rects[i], b = rects[j];
+      const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+      const oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+      if (ox > 4 && oy > 4) overlaps++;
+    }
+    assert.equal(overlaps, 0, `${mode}: overlapping pairs (>4px both axes) must be 0, got ${overlaps}`);
+    const aspect = Math.max((maxX - minX) / (maxY - minY), (maxY - minY) / (maxX - minX));
+    assert.ok(aspect <= 6, `${mode}: span aspect must be ≤ 6, got ${aspect.toFixed(2)} (${Math.round(maxX - minX)}x${Math.round(maxY - minY)})`);
+  }
+});
 console.log(results.join("\n"));
 
 
