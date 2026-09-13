@@ -304,6 +304,7 @@ main { flex: 1; display: flex; min-width: 0; min-height: 0; }
   display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #fff;
   border: 2px solid var(--canvas); box-shadow: 0 2px 8px rgba(0,0,0,.3); z-index: 2; }
 
+.group-box.pinned { border-style: solid; }
 .group-box { position: absolute; border-radius: 16px; border: 1.5px dashed; z-index: 1; opacity: .8; pointer-events: auto; cursor: move; }
 .group-box .glabel { position: absolute; top: -9px; left: 12px; font-size: 10px; padding: 0 7px; border-radius: 999px; font-weight: 700; }
 
@@ -1753,9 +1754,11 @@ function renderGroups(){
   for (const group of current?.groups ?? []){
     const members = (group.members ?? []).map((id)=>nodeById(id)).filter(Boolean);
     if (!members.length) continue;
-    const gm = groupGeom(members);
+    // 已固定过几何的组框：直接使用持久化 rect（不再由成员坐标反推，避免漂移/变形）
+    const gm = group.rect ?? groupGeom(members);
     const box = document.createElement("div");
     box.className = "group-box";
+    if (group.rect) box.classList.add("pinned");
     box.style.cssText = `left:${gm.minX}px;top:${gm.minY}px;width:${gm.w}px;height:${gm.h}px;border-color:${group.color};background:${group.color}14;`;
     box.dataset.groupId = group.id;
     box.innerHTML = `<span class="glabel" style="background:${group.color}22;color:${group.color};border:1px solid ${group.color}66">${escapeHtml(group.label)}</span>`;
@@ -1793,11 +1796,28 @@ function renderGroups(){
         liveDrag = null;
         updateEdgesLive(); renderGroups();
         if (!moved) return;
-        // ③ 抑制本组保存触发的 SSE，并行持久化
+        // ③ 一次事务提交：成员位移 + 组框几何（覆盖旧值）——单个 load/save，杜绝并发读改写互相覆盖
         suppressSSEUntil = Date.now() + 900;
-        await Promise.all(members.map((m)=> api(`/api/graph/${current.id}/position`, {
-          method: "POST", body: JSON.stringify({ nodeId: m.id, x: m.x, y: m.y })
-        }).catch(()=>{})));
+        const ms = members.map((m)=> nodeById(m.id)).filter(Boolean);
+        const k = view.k;
+        const rect = ms.length ? (()=>{
+          const minX = Math.min(...ms.map((m)=> m.x)) - 24;
+          const minY = Math.min(...ms.map((m)=> m.y)) - 34;
+          const maxX = Math.max(...ms.map((m)=> m.x + (m.w ?? 168))) + 24;
+          const maxY = Math.max(...ms.map((m)=> m.y + (m.h ?? 64))) + 24;
+          return { x: Math.round(minX), y: Math.round(minY), w: Math.round(maxX - minX), h: Math.round(maxY - minY) };
+        })() : null;
+        try {
+          const r = await api(`/api/graph/${current.id}/group-commit`, {
+            method: "POST",
+            body: JSON.stringify({ groupId: group.id, moves: ms.map((m)=> ({ nodeId: m.id, x: m.x, y: m.y })), rect }),
+          });
+          // 本地同步持久化几何，后续渲染直接用，不再重算
+          const g = (current.groups ?? []).find((x)=> x.id === group.id);
+          if (g && r?.rect) g.rect = r.rect;
+          renderGroups();
+          toast(LANG === "en" ? "Group position pinned" : "已固定分组位置");
+        } catch (e){ toast(e.message, true); }
       };
       window.addEventListener("pointermove", move);
       window.addEventListener("pointerup", up);
