@@ -136,6 +136,17 @@
             <div class="convo-actions" id="convoActionsRow"></div>
           </div>
 
+          <div class="insp-sec-head">
+            <label data-i18n="note">详情（只读 · 渲染公式）</label>
+            <button class="mini" id="noteCopy" data-i18n-title="noteCopy">⧉</button>
+            <button class="mini" id="attachAdd" data-i18n="attachAdd" data-i18n-title="attachAddTip"></button>
+          </div>
+          <div id="n-preview" class="note-preview" aria-live="polite"></div>
+          <div id="npResize" data-i18n-title="resizeNote" title="拖动调整详情高度"></div>
+          <textarea id="n-note" aria-hidden="true" tabindex="-1" style="display:none"></textarea>
+
+          <div id="attachBox"></div>
+
           <h3 data-i18n="nodeProps">节点属性</h3>
           <label data-i18n="label">文字</label><input id="n-label" />
           <label data-i18n="type">类型</label><select id="n-type"></select>
@@ -151,15 +162,6 @@
             </select></div>
           </div>
 
-          <div class="insp-sec-head">
-            <label data-i18n="note">详情（只读 · 渲染公式）</label>
-            <button class="mini" id="noteCopy" data-i18n-title="noteCopy">⧉</button>
-            <button class="mini" id="attachAdd" data-i18n="attachAdd" data-i18n-title="attachAddTip"></button>
-          </div>
-          <div id="n-preview" class="note-preview" aria-live="polite"></div>
-          <textarea id="n-note" aria-hidden="true" tabindex="-1" style="display:none"></textarea>
-
-          <div id="attachBox"></div>
           <div id="xlinkBox" hidden></div>
           <div id="depBox" hidden></div>
 
