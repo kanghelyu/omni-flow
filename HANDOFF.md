@@ -140,3 +140,18 @@ bash install.sh                        # 同步到 ~/.omni-flow
 - **节点跳转**：节点 `tags` 含 `open:<graphId>` → 卡片显示 ↗ 角标，双击跳转该图。
 - **启动器**：`Start-Studio.command` / `Start-Studio.bat`，自动探测 Node ≥18、从 4319 起找空闲端口。
 - **聚簇间距**：`clusterLayout` 的 `regionGap` 300 → 140（区域不再占满整图宽度）。
+
+## 十三、MinerU v2 全量支持 + 分组几何持久化（2026-09-13）
+
+**v2 导入**（`lib/import-doc.js`）：识别分页富文本结构 `[[{type,content,bbox}]]`；
+`title`→章节分组、`equation_interline`→公式卡（LaTeX + 原图）、
+`paragraph_content/list_items` 里的 `equation_inline` → 保留为 `$…$`（实测 718 处）、
+`image_source.path` → 复制进 `<graph>/assets/`。实测：87 卡（含 56 公式）· 10 章节组 · 25 依赖边 · 143 图。
+
+**布局**（`lib/graph-analysis.js::packedLayeredLayout`）：修掉 `layeredLayout` 的 TD 语义陷阱
+（x 用层内序号 → 孤立节点排成 30,440px 长线），改为按 LR 取层 + 层内折行，成品 2,516×2,108。
+
+**分组几何持久化**（`group.rect`）：框一经拖动即记录 `{x,y,w,h}`，再次拖动**覆盖**旧值；
+渲染优先用 rect（不再由成员反推）。拖拽改为 `POST /api/graph/:id/group-commit` **一次事务**
+（成员位移 + 几何同时落盘），根除「N 个并发 `POST /position` 各自 load→save 互相覆盖」
+导致的「拖完整组后内容散开、框变大」。
