@@ -255,6 +255,23 @@ await test("index.html 顶层 $() 绑定与静态 id 一致", async () => {
 });
 
 console.log(results.join("\n"));
+// —— 重复顶层声明检查（函数声明后者覆盖前者，是本项目反复踩的坑）——
+await test("index.html 无重复顶层声明（函数/常量）", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../studio/index.html", import.meta.url), "utf8");
+  const script = src.match(/<script>([\s\S]*)<\/script>/)[1];
+  const names = new Map();
+  const re = /^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(|^const\s+([A-Za-z_$][\w$]*)\s*=/gm;
+  let m;
+  while ((m = re.exec(script))){
+    const name = m[1] ?? m[2];
+    names.set(name, (names.get(name) ?? 0) + 1);
+  }
+  const dup = [...names.entries()].filter(([, n]) => n > 1).map(([k, n]) => `${k}×${n}`);
+  assert.deepEqual(dup, [], `存在重复的顶层声明（后者会静默覆盖前者）：${dup.join(", ")}`);
+});
+
+
 console.log(`\n${passed}/${results.length} 通过`);
 if (passed !== results.length) process.exit(1);
 
