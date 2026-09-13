@@ -46,7 +46,7 @@ install_skill() {
 }
 install_skill "$HOME/.zcode/skills/omni-flow"
 install_skill "$HOME/.claude/skills/omni-flow"
-install_skill "$HOME/.workbuddy/skills/omni-flow"
+[ -d "$HOME/.workbuddy" ] && install_skill "$HOME/.workbuddy/skills/omni-flow" || true   # 只在该宿主存在时部署，不给其他机器造目录
 CODEX_HOME_DIR="${CODEX_HOME:-$HOME/.codex}"
 install_skill "$CODEX_HOME_DIR/skills/omni-flow"
 
