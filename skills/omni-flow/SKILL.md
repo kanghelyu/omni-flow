@@ -598,6 +598,8 @@ Produces a **single self-contained HTML file** (≈0.6–0.8 MB): fully offline 
 | A toolbar button does nothing visible | Text was hard-coded instead of going through `data-i18n` | Route it through `data-i18n` / `data-i18n-title`; `node test/smoke.mjs` fails otherwise |
 | Two identical charts appear on the canvas | Both rendering surfaces were live at once: the canvas was painted even when the DOM layer was the visible one | Only one surface may be visible — the canvas paints only in canvas mode (`CV.on`) and is `display:none` otherwise. `tools/browser-check-canvas.cjs` asserts it |
 | A toolbar button does nothing visible | Text was hard-coded instead of going through `data-i18n` | Route it through `data-i18n` / `data-i18n-title`; `node test/smoke.mjs` fails otherwise |
+| A test run changed a real map | The test hard-coded a graph id from the user's storage | Tests must build their own throwaway graph and delete it — never point at `~/.omni-flow/graphs/<real-id>` |
+| A test run changed a real map | The test hard-coded a graph id from the user's storage | Tests must build their own throwaway graph and delete it — never point at `~/.omni-flow/graphs/<real-id>` |
 | Layout collapsed into one long line | Layered layout with TD semantics on a wide graph | Use `packedLayeredLayout` (already the import default) |
 
 # ✅ Pre-delivery self-check (MUST · every item uses OmniFlow's own tools, so it is reproducible anywhere)
