@@ -31,25 +31,22 @@
       <input id="globalSearch" data-ph="globalSearchPh" autocomplete="off" />
       <div id="gsResults" class="gs-results"></div>
     </span>
-    <span class="badge" id="gstat">–</span>
+    <span class="badge" id="gstat" role="button" tabindex="0" data-i18n-title="gstatTip">–</span>
     <span class="sep"></span>
-    <button class="primary" id="btnNew" data-i18n="newGraph">＋ 新建</button>
-    <button id="btnImport" data-i18n="import">导入</button>
-    <button id="btnExport" data-i18n="share">📤 分享</button>
+    <button class="primary" id="btnNew" data-i18n="newGraph" data-i18n-title="tipNew">＋ 新建</button>
+    <button id="btnImport" data-i18n="import" data-i18n-title="tipImport">导入</button>
+    <button id="btnExport" data-i18n="share" data-i18n-title="tipExport">📤 分享</button>
     <span class="sep"></span>
-    <button id="btnValidate" data-i18n="validate">校验</button>
     <button id="btnDep" aria-pressed="true" data-i18n="depToggle" data-i18n-title="depToggleTip"></button>
     <button id="btnFxHelp" data-i18n="fxHelp" data-i18n-title="fxHelpTip"></button>
     <button id="btnCanvas" aria-pressed="false" data-i18n="canvasMode" data-i18n-title="canvasModeTip"></button>
-    <button id="btnThumbs" aria-pressed="false" data-i18n="thumbsToggle" data-i18n-title="thumbsToggleTip"></button>
+    <button id="btnThumbs" aria-pressed="false" hidden data-i18n="thumbsToggle" data-i18n-title="thumbsToggleTip"></button>
     <button id="btnReader" data-i18n="readerOpen" data-i18n-title="readerTip"></button>
-    <button id="btnAnalyze" data-i18n="analyze">分析</button>
-    <button id="btnLayout" data-i18n="layout">布局</button>
-    <span class="sep"></span>
-    <button id="btnLegend" data-i18n="legend">图例</button>
+    <button id="btnAnalyze" data-i18n="analyze" data-i18n-title="tipAnalyze">分析</button>
+    <button id="btnLayout" data-i18n="layout" data-i18n-title="tipLayout">布局</button>
     <span class="spacer"></span>
-    <button id="btnTheme" class="mini" title="Light / Dark">🌓</button>
-    <button id="btnLang" class="mini">EN</button>
+    <button id="btnTheme" class="mini" data-i18n-title="tipTheme">🌓</button>
+    <button id="btnLang" class="mini" data-i18n-title="tipLang">EN</button>
   </header>
 
   <main>
@@ -58,7 +55,7 @@
         <span class="docrail-title" data-i18n="vaultTitle">文件树</span>
         <span style="display:flex;gap:4px;align-items:center">
           <button class="docrail-toggle" id="btnNewFolder" data-i18n-title="newFolder" title="新建文件夹">＋</button>
-          <button class="docrail-toggle" id="btnToggleDocrail">‹</button>
+          <button class="docrail-toggle" id="btnToggleDocrail" data-i18n-title="tipDocrail">‹</button>
         </span>
       </div>
       <div class="docrail-search" style="padding:8px 9px 4px"><input id="treeSearch" data-ph="treeSearchPh" /></div>
