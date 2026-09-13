@@ -4,7 +4,7 @@ import { createServer } from "node:http";
 import { homedir } from "node:os";
 import { join, resolve, extname, basename } from "node:path";
 import { spawn } from "node:child_process";
-import { readFile, copyFile, mkdir, readdir, unlink, stat } from "node:fs/promises";
+import { readFile, writeFile, copyFile, mkdir, readdir, unlink, stat } from "node:fs/promises";
 import { NODE_TYPES, EDGE_TYPES, normalizeGraph, validateGraph, newId, nodeTypeDef, setNodeAttachments, setGroupRect, moveNodes } from "../lib/graph-core.js";
 import { layeredLayout, clusterLayout, forceLayout, gridLayout, analyzeGraph } from "../lib/graph-analysis.js";
 import { searchGraphs } from "../lib/search.mjs";
@@ -18,7 +18,7 @@ import { createFolder, renameFolder, deleteFolder, moveGraph, readTree, updateLe
 import { buildTemplateById, mergedTemplateSummaries, saveCustomTemplate, deleteCustomTemplate } from "../lib/templates.js";
 import { toMermaid, fromMermaid, toDot, toMarkdownOutline, toPlainText, fromAgentFlow } from "../lib/converters.js";
 
-const BODY_LIMIT = 4 * 1024 * 1024;
+const BODY_LIMIT = 48 * 1024 * 1024;   // 附件上传走 base64（约 1.33 倍膨胀），放宽上限
 
 function sendJson(res, status, payload) {
   const body = JSON.stringify(payload);
@@ -26,7 +26,11 @@ function sendJson(res, status, payload) {
   res.end(body);
 }
 
+const BODY_CACHE = new WeakMap();
+/** 读请求体。**可重入**：同一请求多次调用返回同一份解析结果——
+ *  此前图级路由在入口处预读了一次，导致后面的 /upload 拿到空对象。 */
 async function readBody(req) {
+  if (BODY_CACHE.has(req)) return BODY_CACHE.get(req);
   let size = 0;
   const chunks = [];
   for await (const chunk of req) {
@@ -34,8 +38,9 @@ async function readBody(req) {
     if (size > BODY_LIMIT) throw new Error("body too large");
     chunks.push(chunk);
   }
-  if (chunks.length === 0) return {};
-  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  const parsed = chunks.length === 0 ? {} : JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  BODY_CACHE.set(req, parsed);
+  return parsed;
 }
 
 function safeId(raw) {
@@ -552,6 +557,42 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         return;
       }
       /* 批量位置：一次 load/save 写多个节点（多选拖动），避免 N 个并发读改写互相覆盖 */
+      /* 附件上传（用户选文件即可，不必手输路径）：{ name, dataUrl } → 存入 assets/ 并返回 src */
+      if (action === "upload" && req.method === "POST") {
+        const b = await readBody(req);
+        const name = String(b.name ?? "file").replace(/[^\w.\-\u4e00-\u9fff]/g, "_");
+        const m = String(b.dataUrl ?? "").match(/^data:([^;]+);base64,(.*)$/);
+        if (!m) { sendJson(res, 400, { error: "需要 dataUrl（data:<mime>;base64,...）" }); return; }
+        const buf = Buffer.from(m[2], "base64");
+        if (buf.length > 40 * 1024 * 1024) { sendJson(res, 413, { error: "文件过大（上限 40MB）" }); return; }
+        const assetsDir = join(root, "graphs", id, "assets");
+        await mkdir(assetsDir, { recursive: true });
+        const safe = `${Date.now().toString(36)}-${name}`;
+        await writeFile(join(assetsDir, safe), buf);
+        sendJson(res, 200, { ok: true, src: `assets/${safe}`, bytes: buf.length, mime: m[1] });
+        return;
+      }
+      /* 整图替换（撤销 / 重做用）：保存一份完整快照 */
+      if (action === "replace" && req.method === "POST") {
+        const b = await readBody(req);
+        const draft = normalizeGraph({ ...b.graph, id, name: b.graph?.name ?? id });
+        // 护栏：绝不让「空图」覆盖「非空图」（撤销时的空快照曾导致数据被清空）
+        if (!b.force){
+          try {
+            const { graph: cur } = await loadGraph(root, id);
+            if ((cur.nodes?.length ?? 0) > 0 && (draft.nodes?.length ?? 0) === 0){
+              sendJson(res, 409, { error: "拒绝用空图覆盖已有内容（如确需清空，请显式 force）" });
+              return;
+            }
+          } catch { /* 读不到当前图则放行 */ }
+        }
+        const verdict = validateGraph(draft);
+        if (!verdict.ok) { sendJson(res, 400, { error: `结构校验未通过：${verdict.issues.slice(0, 3).join("；")}` }); return; }
+        await saveGraph(graphDirSafe(root, id), draft);
+        broadcast();
+        sendJson(res, 200, { ok: true });
+        return;
+      }
       /* 删除节点（批量选择删除用）：同时清理连线 / 备注 / 分组归属 */
       {
         const m = url.pathname.match(/^\/api\/graph\/([^/]+)\/node\/(.+)$/);
