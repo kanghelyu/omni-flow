@@ -209,7 +209,7 @@ function select(kind, id){
       $("insp-empty").style.display = "none"; $("insp-node").style.display = ""; $("insp-edge").style.display = "none"; $("insp-meta").style.display = "none";
       $("n-label").value = node.label; $("n-type").value = node.type; $("n-icon").value = node.icon ?? "";
       $("n-fill").value = node.fill; $("n-border").value = node.border; $("n-text").value = node.textColor;
-      $("n-status").value = node.status ?? ""; $("n-note").value = node.note ?? "";
+      $("n-status").value = node.status ?? ""; $("n-note").value = node.note ?? ""; autoGrow($("n-note"));
       renderNotePreview();
       depFocus = depEnabled ? computeDeps(node.id) : null;
       // 关键：select 不触发整图 render（性能），但高亮必须立刻反映 → 这里只做类切换
@@ -500,6 +500,14 @@ function renderMathIn(el, text){
 
 /** 检查框实时预览（防抖） */
 let notePreviewTimer = 0;
+/** Grow a textarea to fit its content. The content box has no length limit, so it must not be
+ *  capped to a fixed height either. */
+function autoGrow(el){
+  if (!el || el.tagName !== "TEXTAREA") return;
+  el.style.height = "auto";
+  el.style.height = `${el.scrollHeight}px`;
+}
+
 function renderNotePreview(){
   const box = $("n-preview");
   if (!box) return;
@@ -3254,7 +3262,7 @@ $("n-group").onclick = async ()=>{
     await reload(false); toast(LANG === "zh" ? "已建组" : "Grouped");
   } catch (error){ toast(error.message, true); }
 };
-$("n-note")?.addEventListener("input", ()=>{ clearTimeout(notePreviewTimer); notePreviewTimer = setTimeout(renderNotePreview, 120); });
+$("n-note")?.addEventListener("input", ()=>{ autoGrow($("n-note")); clearTimeout(notePreviewTimer); notePreviewTimer = setTimeout(renderNotePreview, 120); });
 $("n-note-full").onclick = async ()=>{
   const nodeId = selected.id;
   const note = await api(`/api/graph/${current.id}/note/${encodeURIComponent(nodeId)}`);
