@@ -18,7 +18,17 @@ const I18N = {
     name:"名称", desc:"描述", direction:"方向", addNode:"新建",
     addHint:"从节点右侧圆点拖到目标框连线；Delete 删除选中；双击箭头改标签",
     universal:"万用流程图", noGraph:"先选择或创建一张图", edgeAdded:"箭头已连接，双击箭头可改标签", nodeAdded:"节点已添加",
-    layoutDone:"已自动布局", saved:"已保存", confirmDeleteGraph:"删除这张图（移入 trash，可恢复）？" },
+    layoutDone:"已自动布局", saved:"已保存", confirmDeleteGraph:"删除这张图（移入 trash，可恢复）？",
+    menuContinue:"▶ 从这里继续（设为点头）", menuBranch:"⑂ 从此外推一轮（分叉）", menuMerge:"⋈ 合并选中的分支", menuMarkStatus:"标记状态",
+    menuAttach:"📎 加附件（页面图 / PDF）", menuXlink:"🔗 跨图依赖…", menuRename:"✎ 改标题", menuInsertTurn:"＋ 在此后插入一轮", menuTrace:"◎ 依赖追踪", menuDeleteNode:"✕ 删除节点",
+    statusUpdated:"状态已更新", headSet:"已设为当前点头", needBranches:"至少需要 2 条分支", mergeLabel:"汇合", mergedDone:"已汇合", renamePrompt:"新标题",
+    turnContentEmpty:"内容不能为空", turnForked:"已分叉出一支", turnInserted:"已插入一轮",
+    convoRole:"角色", convoTurnN:"轮次", convoIsHead:"● 当前点头", convoMain:"主线", convoOff:"离支",
+    actContinue:"▶ 从这里继续", actBranch:"⑂ 分叉一轮", actMerge:"⋈ 合并", actDone:"✓ 标完成", actAttach:"📎 附件", actLocate:"⊙ 定位", markedDone:"已标完成",
+    convoStats:"主线 {a} · 开放 {b} · 待办 {c}", convoHeadLabel:"当前点头", pickNodeFirst:"请先选中一个节点",
+    convoThreadsN:"开放分支 ({n})", convoPendingN:"待办分支 ({n})",
+    convoNextHead:"下一步该谁产出", convoReason:"理由", convoTopology:"拓扑", convoAwaiting:"待办", convoCtx:"— 应发送的上下文 —",
+    formulaPlaceholder:"⟨公式⟩", groupRefitMenu:"⤢ 重新贴合内容", groupPinMenu:"📌 记住当前几何", noteEmpty:"（无备注）", noteCopied:"已复制备注原文" },
   en: { tipNew:"Create a new map (pick a template)", tipImport:"Import a Mermaid or JSON file", tipExport:"Export as Mermaid, Markdown or a single-file page", tipAnalyze:"Cycles, bottlenecks, isolated cards and dependency chains", tipLayout:"Arrange: layered / clusters / force / grid", tipTheme:"Switch light / dark", tipLang:"Switch 中文 / English", tipDocrail:"Collapse or expand the file tree", gstatTip:"Click for validation details (structural problems and warnings)", legendNodeTypes:"Card types", legendEdgeTypes:"Link types", attachPickNode:"Select a card first, then attach a file", thumbsToggle:"🖼 Thumbs", thumbsToggleTip:"Show source-page thumbnails on cards (only for maps imported from a PDF)", expandTree:"Show the file tree", expandInspector:"Show the inspector", depToggle:"🔗 Highlight deps", depToggleTip:"With a card selected: blue = what it depends on, red = what depends on it; click again to turn off", depOnMsg:"Dependency highlighting on", depOffMsg:"Dependency highlighting off", depUpLegend:"upstream (supports it)", depDownLegend:"downstream (it supports)", depSelfLegend:"selected node", depHide:"Hide", fxHelp:"? Formula rules", fxHelpTip:"How to write formulas that render (read this when one fails to compile)", readerTip:"Reading mode: cards grouped by section, collapsible, with dependency jumps", splitterTip:"Drag to resize the two panels", appTitle:"OmniFlow Studio — universal flow maps", convoSetHeadTip:"Make the selected card the current position; new content continues from there", convoMergeTip:"Merge several threads into one conclusion", convoThreadsTip:"List the threads that are still open", convoNextTip:"Who should write next, and what context to send with it", convoPendingTip:"Threads not finished yet (in progress / waiting)", convoLinearTip:"Export the conversation up to here as text", turnSpeaker:"Speaker", turnSpeakerPh:"e.g. me / Alice / reviewer", turnContent:"Content", turnContentPh:"Paste anything (supports $math$)", turnRecord:"Record", turnForkTitle:"Branch out from here", turnInsertTitle:"Insert a turn after this", turnContentLong:"Content (first line becomes the card, the rest becomes the note)", turnContentLongPh:"Paste this turn (supports $math$)", turnStatus:"Status", turnType:"Type", turnParent:"Continue after", turnParentPh:"blank = current position", turnHandoff:"Hand over to (optional)", turnHandoffPh:"e.g. human / Bob", stDone:"done", stRunning:"in progress", stPending:"to do", stWaiting:"waiting for a human", stFailed:"failed", tyTurn:"statement", tyQuestion:"question", tyAnswer:"answer", tyIdea:"idea", tyDecision:"conclusion", xlinkBadgeProvides:"This card supports {n} conclusion(s) in other maps (click to go)", xlinkBadgeUses:"This card depends on {n} conclusion(s) in other maps (click to go)", xlinkDelTitle:"Remove this link", xlinkWhyLabel:"Why related (state the mathematical reason)", sectionLabel:"Section", cardsCount:"{n} cards", edgeDeps:"Depends on", edgeUses:"Used by", readerPage:"p. {n}", reader:"Reader", readerOpen:"📖 Read", readerExpandAll:"Expand all", readerCollapseAll:"Collapse all", readerClose:"Close (Esc)", readerSearch:"Search cards…", readerNoGraph:"No graph open", readerNoMatch:"No matching cards", readerDeps:"Depends on", readerUses:"Used by", pageN:"p. {n}", note:"Details (read-only · formulas rendered)", noteCopy:"Copy raw text", attachAdd:"＋ Attach", attachAddTip:"Add attachment: pick images/PDF (or drop into the box)", attachNoAttach:"(no attachments)", attachAdding:"Adding {n} attachment(s)…", attachAdded:"Added (click a thumbnail to zoom)", attachFailed:"Failed to add {name}: {msg}", xlinkSection:"Cross-graph links ({n})", xlinkAdd:"＋ Add", xlinkDirUses:"depends on", xlinkDirProvides:"is used by", xlinkBroken:"Target node no longer exists", xlinkNone:"No cross-graph links yet. Click “＋ Add” to relate nodes across maps.", xlinkBrokenHint:"Target is gone — click ✕ to remove this link", xlinkDialogTitle:"Link to another map", xlinkSource:"Source node", xlinkTargetGraph:"Target map", xlinkSearchNode:"Search target node", xlinkFilterPh:"Filter by title…", xlinkWhy:"Why related (state the mathematical reason)", xlinkWhyPh:"e.g. this card gives the operational criterion (f coprime to f′), filling the missing step", xlinkDirection:"Direction", xlinkDirTo:"I depend on it (it is the basis)", xlinkDirFrom:"It depends on me (I am the basis)", xlinkCreate:"Create link", xlinkCreated:"Cross-graph link created", xlinkRemoved:"Link removed", xlinkPickNode:"Pick a target node first", xlinkNeedWhy:"Please state the reason (the key part of a cross-graph link)", xlinkNoMatch:"No matching nodes in that map", cancel:"Cancel", depUpstream:"Upstream (what supports it)", depDownstream:"Downstream (what it supports)", depMore:"+{n} more", depLess:"Collapse", depNone:"— none", multiHint:"{n} nodes selected · right-click to merge / Delete to remove / Esc to cancel", selNodes:"{n} nodes selected", selNone:"No node selected", deletedNodes:"Deleted {n} node(s)", groupPinned:"Group position pinned", groupRefit:"Unpinned — snapping back to content", groupPinNow:"Current geometry pinned", groupFocus:"Focus this group", linkCanceled:"Dropped on empty space — cancelled", undoEmpty:"Nothing to undo", undoDone:"Undone", redoEmpty:"Nothing to redo", redoDone:"Redone", opFailed:"Failed: {msg}", blockedWipe:"Blocked an operation that would have erased content", snapCorrupt:"Snapshot corrupted — ignored", canvasMode:"⚡ Canvas", canvasModeTip:"Draw big maps on a canvas for smoother panning; turn off to go back to cards", noteFull:"Full details", traceBtn:"Trace", makeGroupBtn:"Group selection", convoTitle:"Conversation", convoSay:"＋ Record a turn", convoHead:"Current position", convoSetHead:"Continue from here", convoMerge:"Merge branches", convoThreads:"Open threads", convoNext:"Next step", convoPending:"Unfinished", convoLinear:"Export this thread", latexUnsupported:"not supported in the browser — omitted", latexUnparsed:"KaTeX could not parse this fragment", latexKept:"⚠ LaTeX not rendered (source kept)", unsectioned:"(no section)", newGraph:"＋ New", templates:"Templates", import:"📥 Import", share:"📤 Share", export:"📤 Export", validate:"✓ Validate", analyze:"◎ Analyze", layout:"⌗ Tidy up", legend:"☰ Legend", fit:"Fit", deleteGraph:"Delete graph", folderOpt:"Folder (optional, a/b nests)",
     vaultTitle:"Files", docTitle:"Nodes", nodesWord:"NODES", newFolder:"New folder", rootName:"Root (unfiled)",
     globalSearchPh:"Search graphs / nodes / notes… (⌘K)", treeSearchPh:"Search titles…", collapseInspector:"Collapse / expand inspector", groupsTitle:"Groups",
@@ -33,11 +43,22 @@ const I18N = {
     name:"Name", desc:"Description", direction:"Direction", addNode:"New",
     addHint:"Drag from a node's right dot onto a target to connect; Delete removes; double-click an edge to rename",
     universal:"Universal flow maps", noGraph:"Select or create a graph first", edgeAdded:"Connected — double-click the edge to rename it", nodeAdded:"Node added",
-    layoutDone:"Layout applied", saved:"Saved", confirmDeleteGraph:"Delete this graph (archived to trash)?" }
+    layoutDone:"Layout applied", saved:"Saved", confirmDeleteGraph:"Delete this graph (archived to trash)?",
+    menuContinue:"▶ Continue from here (set as head)", menuBranch:"⑂ Branch out a turn (fork)", menuMerge:"⋈ Merge selected branches", menuMarkStatus:"Mark status",
+    menuAttach:"📎 Attach (page image / PDF)", menuXlink:"🔗 Cross-graph link…", menuRename:"✎ Rename", menuInsertTurn:"＋ Insert a turn after this", menuTrace:"◎ Trace deps", menuDeleteNode:"✕ Delete node",
+    statusUpdated:"Status updated", headSet:"Head moved", needBranches:"Need 2+ branches", mergeLabel:"Merge", mergedDone:"Merged", renamePrompt:"New title",
+    turnContentEmpty:"Content cannot be empty", turnForked:"Turn branched out", turnInserted:"Turn inserted",
+    convoRole:"Role", convoTurnN:"Turn", convoIsHead:"● current head", convoMain:"Main line", convoOff:"Off thread",
+    actContinue:"▶ Continue here", actBranch:"⑂ Fork a turn", actMerge:"⋈ Merge", actDone:"✓ Mark done", actAttach:"📎 Attach", actLocate:"⊙ Locate", markedDone:"Marked done",
+    convoStats:"Main {a} · open {b} · pending {c}", convoHeadLabel:"Current head", pickNodeFirst:"Select a node first",
+    convoThreadsN:"Open threads ({n})", convoPendingN:"Pending ({n})",
+    convoNextHead:"Who should produce next", convoReason:"Reason", convoTopology:"Topology", convoAwaiting:"Awaiting", convoCtx:"— Context to send —",
+    formulaPlaceholder:"⟨formula⟩", groupRefitMenu:"⤢ Refit to content", groupPinMenu:"📌 Pin current geometry", noteEmpty:"(no note)", noteCopied:"Note copied" },
 };
 let LANG = localStorage.getItem("of-lang") || "zh";
 function t(key){ return (I18N[LANG] ?? I18N.zh)[key] ?? I18N.zh[key] ?? key; }
 function applyLang(){
+  document.documentElement.lang = LANG === "en" ? "en" : "zh-CN";   // CSS html[lang] 切换 + a11y
   document.querySelectorAll("[data-i18n]").forEach((el)=>{ el.textContent = t(el.dataset.i18n); });
   document.querySelectorAll("[data-ph]").forEach((el)=>{ el.placeholder = t(el.dataset.ph); });
   document.querySelectorAll("[data-i18n-title]").forEach((el)=>{ el.title = t(el.dataset.i18nTitle); });
@@ -216,13 +237,6 @@ function select(kind, id){
       $("n-status").value = node.status ?? ""; $("n-note").value = node.note ?? ""; autoGrow($("n-note"));
       renderNotePreview();
       depFocus = depEnabled ? computeDeps(node.id) : null;
-      // 关键：select 不触发整图 render（性能），但高亮必须立刻反映 → 这里只做类切换
-      applyDepHighlight();
-      applyConvoToCanvas();
-      renderDepList(node);
-      // 关键：select 不触发整图 render（性能），但高亮必须立刻反映 → 这里只做类切换
-      applyDepHighlight();
-      applyConvoToCanvas();
       renderDepList(node);
       $("n-titleText") && ($("n-titleText").textContent = String(node.label ?? "").slice(0, 60));
       $("n-typeBadge") && ($("n-typeBadge").textContent = typeLabel(node.type));
@@ -240,6 +254,10 @@ function select(kind, id){
     }
   }
   renderEdges();
+  // 顺序关键：renderEdges 会重建全部边 DOM，依赖高亮类必须在它之后写，否则刚加的高亮被整体抹掉
+  applyDepHighlight();
+  applyConvoToCanvas();
+  if (CV.on) cvDraw();   // 画布模式：选中环 / 依赖明暗由 cvDraw 呈现，选中变化必须立刻重绘
 }
 /** 选中一个分组（DOM/画布通用）：面板归位到 meta（组列表在其中），高亮 + 滚动定位，
  *  组框以卡片选中语言（accent 边 + 柔光）高亮。不新建面板——组详情仍走右键菜单（范围控制）。 */
@@ -344,7 +362,7 @@ function normalizeLatex(src){
   });
   // 无法在网页渲染的绘图/浮动环境 → 占位（保留可读信息）
   t = t.replace(/\\begin\{(tikzpicture|figure\*?|table\*?|algorithm\*?|lstlisting)\}[\s\S]*?\\end\{\1\}/g,
-                (_m, env)=> `[${env}: 网页不支持该环境，此处省略]`);
+                (_m, env)=> `[${env}: ${t("latexUnsupported")}]`);
   // 先清理「孤立」的 begin/end（未成对的残留），再转换合法公式环境——顺序不可颠倒
   t = t.replace(/\\(begin|end)\{(?!equation|align|gather|multline|displaymath|math|alignat|flalign|eqnarray|pmatrix|bmatrix|vmatrix|matrix|cases|array|aligned|gathered|split|smallmatrix)[^}]*\}/g, "");
   // 公式环境 → $$ 显示数学；align/gather 系列必须保留内部结构（& 与 \\ 在裸数学中非法）
@@ -481,7 +499,7 @@ function renderMathNode(seg){
     if (err){
       const box = document.createElement("span");
       box.className = "math-fallback";
-      box.title = err.getAttribute("title") || "KaTeX 无法解析该片段";
+      box.title = err.getAttribute("title") || t("latexUnparsed");
       box.textContent = seg.raw;
       const tag = document.createElement("span");
       tag.className = "math-fallback-tag";
@@ -1034,9 +1052,9 @@ function cvBind(){
     }
     const grp = cvHitGroup(w);
     if (grp){ cvStartGroupDrag(grp, e); return; }
-    // 空白：pan + 取消选择
-    select(null);
-    cvStartPan(e);
+    // 空白：按下即平移；只有未移动的抬起才算「点击空白」→ 取消选择。
+    // 此前 pointerdown 直接 select(null)，一平移就把依赖高亮整个清掉。
+    cvStartPan(e, ()=>select(null));
   });
 
   vp.addEventListener("wheel", (e)=>{
@@ -1079,13 +1097,20 @@ function cvBind(){
   });
 }
 
-function cvStartPan(e){
+function cvStartPan(e, onClick){
   const vp = $("viewport");
   const sx = e.clientX, sy = e.clientY, ox = view.x, oy = view.y;
+  let moved = false;
   vp.classList.add("panning");
   beginViewportMove();
-  const mv = (ev)=>{ view.x = ox + (ev.clientX - sx); view.y = oy + (ev.clientY - sy); applyView(); };
-  const up = ()=>{ window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", up); vp.classList.remove("panning"); endViewportMoveSoon(); };
+  const mv = (ev)=>{
+    if (Math.abs(ev.clientX - sx) > 2 || Math.abs(ev.clientY - sy) > 2) moved = true;
+    view.x = ox + (ev.clientX - sx); view.y = oy + (ev.clientY - sy); applyView();
+  };
+  const up = ()=>{
+    window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", up); vp.classList.remove("panning"); endViewportMoveSoon();
+    if (!moved && onClick) onClick();   // 原地点击空白才取消选择；拖动平移不影响选中/高亮
+  };
   window.addEventListener("pointermove", mv); window.addEventListener("pointerup", up);
 }
 function cvStartNodeDrag(node, e){
@@ -1649,7 +1674,7 @@ function openLightbox(list, idx){
     img.src = srcOf(a);
     img.style.transform = `translate(${lbState.x}px, ${lbState.y}px) scale(${lbState.k})`;
     $("lb-title").textContent = a.label || a.src;
-    $("lb-cap").textContent = `${lbState.idx + 1}/${lbState.list.length}${a.page ? ` · 第 ${a.page} 页` : ""}${a.caption ? " · " + a.caption : ""}`;
+    $("lb-cap").textContent = `${lbState.idx + 1}/${lbState.list.length}${a.page ? ` · ${t("pageN").replace("{n}", a.page)}` : ""}${a.caption ? " · " + a.caption : ""}`;
   };
   img.onload = ()=>{
     const r = stage.getBoundingClientRect();
@@ -1705,7 +1730,7 @@ function renderAttachments(node){
     return isImg
       ? `<div class="attach-thumb" data-i="${i}" title="${label}"><img src="${srcOf(a)}" alt=""><span class="tag">${a.page ? "p." + a.page : label.slice(0, 10)}</span></div>`
       : `<span class="attach-chip" data-i="${i}">📄 ${label.slice(0, 22)}</span>`;
-  }).join("")}</div>` : `<div style="font-size:11px;color:var(--text-dim)">（无附件）</div>`;
+  }).join("")}</div>` : `<div style="font-size:11px;color:var(--text-dim)">${t("attachNoAttach")}</div>`;
   box.querySelectorAll(".attach-thumb,.attach-chip").forEach((el)=>{
     el.onclick = ()=> openLightbox(list, Number(el.dataset.i));
   });
@@ -1735,7 +1760,7 @@ async function addAttachment(nodeId){
           nodeId, src: up.src, kind: /pdf$/i.test(f.name) ? "pdf" : "image",
           label: f.name, caption: "", mode: "append",
         }) });
-      } catch (e){ toast(`${f.name} 添加失败：${e.message}`, true); }
+      } catch (e){ toast(t("attachFailed").replace("{name}", f.name).replace("{msg}", e.message), true); }
     }
     await reload(false);
     toast(t("attachAdded"));
@@ -1816,14 +1841,14 @@ async function undo(){
   const now = snapshotState();
   const prev = history.undo.pop();
   history.redo.push(now);
-  await applySnapshot(prev, "已撤销");
+  await applySnapshot(prev, t("undoDone"));
 }
 async function redo(){
   if (!history.redo.length){ toast(t("redoEmpty")); return; }
   const now = snapshotState();
   const next = history.redo.pop();
   history.undo.push(now);
-  await applySnapshot(next, "已重做");
+  await applySnapshot(next, t("redoDone"));
 }
 async function applySnapshot(snap, tip){
   // 护栏：目标快照无节点而当前有内容 → 拒绝（防误清空）
@@ -1869,23 +1894,23 @@ function openNodeMenu(node, x, y){
   const menu = document.createElement("div");
   menu.className = "ctxmenu"; menu.id = "ctxmenu";
   const isConvoNode = isConvo();
-  const statuses = [["done", "已完成"], ["running", "进行中"], ["pending", "待产出"], ["waiting-human", "等人工"], ["failed", "失败"]];
+  const statuses = [["done", t("stDone")], ["running", t("stRunning")], ["pending", t("stPending")], ["waiting-human", t("stWaiting")], ["failed", t("stFailed")]];
   menu.innerHTML = `
     <div class="cm-title">${escapeHtml(String(node.label).slice(0, 34))}</div>
     ${isConvoNode ? `
-      <button data-a="continue">▶ 从这里继续（设为点头）<kbd>Enter</kbd></button>
-      <button data-a="branch">⑂ 从此外推一轮（分叉）</button>
-      <button data-a="merge">⋈ 合并选中的分支</button>
-      <div class="cm-sub">标记状态</div>
+      <button data-a="continue">${t("menuContinue")}<kbd>Enter</kbd></button>
+      <button data-a="branch">${t("menuBranch")}</button>
+      <button data-a="merge">${t("menuMerge")}</button>
+      <div class="cm-sub">${t("menuMarkStatus")}</div>
       <div class="cm-row">${statuses.map(([v, l])=> `<button data-s="${v}">${l}</button>`).join("")}</div>
       <hr>` : ""}
-    <button data-a="attach">📎 加附件（页面图 / PDF）</button>
-    <button data-a="xlink">🔗 跨图依赖…</button>
-    <button data-a="rename">✎ 改标题</button>
-    <button data-a="branchFrom">＋ 在此后插入一轮</button>
-    <button data-a="trace">◎ 依赖追踪</button>
+    <button data-a="attach">${t("menuAttach")}</button>
+    <button data-a="xlink">${t("menuXlink")}</button>
+    <button data-a="rename">${t("menuRename")}</button>
+    <button data-a="branchFrom">${t("menuInsertTurn")}</button>
+    <button data-a="trace">${t("menuTrace")}</button>
     <hr>
-    <button data-a="delete" style="color:var(--danger)">✕ 删除节点</button>`;
+    <button data-a="delete" style="color:var(--danger)">${t("menuDeleteNode")}</button>`;
   document.body.appendChild(menu);
   // 边界收敛
   const r = menu.getBoundingClientRect();
@@ -1900,19 +1925,19 @@ function openNodeMenu(node, x, y){
     b.onclick = async ()=>{
       const a = b.dataset.a, st = b.dataset.s;
       closeCtxMenu();
-      if (st){ await post({ op: "resolve", nodeId: node.id, status: st }); toast("状态已更新"); return; }
-      if (a === "continue"){ await post({ op: "branch", nodeId: node.id }); toast("已设为当前点头"); return; }
+      if (st){ await post({ op: "resolve", nodeId: node.id, status: st }); toast(t("statusUpdated")); return; }
+      if (a === "continue"){ await post({ op: "branch", nodeId: node.id }); toast(t("headSet")); return; }
       if (a === "branch" || a === "branchFrom"){ recordTurnAt(node.id, a === "branch"); return; }
       if (a === "merge"){
         const sel = [...multiSel];
         const sources = sel.length >= 2 ? sel : (convo?.leaves ?? []);
-        if (sources.length < 2){ toast("至少需要 2 条分支", true); return; }
-        await post({ op: "merge", sources, label: "汇合" }); toast("已汇合"); return;
+        if (sources.length < 2){ toast(t("needBranches"), true); return; }
+        await post({ op: "merge", sources, label: t("mergeLabel") }); toast(t("mergedDone")); return;
       }
       if (a === "attach"){ addAttachment(node.id); return; }
       if (a === "xlink"){ openXlinkDialog(node); return; }
       if (a === "rename"){
-        const v = prompt("新标题", node.label);
+        const v = prompt(t("renamePrompt"), node.label);
         if (v != null){ await api(`/api/graph/${current.id}/node`, { method: "POST", body: JSON.stringify({ nodeId: node.id, patch: { label: v } }) }).catch(()=>{}); await reload(false); }
         return;
       }
@@ -1940,18 +1965,18 @@ function recordTurnAt(parentId, fork){
     ${speakerField()}
     <label>${t("turnContent")}</label>
     <textarea id="turn-text" style="min-height:130px" placeholder="${t("turnContentPh")}"></textarea>
-    <div class="btnrow"><button class="primary" id="turn-save">记录</button><button id="turn-cancel" data-i18n="cancel"></button></div>`);
+    <div class="btnrow"><button class="primary" id="turn-save">${t("turnRecord")}</button><button id="turn-cancel" data-i18n="cancel"></button></div>`);
   $("turn-cancel").onclick = closeModal;
   $("turn-save").onclick = async ()=>{
     const text = $("turn-text").value;
-    if (!text.trim()){ toast("内容不能为空", true); return; }
+    if (!text.trim()){ toast(t("turnContentEmpty"), true); return; }
     const speaker = $("turn-agent").value.trim() || "user";
     try {
       await api(`/api/graph/${current.id}/convo`, { method: "POST", body: JSON.stringify({
         op: "record", agent: speaker, text, status: "done", type: "turn", parentId,
         edgeType: fork ? "branches" : "follows",
       }) });
-      closeModal(); await reload(false); toast(fork ? "已分叉出一支" : "已插入一轮");
+      closeModal(); await reload(false); toast(fork ? t("turnForked") : t("turnInserted"));
     } catch (e){ toast(e.message, true); }
   };
 }
@@ -1969,27 +1994,27 @@ function renderConvoActions(node){
   const turn = pick("turn:") || "—";
   const isHead = convo?.head === node.id;
   const onMain = convo?.mainline?.has(node.id);
-  meta.innerHTML = `<span>角色 <b>${escapeHtml(role)}</b></span><span>状态 <b>${escapeHtml(status)}</b></span><span>轮次 <b>${escapeHtml(turn)}</b></span>${isHead ? '<span style="color:var(--ok)">● 当前点头</span>' : onMain ? '<span>主线</span>' : '<span style="color:var(--warn)">离支</span>'}`;
+  meta.innerHTML = `<span>${t("convoRole")} <b>${escapeHtml(role)}</b></span><span>${t("turnStatus")} <b>${escapeHtml(status)}</b></span><span>${t("convoTurnN")} <b>${escapeHtml(turn)}</b></span>${isHead ? `<span style="color:var(--ok)">${t("convoIsHead")}</span>` : onMain ? `<span>${t("convoMain")}</span>` : `<span style="color:var(--warn)">${t("convoOff")}</span>`}`;
   row.innerHTML = `
-    <button data-a="continue" class="primary">▶ 从这里继续</button>
-    <button data-a="branch">⑂ 分叉一轮</button>
-    <button data-a="merge">⋈ 合并</button>
-    <button data-a="done">✓ 标完成</button>
-    <button data-a="attach">📎 附件</button>
-    <button data-a="locate">⊙ 定位</button>`;
+    <button data-a="continue" class="primary">${t("actContinue")}</button>
+    <button data-a="branch">${t("actBranch")}</button>
+    <button data-a="merge">${t("actMerge")}</button>
+    <button data-a="done">${t("actDone")}</button>
+    <button data-a="attach">${t("actAttach")}</button>
+    <button data-a="locate">${t("actLocate")}</button>`;
   const post = async (body)=>{ try { await api(`/api/graph/${current.id}/convo`, { method: "POST", body: JSON.stringify(body) }); await reload(false); } catch (e){ toast(e.message, true); } };
   row.querySelectorAll("button").forEach((b)=>{
     b.onclick = async ()=>{
       const a = b.dataset.a;
-      if (a === "continue"){ await post({ op: "branch", nodeId: node.id }); toast("已设为当前点头"); }
+      if (a === "continue"){ await post({ op: "branch", nodeId: node.id }); toast(t("headSet")); }
       else if (a === "branch"){ recordTurnAt(node.id, true); }
       else if (a === "merge"){
         const sel = [...multiSel];
         const sources = sel.length >= 2 ? sel : (convo?.leaves ?? []);
-        if (sources.length < 2){ toast("至少需要 2 条分支", true); return; }
-        await post({ op: "merge", sources, label: "汇合" }); toast("已汇合");
+        if (sources.length < 2){ toast(t("needBranches"), true); return; }
+        await post({ op: "merge", sources, label: t("mergeLabel") }); toast(t("mergedDone"));
       }
-      else if (a === "done"){ await post({ op: "resolve", nodeId: node.id, status: "done" }); toast("已标完成"); }
+      else if (a === "done"){ await post({ op: "resolve", nodeId: node.id, status: "done" }); toast(t("markedDone")); }
       else if (a === "attach"){ addAttachment(node.id); }
       else if (a === "locate"){ focusNode(node); }
     };
@@ -2069,8 +2094,8 @@ function renderConvoPanel(){
   if (!isConvo()){ panel.hidden = true; return; }
   panel.hidden = false;
   const headNode = convo?.head ? nodeById(convo.head) : null;
-  $("convoStats").textContent = `主线 ${convo?.mainline?.size ?? 0} · 开放 ${convo?.leaves?.length ?? 0} · 待办 ${(current.conversation?.runtime?.awaiting ?? []).length}`;
-  $("convoHeadLine").innerHTML = `<b>当前点头</b>${headNode ? escapeHtml(String(headNode.label).slice(0, 60)) : "—"}`;
+  $("convoStats").textContent = t("convoStats").replace("{a}", convo?.mainline?.size ?? 0).replace("{b}", convo?.leaves?.length ?? 0).replace("{c}", (current.conversation?.runtime?.awaiting ?? []).length);
+  $("convoHeadLine").innerHTML = `<b>${t("convoHeadLabel")}</b>${headNode ? escapeHtml(String(headNode.label).slice(0, 60)) : "—"}`;
 
   const post = async (body, tip)=>{
     try {
@@ -2080,30 +2105,30 @@ function renderConvoPanel(){
     } catch (e){ toast(e.message, true); }
   };
   $("convoHead").onclick = ()=>{
-    if (selected?.kind !== "node"){ toast(LANG === "en" ? "Select a node first" : "请先选中一个节点", true); return; }
-    post({ op: "branch", nodeId: selected.id }, LANG === "en" ? "Head moved" : "已设为当前点头");
+    if (selected?.kind !== "node"){ toast(t("pickNodeFirst"), true); return; }
+    post({ op: "branch", nodeId: selected.id }, t("headSet"));
   };
   $("convoMerge").onclick = ()=>{
     const sel = [...multiSel];
     const sources = sel.length >= 2 ? sel : (convo?.leaves ?? []);
-    if (sources.length < 2){ toast(LANG === "en" ? "Need 2+ branches" : "至少需要 2 条分支", true); return; }
-    post({ op: "merge", sources, label: LANG === "en" ? "Merge" : "汇合" }, LANG === "en" ? "Merged" : "已汇合");
+    if (sources.length < 2){ toast(t("needBranches"), true); return; }
+    post({ op: "merge", sources, label: t("mergeLabel") }, t("mergedDone"));
   };
   $("convoThreads").onclick = ()=>{
     const list = (convo?.leaves ?? []).map((id)=> `· ${String(nodeById(id)?.label ?? id).slice(0, 46)}  (${id})`).join("\n");
-    alert(`${LANG === "en" ? "Open threads" : "开放分支"} (${(convo?.leaves ?? []).length})\n\n${list || "—"}`);
+    alert(`${t("convoThreadsN").replace("{n}", (convo?.leaves ?? []).length)}\n\n${list || "—"}`);
   };
   $("convoNext").onclick = async ()=>{
     try {
       const r = await api(`/api/graph/${current.id}/convo?view=next`);
-      alert(`下一步该谁产出：${r.nextSpeaker ?? "—"}\n理由：${r.reason}\n轮次：${r.round}\n拓扑：${r.topology}\n待办：${(r.awaiting ?? []).join(", ") || "—"}\n\n— 应发送的上下文 —\n${(r.contextText ?? "").slice(0, 900)}`);
+      alert(`${t("convoNextHead")}：${r.nextSpeaker ?? "—"}\n${t("convoReason")}：${r.reason}\n${t("convoTurnN")}：${r.round}\n${t("convoTopology")}：${r.topology}\n${t("convoAwaiting")}：${(r.awaiting ?? []).join(", ") || "—"}\n\n${t("convoCtx")}\n${(r.contextText ?? "").slice(0, 900)}`);
     } catch (e){ toast(e.message, true); }
   };
   $("convoPending").onclick = async ()=>{
     try {
       const r = await api(`/api/graph/${current.id}/convo?view=pending`);
       const list = (r.pending ?? []).map((x)=> `· [${x.status}] ${x.agent ?? "?"} — ${String(x.label).slice(0, 40)}  (${x.id})`).join("\n");
-      alert(`${LANG === "en" ? "Pending" : "待办分支"} (${(r.pending ?? []).length})\n\n${list || "—"}`);
+      alert(`${t("convoPendingN").replace("{n}", (r.pending ?? []).length)}\n\n${list || "—"}`);
     } catch (e){ toast(e.message, true); }
   };
   $("convoLinear").onclick = async ()=>{
@@ -2356,6 +2381,7 @@ function renderEdges(){
       if (next !== null) patchEdge(edge.id, { label: next });
     });
   });
+  applyDepHighlight();   // 边 DOM 重建后立刻补写依赖高亮类（幂等；render() 末尾的调用保持不变）
 }
 
 /* --- 节点（agent-flow 卡片解剖 + 自定义三色/图标/状态） --- */
@@ -2368,13 +2394,14 @@ function statusMark(status){
 }
 /** 摘要清洗：卡片上只显示可读文本，不留 LaTeX 噪声 */
 function cleanExcerpt(text){
-  let t = String(text ?? "");
-  t = t.replace(/\$\$[\s\S]*?\$\$/g, " ⟨公式⟩ ");          // 显示公式
-  t = t.replace(/\$[^$]*?\$/g, " ⟨公式⟩ ");                 // 行内公式
-  t = t.replace(/\\[a-zA-Z]+\s*\{([^{}]*)\}/g, "$1");      // \cmd{内容} → 内容
-  t = t.replace(/\\[a-zA-Z]+/g, " ");                        // 残余命令名
-  t = t.replace(/[{}]/g, "").replace(/\s{2,}/g, " ").trim();
-  return t;
+  let s = String(text ?? "");
+  const ph = ` ${t("formulaPlaceholder")} `;   // 本地变量改名 s，腾出 t() 做翻译
+  s = s.replace(/\$\$[\s\S]*?\$\$/g, ph);       // 显示公式
+  s = s.replace(/\$[^$]*?\$/g, ph);             // 行内公式
+  s = s.replace(/\\[a-zA-Z]+\s*\{([^{}]*)\}/g, "$1");      // \cmd{内容} → 内容
+  s = s.replace(/\\[a-zA-Z]+/g, " ");                        // 残余命令名
+  s = s.replace(/[{}]/g, "").replace(/\s{2,}/g, " ").trim();
+  return s;
 }
 
 document.addEventListener("click", (e)=>{
@@ -2406,10 +2433,10 @@ function openGroupMenu(group, cx, cy){
   const members = (group.members ?? []).map((id)=> nodeById(id)).filter(Boolean);
   const menu = document.createElement("div");
   menu.className = "ctxmenu"; menu.id = "ctxmenu";
-  menu.innerHTML = `<div class="cm-title">${escapeHtml(String(group.label).slice(0, 30))} · ${members.length} 张</div>
-    <button data-a="refit">⤢ 重新贴合内容</button>
-    <button data-a="pin">📌 记住当前几何</button>
-    <button data-a="fit">⊙ 聚焦到该组</button>`;
+  menu.innerHTML = `<div class="cm-title">${escapeHtml(String(group.label).slice(0, 30))} · ${t("cardsCount").replace("{n}", members.length)}</div>
+    <button data-a="refit">${t("groupRefitMenu")}</button>
+    <button data-a="pin">${t("groupPinMenu")}</button>
+    <button data-a="fit">⊙ ${t("groupFocus")}</button>`;
   document.body.appendChild(menu);
   const r0 = menu.getBoundingClientRect();
   menu.style.left = Math.min(cx, window.innerWidth - r0.width - 8) + "px";
@@ -2425,12 +2452,12 @@ function openGroupMenu(group, cx, cy){
   };
   menu.querySelector('[data-a="refit"]').onclick = ()=>{
     closeCtxMenu();
-    commit(null, "已取消固定，按内容自动贴合");
+    commit(null, t("groupRefit"));
   };
   menu.querySelector('[data-a="pin"]').onclick = ()=>{
     closeCtxMenu();
     const b = groupGeom(members);
-    commit({ x: b.minX, y: b.minY, w: b.w, h: b.h }, "已固定当前几何");
+    commit({ x: b.minX, y: b.minY, w: b.w, h: b.h }, t("groupPinNow"));
   };
   menu.querySelector('[data-a="fit"]').onclick = ()=>{
     closeCtxMenu();
@@ -2499,7 +2526,7 @@ function paintNodeEl(el, node){
     ? `<u class="thumbs">${imgs.slice(0, 2).map((a, i)=> `<span class="th" data-a="${i}"><img loading="lazy" decoding="async" src="${thumbSrc(a)}" alt=""></span>`).join("")}${imgs.length > 2 ? `<span class="th more">+${imgs.length - 2}</span>` : ""}</u>`
     : "";
   el.innerHTML = `<div class="card${(document.body.classList.contains("show-thumbs") && imgs.length) ? " has-thumb" : ""}" style="--n-fill:${node.fill};--n-border:${node.border};--n-text:${node.textColor}">
-      <i class="k">${escapeHtml(node.icon ?? "")} ${escapeHtml(typeLabel(node.type))}${others > 0 ? ` <em class="att">📎${others}</em>` : ""}${imgs.length ? ` <em class="att" title="${imgs.length} 张图（双击卡片看大图）">🖼${imgs.length}</em>` : ""}${openTag ? ` <em class="jump">↗</em>` : ""}</i>
+      <i class="k">${escapeHtml(node.icon ?? "")} ${escapeHtml(typeLabel(node.type))}${others > 0 ? ` <em class="att">📎${others}</em>` : ""}${imgs.length ? ` <em class="att" title="${LANG === "en" ? `${imgs.length} image(s) — double-click the card to zoom` : `${imgs.length} 张图（双击卡片看大图）`}">🖼${imgs.length}</em>` : ""}${openTag ? ` <em class="jump">↗</em>` : ""}</i>
       <b class="l">${escapeHtml(node.label)} ${xlinkBadgeHtml(node.id)}</b>
       ${excerpt ? `<s class="x">${escapeHtml(excerpt.slice(0, 90))}</s>` : ""}
       ${thumbs}
@@ -2774,7 +2801,6 @@ canvas.addEventListener("pointerdown", (event)=>{
   if (event.button !== 0 || event.target.closest(".node,.controls,.add-wrap,.modal-bg")) return;
   cancelViewAnimation();
   event.preventDefault();
-  select(null);
   const startX = event.clientX, startY = event.clientY, origin = { ...view };
   canvas.classList.add("panning");
   let moved = false;
@@ -2788,6 +2814,8 @@ canvas.addEventListener("pointerdown", (event)=>{
     window.removeEventListener("pointermove", move);
     window.removeEventListener("pointerup", up);
     canvas.classList.remove("panning");
+    // 与画布模式对齐：拖动平移不清选中/高亮，只有原地点击空白才取消
+    if (!moved) select(null);
   };
   window.addEventListener("pointermove", move);
   window.addEventListener("pointerup", up);
@@ -3367,6 +3395,7 @@ function setDepEnabled(on){
   setToggle("btnDep", depEnabled);
   applyDepHighlight();
   renderDepLegend();
+  if (CV.on) cvDraw();   // 画布模式：高亮开关也要立刻反映到画布明暗
 }
 $("btnDep") && ($("btnDep").onclick = ()=>{ setDepEnabled(!depEnabled); toast(depEnabled ? t("depOnMsg") : t("depOffMsg")); });
 setToggle("btnDep", depEnabled);
@@ -3383,8 +3412,8 @@ $("btnThumbs") && ($("btnThumbs").onclick = ()=>{
 });
 $("noteCopy") && ($("noteCopy").onclick = ()=>{
   const v = $("n-note")?.value ?? "";
-  if (!v){ toast("无备注"); return; }
-  navigator.clipboard?.writeText(v); toast("已复制备注原文");
+  if (!v){ toast(t("noteEmpty")); return; }
+  navigator.clipboard?.writeText(v); toast(t("noteCopied"));
 });
 $("rd-close") && ($("rd-close").onclick = closeReader);
 $("rd-search") && ($("rd-search").addEventListener("input", ()=>{ renderReader(); }));
