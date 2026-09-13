@@ -69,6 +69,12 @@ function applyLang(){
   if (typeof buildTypeSelects === "function") buildTypeSelects();
   if (typeof localizeStaticSelects === "function") localizeStaticSelects();
   if (typeof render === "function") render();
+  // 左侧栏与检查器里的动态文案不在 data-i18n 扫描范围内，必须显式重建，
+  // 否则切语言后要等下一次操作才会生效（文件树 / 节点列表 / 类型筛选 / 检查器面板 / 阅读模式）。
+  if (typeof renderVault === "function") renderVault();
+  if (typeof rdOpen !== "undefined" && rdOpen && typeof renderReader === "function") renderReader();
+  if (typeof selGroupId !== "undefined" && selGroupId && typeof selectGroup === "function") selectGroup(selGroupId);
+  else if (selected && typeof select === "function") select(selected.kind, selected.id);
   const noteEl = $("n-note");   // 语言切换会重排 inspector：备注框高度必须跟着内容重算
   if (noteEl) autoGrow(noteEl);
 }
@@ -588,7 +594,7 @@ function render(){
   $("gstat").textContent = current.valid ? `✓ ${current.nodes.length}● / ${current.edges.length}→` : `⚠ ${current.issues.length}`;
   $("gstat").className = "badge " + (current.valid ? (current.warnings.length ? "warn" : "ok") : "err");
   // 列表与筛选只在“影响列表的内容”变化时重建（每次 render 重建 70+ 行 DOM 是卡顿主因之一）
-  const listSig = `${current.id}|${current.nodes.length}|${current.edges.length}|${typeFilter ?? ""}|${$("globalSearch")?.value ?? ""}|${current.revision ?? ""}`;
+  const listSig = `${current.id}|${current.nodes.length}|${current.edges.length}|${typeFilter ?? ""}|${$("globalSearch")?.value ?? ""}|${current.revision ?? ""}|${LANG}`;
   if (listSig !== window.__listSig){
     window.__listSig = listSig;
     renderDocList();
@@ -1471,7 +1477,7 @@ function renderDepList(node){
     const shown = list.slice(0, CAP), rest = list.length - shown.length;
     return `<div class="card-deps" style="margin-top:6px"><span class="dlab">${label}</span>`
       + shown.map((n)=> chip(n, cls)).join("")
-      + (rest > 0 ? `<span class="dep more" data-more="${cls}">+${rest} 展开</span>` : "")
+      + (rest > 0 ? `<span class="dep more" data-more="${cls}">${t("depMore").replace("{n}", rest)}</span>` : "")
       + `</div>`
       + (rest > 0 ? `<div class="card-deps dep-rest" data-rest="${cls}" hidden>${list.slice(CAP).map((n)=> chip(n, cls)).join("")}</div>` : '');
   };
@@ -1540,19 +1546,19 @@ async function openXlinkDialog(node){
   let list = [];
   try { list = await api("/api/graphs"); } catch { list = []; }
   const others = (Array.isArray(list) ? list : []).filter((g)=> g.id !== current.id);
-  openModal(`<h2>链接到其他图</h2>
-    <div class="hint" style="margin:0 0 8px">源节点：<b>${escapeHtml(String(node.label).slice(0, 40))}</b>（${escapeHtml(node.id)}）</div>
-    <label>目标图</label>
+  openModal(`<h2>${t("xlinkDialogTitle")}</h2>
+    <div class="hint" style="margin:0 0 8px">${t("xlinkSource")}：<b>${escapeHtml(String(node.label).slice(0, 40))}</b>（${escapeHtml(node.id)}）</div>
+    <label>${t("xlinkTargetGraph")}</label>
     <select id="xl-graph">${others.map((g)=> `<option value="${escapeHtml(g.id)}">${escapeHtml(g.name ?? g.id)}</option>`).join("")}</select>
-    <label>搜索目标节点</label>
+    <label>${t("xlinkSearchNode")}</label>
     <input id="xl-q" data-ph="xlinkFilterPh" autocomplete="off">
     <div id="xl-nodes" class="xl-nodes"></div>
     <label data-i18n="xlinkWhyLabel"></label>
     <textarea id="xl-why" rows="3" data-ph="xlinkWhyPh"></textarea>
     <div class="row2" style="margin-top:6px">
-      <div><label>方向</label><select id="xl-dir">
-        <option value="to">我依赖对方（对方是依据）</option>
-        <option value="from">对方依赖我（我提供依据）</option>
+      <div><label>${t("xlinkDirection")}</label><select id="xl-dir">
+        <option value="to">${t("xlinkDirTo")}</option>
+        <option value="from">${t("xlinkDirFrom")}</option>
       </select></div>
       <div></div>
     </div>
@@ -1609,7 +1615,7 @@ function renderXlinks(node){
     ? [...hit.uses.map((it)=> ({ ...it, dir: t("xlinkDirUses") })), ...hit.provides.map((it)=> ({ ...it, dir: t("xlinkDirProvides") }))]
     : [];
   box.innerHTML = `<div class="insp-sec-head" style="margin-top:10px">
-      <label>跨图依赖（${rows.length}）</label>
+      <label>${t("xlinkSection").replace("{n}", rows.length)}</label>
       <button class="mini" id="xlAdd" data-i18n="xlinkAdd"></button>
     </div>`
     + (rows.length ? `<div class="xlink-list">${rows.map((it, i)=> `
@@ -1622,7 +1628,7 @@ function renderXlinks(node){
           <div class="t">${it.broken ? `<i>${t("xlinkBroken")}</i>` : escapeHtml(String(it.otherNodeLabel ?? it.other.node).slice(0, 46))}</div>
           ${it.why ? `<div class="why">${escapeHtml(String(it.why).slice(0, 200))}</div>` : ""}
         </div>`).join("")}</div>`
-      : '<div class="dep-none" style="margin:4px 0 8px">${t("xlinkNone")}</div>');
+      : `<div class="dep-none" style="margin:4px 0 8px">${t("xlinkNone")}</div>`);
   $("xlAdd").onclick = ()=> openXlinkDialog(node);
   box.querySelectorAll(".xlink-item").forEach((el)=>{
     el.onclick = (ev)=>{
@@ -2167,7 +2173,7 @@ function renderConvoPanel(){
     $("turn-cancel").onclick = closeModal;
     $("turn-save").onclick = async ()=>{
       const text = $("turn-text").value;
-      if (!text.trim()){ toast("内容不能为空", true); return; }
+      if (!text.trim()){ toast(t("turnContentEmpty"), true); return; }
       const parent = $("turn-parent").value.trim();
       const isAgentMode = (current.conversation?.agents ?? []).length > 0;
       await post(isAgentMode
@@ -3545,7 +3551,7 @@ $("btnImport").onclick = ()=>{
     <div id="imp-af" style="display:none"><label>${LANG === "zh" ? "agent-flow 工作流 id（读取 ~/.agent-flow/flows/<id>/flow.json）" : "agent-flow workflow id (reads ~/.agent-flow/flows/<id>/flow.json)"}</label>
       <input id="imp-afid" placeholder="my-workflow-a1b2" /></div>
     <div id="imp-text"><label>${LANG === "zh" ? "粘贴 Mermaid flowchart 代码或 OmniFlow JSON" : "Paste Mermaid flowchart code or OmniFlow JSON"}</label>
-      <textarea id="imp-data" placeholder="flowchart TD&#10;  A[开始] --> B[处理]&#10;  B -->|是| C[结束]"></textarea></div>
+      <textarea id="imp-data" placeholder="${LANG === "zh" ? "flowchart TD&#10;  A[开始] --> B[处理]&#10;  B -->|是| C[结束]" : "flowchart TD&#10;  A[Start] --> B[Process]&#10;  B -->|yes| C[End]"}"></textarea></div>
     <label>${t("name")}</label><input id="imp-name" />
     <div class="btnrow"><button class="primary" id="imp-go">${LANG === "zh" ? "导入" : "Import"}</button></div>`);
   let fmt = "mermaid";
