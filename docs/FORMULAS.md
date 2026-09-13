@@ -88,13 +88,15 @@ Use `\ce{...}` (the mhchem extension is bundled):
 
 ## 6. Troubleshooting checklist
 
-1. **Are the braces balanced?** — the most common cause. `\frac{a}{b` fails the whole fragment.
-2. **Did you use an undefined macro?** — only KaTeX built-ins plus the substitutions in the table above are supported.
-3. **Did you nest `$`?** — `$a $b$ c$` splits wrongly; never write `$` inside a formula.
-4. **Is something attached after `_` or `^`?** — `x_1` is fine, a bare `x_` is not.
-5. **Is `\tag` inside inline `$...$`?** — it is auto-converted now; if it still fails, switch to `$$...$$`.
-6. **Matrix / system environments**: `pmatrix`, `bmatrix`, `cases` and `array` are supported; use `\begin{smallmatrix}` inline.
-7. **Still broken?** — the formula is shown **verbatim** with a corner badge `⚠ LaTeX not rendered (source kept)`. Nothing is lost; fix it using the list above.
+1. **Are the delimiters closed?** — an unclosed `$`, `$$`, `\(` or `\[` silently swallows the rest of the text:
+   it shows as plain prose and nothing is reported. Write `\$` for a literal dollar sign.
+2. **Are the braces balanced?** — the next most common cause. `\frac{a}{b` fails the whole fragment.
+3. **Did you use an undefined macro?** — only KaTeX built-ins plus the substitutions in the table above are supported.
+4. **Did you nest `$`?** — `$a $b$ c$` splits wrongly; never write `$` inside a formula.
+5. **Is something attached after `_` or `^`?** — `x_1` is fine, a bare `x_` is not.
+6. **Is `\tag` inside inline `$...$`?** — it is auto-converted now; if it still fails, switch to `$$...$$`.
+7. **Matrix / system environments**: `pmatrix`, `bmatrix`, `cases` and `array` are supported; use `\begin{smallmatrix}` inline.
+8. **Still broken?** — the formula is shown **verbatim** with a corner badge `⚠ LaTeX not rendered (source kept)`. Nothing is lost; fix it using the list above.
 
 ---
 
@@ -106,4 +108,5 @@ Use `\ce{...}` (the mhchem extension is bundled):
 | `x^2^3` | `x^{2^3}` |
 | `\sqrt[3}x` | `\sqrt[3]{x}` |
 | `\lim_{x→0}` | `\lim_{x\to 0}` |
+| `$\iff$ $` (unclosed) | `$\iff$` — close every `$` |
 | `\ce{2H2+O2->2H2O}` mixed with prose inside `$…$` | write `\ce{...}` on its own, prose outside the formula |
