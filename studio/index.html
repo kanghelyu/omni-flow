@@ -147,6 +147,54 @@ main { flex: 1; display: flex; min-width: 0; min-height: 0; }
 .splitter::after { content: ""; width: 3px; height: 42px; border-radius: 99px; background: var(--border); box-shadow: 0 -7px 0 var(--border), 0 7px 0 var(--border); }
 .splitter:hover::before { background: var(--accent); }
 
+/* ===== 阅读模式（对照 chapter2_cards.html：章节分组 + 可折叠卡片 + 依赖 chip） ===== */
+#reader { position: fixed; inset: 0; z-index: 70; background: var(--bg); display: flex; flex-direction: column; }
+#reader[hidden] { display: none; }
+#reader .rd-bar { display: flex; gap: 10px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--panel); }
+#reader .rd-bar h2 { margin: 0; font-size: 14px; font-weight: 650; }
+#reader .rd-bar .grow { flex: 1; }
+#reader .rd-bar input { width: 240px; padding: 5px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 12px; }
+#reader .rd-bar button { font-size: 11.5px; padding: 4px 10px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg-soft); color: var(--text); cursor: pointer; }
+#reader .rd-body { flex: 1; overflow: auto; padding: 18px 22px 60px; }
+#reader .rd-sec { margin: 0 0 22px; }
+#reader .rd-sec-head { display: flex; gap: 10px; align-items: baseline; padding: 6px 0 8px; border-bottom: 1px solid var(--border); margin-bottom: 10px; }
+#reader .rd-sec-code { font-size: 12px; font-weight: 650; color: var(--accent); }
+#reader .rd-sec-name { font-size: 13px; font-weight: 600; flex: 1; }
+#reader .rd-sec-cnt { font-size: 11px; color: var(--text-dim); }
+#reader .rd-card { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; background: var(--panel); overflow: hidden; }
+#reader .rd-card[open] { box-shadow: 0 4px 18px rgba(0,0,0,.18); }
+#reader .rd-card > summary { list-style: none; cursor: pointer; padding: 9px 12px; display: flex; gap: 9px; align-items: center; }
+#reader .rd-card > summary::-webkit-details-marker { display: none; }
+#reader .rd-card > summary:hover { background: var(--bg-soft); }
+#reader .rd-badge { font-size: 10px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-dim); flex: none; }
+#reader .rd-title { font-size: 12.8px; font-weight: 600; flex: 1; }
+#reader .rd-num { font-size: 11px; color: var(--text-dim); }
+#reader .rd-page { font-size: 10.5px; color: var(--text-dim); flex: none; }
+#reader .rd-in { padding: 0 12px 12px; }
+#reader .rd-deps { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+#reader .rd-deps .dlab { font-size: 10.5px; color: var(--text-dim); align-self: center; }
+#reader .rd-dep { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--bg-soft); color: var(--text); cursor: pointer; }
+#reader .rd-dep:hover { border-color: var(--accent); color: var(--accent); }
+#reader .rd-note { font-size: 12.5px; line-height: 1.75; }
+#reader .rd-note .katex-display { margin: 10px 0; overflow-x: auto; }
+#reader .rd-thumbs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+#reader .rd-empty { color: var(--text-dim); font-size: 12.5px; }
+
+/* ===== 跨图链接角标 ===== */
+.card .xlink { display: inline-flex; gap: 3px; align-items: center; font-size: 9.5px; padding: 0 5px;
+  border-radius: 999px; border: 1px solid currentColor; opacity: .95; cursor: pointer; }
+.card .xlink.provides { color: #F59E0B; }
+.card .xlink.uses { color: #22D3EE; }
+.xlink-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.xlink-item { border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; background: var(--bg-soft); cursor: pointer; }
+.xlink-item:hover { border-color: var(--accent); }
+.xlink-item .h { display: flex; gap: 6px; align-items: center; font-size: 11px; }
+.xlink-item .h b { font-weight: 600; }
+.xlink-item .h .badge { font-size: 9.5px; padding: 0 5px; border-radius: 999px; border: 1px solid currentColor; }
+.xlink-item .why { font-size: 10.5px; color: var(--text-dim); margin-top: 4px; line-height: 1.5; }
+.node.ghost .card { border-style: dashed !important; opacity: .78; }
+
 /* ===== 右键菜单（点击运行的对话流程） ===== */
 .ctxmenu {
   position: fixed; z-index: 80; min-width: 176px; padding: 5px;
@@ -379,6 +427,17 @@ main { flex: 1; display: flex; min-width: 0; min-height: 0; }
 </style>
 </head>
 <body>
+  <div id="reader" hidden>
+    <div class="rd-bar">
+      <h2>📖 <span data-i18n="reader">阅读模式</span></h2>
+      <span class="grow"></span>
+      <input id="rd-search" placeholder="搜索卡片…">
+      <button id="rd-expand">全部展开</button>
+      <button id="rd-collapse">全部折叠</button>
+      <button id="rd-close">关闭 (Esc)</button>
+    </div>
+    <div class="rd-body" id="rd-body"></div>
+  </div>
   <header class="topbar">
     <span class="logo"><span class="spark">◈</span>OmniFlow <span class="sub" id="ui-tag">万用流程图</span></span>
     <span class="gs-wrap">
@@ -392,6 +451,7 @@ main { flex: 1; display: flex; min-width: 0; min-height: 0; }
     <button id="btnExport" data-i18n="share">📤 分享</button>
     <span class="sep"></span>
     <button id="btnValidate" data-i18n="validate">校验</button>
+    <button id="btnReader" title="阅读模式：按章节列卡片，可折叠、带依赖跳转">📖 阅读</button>
     <button id="btnAnalyze" data-i18n="analyze">分析</button>
     <button id="btnLayout" data-i18n="layout">布局</button>
     <span class="sep"></span>
@@ -498,6 +558,7 @@ main { flex: 1; display: flex; min-width: 0; min-height: 0; }
             <button class="mini" id="attachAdd" title="添加附件：本地文件路径或 URL（本地文件会复制进图资源目录）">＋ 附件</button>
           </div>
           <div id="attachBox"></div>
+          <div id="xlinkBox" hidden></div>
           <textarea id="n-note" rows="3"></textarea>
           <div id="n-preview" class="note-preview" aria-live="polite"></div>
           <div class="btnrow">
@@ -757,6 +818,7 @@ function select(kind, id){
       renderNotePreview();
       depFocus = depEnabled ? computeDeps(node.id) : null;
       renderAttachments(node);
+      renderXlinks(node);
       renderConvoActions(node);
     }
   } else {
@@ -1054,6 +1116,7 @@ function render(){
   $("gstat").textContent = current.valid ? `✓ ${current.nodes.length}● / ${current.edges.length}→` : `⚠ ${current.issues.length}`;
   $("gstat").className = "badge " + (current.valid ? (current.warnings.length ? "warn" : "ok") : "err");
   renderDocList(); renderGroups(); renderEdges(); renderNodes();
+  loadCrosslinks().then(()=> render());   // 加载后重绘角标（不阻塞渲染）
   computeConvo();
   applyDepHighlight();
   applyConvoToCanvas();
@@ -1072,6 +1135,153 @@ function scheduleLiveFrame(){
   if (liveFrameQueued) return;
   liveFrameQueued = true;
   requestAnimationFrame(()=>{ liveFrameQueued = false; updateEdgesLive(); updateConnLive(); updateGroupsLive(); });
+}
+
+
+
+/* ================= 阅读模式：章节分组 + 可折叠卡片 + 依赖 chip ================= */
+let rdOpen = false;
+
+function openReader(){
+  if (!current) return;
+  rdOpen = true;
+  $("reader").hidden = false;
+  renderReader();
+}
+function closeReader(){ rdOpen = false; $("reader").hidden = true; }
+
+/** 卡片所属小节（sec: 标签优先，其次分组） */
+function sectionOfNode(node){
+  const tag = (node.tags ?? []).map(String).find((t)=> t.startsWith("sec:"));
+  if (tag) return tag.slice(4);
+  const g = (current.groups ?? []).find((x)=> (x.members ?? []).includes(node.id));
+  return g ? g.label : "（未分节）";
+}
+
+function renderReader(){
+  const body = $("rd-body");
+  if (!current){ body.innerHTML = '<div class="rd-empty">没有打开的图</div>'; return; }
+  const q = ($("rd-search")?.value ?? "").trim().toLowerCase();
+  const noteOf = (id)=> String(current.notes?.[id] ?? "");
+  const bySec = new Map();
+  for (const n of current.nodes){
+    if (q && !(`${n.label} ${noteOf(n.id)}`.toLowerCase().includes(q))) continue;
+    const sec = sectionOfNode(n);
+    if (!bySec.has(sec)) bySec.set(sec, []);
+    bySec.get(sec).push(n);
+  }
+  const typeColor = (t)=> (current.nodeTypes?.[t]?.border) ?? "var(--border)";
+  const secCode = (s)=> (String(s).match(/^[\d.]+|^\(?[a-z]\)/i) ?? [String(s).slice(0, 4)])[0];
+
+  body.innerHTML = bySec.size ? [...bySec.entries()].map(([sec, list])=> {
+    const cards = list.map((n)=>{
+      const deps = current.edges.filter((e)=> e.target === n.id).map((e)=> ({ e, node: current.nodes.find((x)=> x.id === e.source) })).filter((x)=> x.node);
+      const uses = current.edges.filter((e)=> e.source === n.id).map((e)=> ({ e, node: current.nodes.find((x)=> x.id === e.target) })).filter((x)=> x.node);
+      const xl = xlinks.byNode.get(n.id);
+      const page = (n.tags ?? []).map(String).find((t)=> t.startsWith("page:"))?.slice(5);
+      const thumbs = (n.attachments ?? []).slice(0, 4).map((a)=>{
+        const src = /^https?:|^data:/i.test(a.src) ? a.src : `/api/graph/${encodeURIComponent(current.id)}/asset/${encodeURIComponent(String(a.src).replace(/^assets\//, ""))}`;
+        return `<span class="attach-thumb" style="width:54px;height:72px" data-img="${escapeHtml(src)}"><img src="${src}" alt=""><span class="tag">${a.page ? "p." + a.page : ""}</span></span>`;
+      }).join("");
+      return `<details class="rd-card">
+        <summary>
+          <span class="rd-badge" style="color:${typeColor(n.type)}">${escapeHtml(typeLabel(n.type))}</span>
+          <span class="rd-title">${escapeHtml(n.label)}</span>
+          <span class="rd-num">${escapeHtml(n.id)}</span>
+          ${xl ? `<span class="xlink ${xl.provides.length ? "provides" : "uses"}">${xl.provides.length ? "⇱" + xl.provides.length : ""}${xl.uses.length ? "⇲" + xl.uses.length : ""}</span>` : ""}
+          <span class="rd-page">${page ? "第 " + page + " 页" : ""}</span>
+        </summary>
+        <div class="rd-in">
+          ${deps.length ? `<div class="rd-deps"><span class="dlab">依赖</span>${deps.map((d)=> `<span class="rd-dep" data-node="${escapeHtml(d.node.id)}">${escapeHtml(d.node.label)}</span>`).join("")}</div>` : ""}
+          ${uses.length ? `<div class="rd-deps"><span class="dlab">被用于</span>${uses.map((d)=> `<span class="rd-dep" data-node="${escapeHtml(d.node.id)}">${escapeHtml(d.node.label)}</span>`).join("")}</div>` : ""}
+          <div class="rd-note" data-note="${escapeHtml(n.id)}"></div>
+          ${thumbs ? `<div class="rd-thumbs">${thumbs}</div>` : ""}
+        </div>
+      </details>`;
+    }).join("");
+    return `<section class="rd-sec">
+      <div class="rd-sec-head">
+        <span class="rd-sec-code">${escapeHtml(secCode(sec))}</span>
+        <span class="rd-sec-name">${escapeHtml(sec)}</span>
+        <span class="rd-sec-cnt">${list.length} 张</span>
+      </div>${cards}</section>`;
+  }).join("") : '<div class="rd-empty">没有匹配的卡片</div>';
+
+  // 备注：懒渲染（展开时才编译公式，避免 87 张卡一次性重排）
+  body.querySelectorAll("details.rd-card").forEach((d)=>{
+    d.addEventListener("toggle", ()=>{
+      if (!d.open) return;
+      const host = d.querySelector(".rd-note");
+      if (host.dataset.done) return;
+      const id = host.dataset.note;
+      renderMathIn(host, noteOf(id));
+      host.dataset.done = "1";
+    }, { once: true });
+  });
+  body.querySelectorAll(".rd-dep").forEach((el)=>{
+    el.onclick = ()=>{ closeReader(); select("node", el.dataset.node); fitNode(current.nodes.find((n)=> n.id === el.dataset.node)); };
+  });
+  body.querySelectorAll(".rd-thumbs .attach-thumb").forEach((el)=>{
+    el.onclick = ()=> openLightbox([{ src: el.dataset.img.replace(/^.*\/asset\//, "assets/"), label: "" }], 0);
+  });
+}
+
+/* ================= 跨图链接（单一事实源：<root>/crosslinks.json） ================= */
+let xlinks = { items: [], byNode: new Map() };
+
+async function loadCrosslinks(){
+  if (!current?.id){ xlinks = { items: [], byNode: new Map() }; return; }
+  try {
+    const r = await api(`/api/crosslinks?graph=${encodeURIComponent(current.id)}`);
+    const byNode = new Map();
+    for (const it of (r.links ?? [])){
+      const key = it.self?.node;
+      if (!key) continue;
+      if (!byNode.has(key)) byNode.set(key, { provides: [], uses: [] });
+      byNode.get(key)[it.view === "provides" ? "provides" : "uses"].push(it);
+    }
+    xlinks = { items: r.links ?? [], byNode };
+  } catch { xlinks = { items: [], byNode: new Map() }; }
+}
+
+/** 跳到对端图的某个节点（深链已支持 #图id/节点id） */
+function jumpToLink(it){
+  const g = it.other?.graph, n = it.other?.node;
+  if (!g || !n) return;
+  location.hash = `#${encodeURIComponent(g)}/${encodeURIComponent(n)}`;
+}
+
+/** 卡片上的角标 HTML */
+function xlinkBadgeHtml(nodeId){
+  const hit = xlinks.byNode.get(nodeId);
+  if (!hit) return "";
+  const parts = [];
+  if (hit.provides.length) parts.push(`<span class="xlink provides" data-x="provides" title="外部引用：本卡支撑了别的图的 ${hit.provides.length} 个结论">⇱${hit.provides.length}</span>`);
+  if (hit.uses.length) parts.push(`<span class="xlink uses" data-x="uses" title="跨图依据：本卡用了别的图的 ${hit.uses.length} 个结论">⇲${hit.uses.length}</span>`);
+  return parts.join("");
+}
+
+/** 检查器：跨图链接明细（含数学理由） */
+function renderXlinks(node){
+  const box = $("xlinkBox");
+  if (!box) return;
+  const hit = node ? xlinks.byNode.get(node.id) : null;
+  if (!hit){ box.innerHTML = ""; box.hidden = true; return; }
+  box.hidden = false;
+  const rows = [
+    ...hit.uses.map((it)=> ({ ...it, label: "跨图依据", cls: "uses" })),
+    ...hit.provides.map((it)=> ({ ...it, label: "外部引用", cls: "provides" })),
+  ];
+  box.innerHTML = `<label style="margin-top:8px">跨图链接（${rows.length}）</label>
+    <div class="xlink-list">${rows.map((it, i)=> `
+      <div class="xlink-item" data-i="${i}">
+        <div class="h"><span class="badge" style="color:${it.cls === "uses" ? "#22D3EE" : "#F59E0B"}">${it.label}</span>
+          <b>${escapeHtml(it.other.graph)}</b> · ${escapeHtml(it.other.node)}</div>
+        ${it.why ? `<div class="why">${escapeHtml(String(it.why).slice(0, 220))}</div>` : ""}
+      </div>`).join("")}</div>`;
+  box.querySelectorAll(".xlink-item").forEach((el)=>{
+    el.onclick = ()=> jumpToLink(rows[Number(el.dataset.i)]);
+  });
 }
 
 /* ================= 节点附件（原书页面图 / PDF / 外链） ================= */
@@ -1693,6 +1903,18 @@ function cleanExcerpt(text){
   return t;
 }
 
+document.addEventListener("click", (e)=>{
+  const badge = e.target.closest?.(".card .xlink");
+  if (!badge) return;
+  e.stopPropagation(); e.preventDefault();
+  const card = badge.closest(".node");
+  const id = card?.dataset.id;
+  const hit = xlinks.byNode.get(id);
+  if (!hit) return;
+  const list = badge.dataset.x === "provides" ? hit.provides : hit.uses;
+  if (list.length) jumpToLink(list[0]);
+}, true);
+
 function renderNodes(){
   if (!current){ nodesLayer.innerHTML = ""; return; }
   nodesLayer.innerHTML = "";
@@ -1712,7 +1934,7 @@ function renderNodes(){
     el.innerHTML = `<div class="card" style="--n-fill:${node.fill};--n-border:${node.border};--n-text:${node.textColor}">
       <span class="typebar" style="background:${node.border}"></span>
       <div class="kind"><span>${escapeHtml(node.icon ?? "")}</span><span>${escapeHtml(typeLabel(node.type))}</span>${(node.attachments ?? []).length ? `<span class="att" title="${(node.attachments ?? []).length} 个附件">📎${(node.attachments ?? []).length}</span>` : ""}${openTag ? `<span class="jump" title="${LANG === "en" ? "Double-click to open the linked map" : "双击打开关联图"}">↗</span>` : ""}</div>
-      <div class="nlabel">${escapeHtml(node.label)}</div>
+      <div class="nlabel">${escapeHtml(node.label)} ${xlinkBadgeHtml(node.id)}</div>
       ${excerpt ? `<div class="nexcerpt">${escapeHtml(excerpt.slice(0, 90))}</div>` : ""}
     </div>${statusMark(node.status)}
     <div class="handle t" title="${escapeHtml(t("handleT"))}"></div><div class="handle s" title="${escapeHtml(t("handleS"))}"></div>`;
@@ -2440,6 +2662,12 @@ $("btnValidate").onclick = async ()=>{
     ? `✅ ${LANG === "zh" ? "结构合法" : "Structure OK"}${verdict.warnings.length ? `<br><br>${verdict.warnings.map(escapeHtml).join("<br>")}` : ""}`
     : `❌ ${verdict.issues.map(escapeHtml).join("<br>")}<br><br>${verdict.warnings.map(escapeHtml).join("<br>")}`}</div></div>`);
 };
+$("btnReader") && ($("btnReader").onclick = openReader);
+$("rd-close") && ($("rd-close").onclick = closeReader);
+$("rd-search") && ($("rd-search").addEventListener("input", ()=>{ renderReader(); }));
+$("rd-expand") && ($("rd-expand").onclick = ()=>{ document.querySelectorAll("#rd-body details").forEach((d)=>{ d.open = true; d.dispatchEvent(new Event("toggle")); }); });
+$("rd-collapse") && ($("rd-collapse").onclick = ()=>{ document.querySelectorAll("#rd-body details").forEach((d)=>{ d.open = false; }); });
+document.addEventListener("keydown", (e)=>{ if (e.key === "Escape" && rdOpen) closeReader(); });
 $("btnAnalyze").onclick = ()=>runAnalysis(null);
 /* 布局应用：单一动画路径 —— rAF 插值（livePos 驱动节点/边/组框逐帧跟随），动画期抑制 SSE reload */
 let suppressSSEUntil = 0;
