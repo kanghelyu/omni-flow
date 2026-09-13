@@ -292,7 +292,7 @@ function cmdHelp() {
   import-doc <content_list.json|.md|build_data.py> [--name 名] [--pages 页面图目录] [--folder 路径]  # MinerU/Markdown/人工卡片表 → 图
   import-af <agent-flow-id>                    导入 agent-flow 工作流为图
   studio [--port N] [--no-open]                本地画布（默认 127.0.0.1:4319）
-  mcp                                          MCP 标准服务（stdio，全量 33 个工具）
+  mcp                                          MCP 标准服务（stdio，全量 61 个工具）
   templates                                    内置 + 自定义模板列表
   template-save <图id> [--id --name --desc]     把图沉淀为自定义模板
   template-delete <模板id>                      删除自定义模板
