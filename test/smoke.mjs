@@ -240,8 +240,8 @@ await test("Studio API: create/read/edit/validate/analyze/export/delete end to e
 await test("index.html top-level $() bindings match static ids", async () => {
   const { readFileSync } = await import("node:fs");
   const html = readFileSync(new URL("../studio/index.html", import.meta.url), "utf8");
-  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
-  const htmlPart = html.slice(0, html.indexOf("<script>"));
+  const script = readFileSync(new URL("../studio/app.js", import.meta.url), "utf8");
+  const htmlPart = html;
   const dynamicIds = new Set(["fx-close", "btnFxHelp", "xlAdd", "xl-graph", "xl-q", "xl-nodes", "xl-why", "xl-dir", "xl-save", "xl-cancel", "note-save", "note-edit", "note-close", "note-preview", "depLegend", "depOff", "depBar", "typeFilterBar", "convoHead", "convoMerge", "convoThreads", "convoNext", "convoPending", "convoLinear", "convoSayBtn", "convoStats", "convoHeadLine", "convoPanel",
     "lightbox", "lb-stage", "lb-img", "lb-title", "lb-cap", "lb-prev", "lb-next", "lb-zoomin", "lb-zoomout", "lb-fit", "lb-open", "lb-close",
     "attachBox", "attachAdd", "convo-text", "convo-copy", "convo-close2",
@@ -257,8 +257,7 @@ await test("index.html top-level $() bindings match static ids", async () => {
 // —— 重复顶层声明检查（函数声明后者覆盖前者，是本项目反复踩的坑）——
 await test("index.html has no duplicate top-level declarations", async () => {
   const { readFileSync } = await import("node:fs");
-  const src = readFileSync(new URL("../studio/index.html", import.meta.url), "utf8");
-  const script = src.match(/<script>([\s\S]*)<\/script>/)[1];
+  const script = readFileSync(new URL("../studio/app.js", import.meta.url), "utf8");
   const names = new Map();
   const re = /^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(|^const\s+([A-Za-z_$][\w$]*)\s*=/gm;
   let m;
@@ -322,6 +321,74 @@ await test("SKILL.md has no duplicated section headings", async () => {
   }
   const dup = [...seen.entries()].filter(([, n]) => n > 1).map(([k, n]) => `${k}×${n}`);
   assert.deepEqual(dup, [], `duplicate heading(s) in SKILL.md (an edit was applied more than once): ${dup.join(", ")}`);
+});
+// —— Front-end split invariant: markup stays thin, styles/behaviour live beside it ——
+await test("studio front-end is split (thin index.html + app.css + app.js)", async () => {
+  const { readFileSync, statSync } = await import("node:fs");
+  const dir = new URL("../studio/", import.meta.url);
+  const html = readFileSync(new URL("index.html", dir), "utf8");
+  const css = readFileSync(new URL("app.css", dir), "utf8");
+  const js = readFileSync(new URL("app.js", dir), "utf8");
+  const lines = (t) => t.split("\n").length;
+  assert.ok(lines(html) <= 400, `index.html grew back to ${lines(html)} lines — keep markup only (styles → app.css, behaviour → app.js)`);
+  assert.ok(!/<style>[\s\S]*?\S[\s\S]*?<\/style>/.test(html), "index.html has an inline <style> block — move it to app.css");
+  assert.ok(!/<script>(?![\s\S]*?src=)[\s\S]*?\S[\s\S]*?<\/script>/.test(html), "index.html has an inline <script> block — move it to app.js");
+  assert.ok(/<link rel="stylesheet" href="(?:\.\/)?app\.css">/.test(html), "index.html does not link app.css");
+  assert.ok(/<script src="(?:\.\/)?app\.js"><\/script>/.test(html), "index.html does not load app.js");
+  assert.ok(lines(css) > 200 && lines(js) > 500, "app.css / app.js look truncated");
+  assert.ok(statSync(new URL("app.js", dir)).size > 10000, "app.js is suspiciously small");
+});
+// —— i18n 不变式：键集合一致 + 无重复键 + 可见中文必须走 i18n ——
+await test("i18n dictionaries are complete and duplicate-free", async () => {
+  const { readFileSync } = await import("node:fs");
+  const app = readFileSync(new URL("../studio/app.js", import.meta.url), "utf8");
+  const zh = app.split("const I18N = {\n  zh: { ")[1].split(" },\n  en: { ")[0];
+  const en = app.split(" },\n  en: { ")[1].split("\n};")[0];
+  // Prefix with "{" so the first key of each block is matched too (it has no preceding comma).
+  const keys = (blk) => [...("{ " + blk).matchAll(/(?:[,{]\s*)([a-z][A-Za-z0-9_]*)\s*:/g)].map((m) => m[1]);
+  const kz = keys(zh), ke = keys(en);
+  const dup = (list) => [...new Set(list.filter((k) => list.filter((x) => x === k).length > 1))];
+  assert.deepEqual(dup(kz), [], `duplicate keys in I18N.zh (the later one silently wins): ${dup(kz).join(", ")}`);
+  assert.deepEqual(dup(ke), [], `duplicate keys in I18N.en (the later one silently wins): ${dup(ke).join(", ")}`);
+  const onlyZh = [...new Set(kz)].filter((k) => !ke.includes(k));
+  const onlyEn = [...new Set(ke)].filter((k) => !kz.includes(k));
+  assert.deepEqual(onlyZh, [], `keys missing from I18N.en (English UI would fall back to Chinese): ${onlyZh.join(", ")}`);
+  assert.deepEqual(onlyEn, [], `keys missing from I18N.zh: ${onlyEn.join(", ")}`);
+});
+
+await test("index.html has no hard-coded Chinese outside i18n", async () => {
+  const { readFileSync } = await import("node:fs");
+  const html = readFileSync(new URL("../studio/index.html", import.meta.url), "utf8");
+  // These are filled at runtime by localizeStaticSelects() / applyLang(), so static Chinese here is fine.
+  const runtimeLocalized = new Set(["n-status", "e-style", "e-arrow", "m-direction", "n-typeBadge", "btnLang", "ui-tag"]);
+  const CJK = /[\u4e00-\u9fff]/;
+  const offenders = [];
+  for (const line of html.split("\n")) {
+    if (!CJK.test(line)) continue;
+    if (/^\s*<!--/.test(line)) continue;                                  // comments
+    if (/data-i18n(=|-title=)/.test(line)) continue;                      // driven by the dictionary
+    if (/<option\b/.test(line)) continue;                                 // refilled by localizeStaticSelects()
+    const idMatch = line.match(/id="([^"]+)"/);
+    if (idMatch && runtimeLocalized.has(idMatch[1])) continue;
+    offenders.push(line.trim().slice(0, 90));
+  }
+  assert.deepEqual(offenders, [], "hard-coded Chinese in index.html — route it through data-i18n so the English UI is complete:\n" + offenders.join("\n"));
+});
+// —— Layout modes: one dispatcher, all four modes really differ (the MCP server used to drop force/grid) ——
+await test("computeLayout supports all four modes distinctly", async () => {
+  const { computeLayout } = await import("../lib/graph-analysis.js");
+  const graph = normalizeGraph({
+    name: "layout modes",
+    nodes: ["a", "b", "c", "d"].map((id) => ({ id, type: "process", label: id.toUpperCase(), x: 0, y: 0 })),
+    edges: [
+      { id: "e1", source: "a", target: "b", type: "flow" },
+      { id: "e2", source: "c", target: "d", type: "flow" },
+    ],
+  });
+  const sig = (mode) => [...computeLayout(graph, mode).values()].map((p) => `${Math.round(p.x)},${Math.round(p.y)}`).join(" ");
+  const results = ["layered", "clusters", "force", "grid"].map(sig);
+  assert.equal(new Set(results).size, 4, `modes must produce distinct layouts, got ${new Set(results).size}`);
+  assert.ok(results.every((r) => r.length > 0), "every mode must place the nodes");
 });
 console.log(results.join("\n"));
 
