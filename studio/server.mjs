@@ -76,6 +76,18 @@ async function mutateGraph(root, id, mutator, { bump = true } = {}) {
   const { graph } = await loadGraph(root, id);
   const draft = normalizeGraph(structuredClone(graph));
   mutator(draft);
+  // ===== 公式防线（系统强制：任何 agent / 客户端从任何入口写入都要过检）=====
+  {
+    const { guardGraphText, normalizeGraphText } = await import("../lib/latex.js");
+    normalizeGraphText(draft);                       // 先规范化（落库永远纯标准 KaTeX，不依赖库外宏）
+    const __g = guardGraphText(draft);
+    if (__g.failed.length){
+      const det = __g.failed.slice(0, 5).map((f, i)=> `  ${i + 1}) ${f.where}：${String(f.fragment).replace(/\s+/g, " ").slice(0, 90)}\n     修法：${f.hint}`).join("\n");
+      const err = new Error(`LaTeX 校验未通过，已拒绝写入（${__g.failed.length} 处）：\n${det}\n请按修法改正后重写；若要展示 LaTeX 源码本身，请放进代码围栏 \`\`\`…\`\`\` 内。`);
+      err.code = "LATEX_INVALID";
+      throw err;
+    }
+  }
   const verdict = validateGraph(draft);
   if (!verdict.ok) return { ok: false, issues: verdict.issues };
   if (bump) draft.revision = graph.revision + 1;
@@ -300,7 +312,31 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
       if (url.pathname === "/api/crosslinks") {
         if (req.method === "GET"){
           const gid = url.searchParams.get("graph");
-          sendJson(res, 200, { links: gid ? await crosslinksForGraph(root, gid) : await (await import("../lib/crosslinks.js")).readCrosslinks(root) });
+          const links = gid ? await crosslinksForGraph(root, gid) : await (await import("../lib/crosslinks.js")).readCrosslinks(root);
+          // enrich：把对端「图名 + 节点标题」解析出来，供界面显示友好名称；并标记失效链接
+          const cache = new Map();
+          const head = async (g)=> {
+            if (cache.has(g)) return cache.get(g);
+            let v = null;
+            try { const { graph } = await loadGraph(root, g); v = graph; } catch { v = null; }
+            cache.set(g, v);
+            return v;
+          };
+          const out = [];
+          for (const l of links){
+            const otherGraph = l.other?.graph ?? (l.from?.graph === gid ? l.to?.graph : l.from?.graph);
+            const otherNode = l.other?.node ?? (l.from?.graph === gid ? l.to?.node : l.from?.node);
+            const og = await head(otherGraph);
+            const on = og?.nodes?.find((n)=> n.id === otherNode) ?? null;
+            out.push({
+              ...l,
+              otherGraphName: og?.name ?? null,
+              otherNodeLabel: on?.label ?? null,
+              otherNodeType: on?.type ?? null,
+              broken: !og || !on,
+            });
+          }
+          sendJson(res, 200, { links: out });
           return;
         }
         if (req.method === "POST"){
@@ -592,23 +628,6 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         broadcast();
         sendJson(res, 200, { ok: true });
         return;
-      }
-      /* 删除节点（批量选择删除用）：同时清理连线 / 备注 / 分组归属 */
-      {
-        const m = url.pathname.match(/^\/api\/graph\/([^/]+)\/node\/(.+)$/);
-        if (m && req.method === "DELETE") {
-          const gid = decodeURIComponent(m[1]);
-          const nid = decodeURIComponent(m[2]);
-          if (!gid || !nid) { sendJson(res, 400, { error: "bad request" }); return; }
-          await mutateGraph(root, gid, (draft) => {
-            draft.nodes = draft.nodes.filter((n)=> n.id !== nid);
-            draft.edges = draft.edges.filter((e)=> e.source !== nid && e.target !== nid);
-            for (const g of draft.groups) g.members = (g.members ?? []).filter((x)=> x !== nid);
-            if (draft.notes) delete draft.notes[nid];
-          });
-          sendJson(res, 200, { ok: true, nodeId: nid });
-          return;
-        }
       }
       /* 删除节点（批量选择删除用）：同时清理连线 / 备注 / 分组归属 */
       {
