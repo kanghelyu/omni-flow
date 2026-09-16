@@ -2,6 +2,16 @@
 
 All notable changes to OmniFlow are documented here. Formats: Keep a Changelog, SemVer.
 
+## 0.2.3 — 2026-09-17
+
+### Tooling
+- **`tools/audit-push.py` can bootstrap an empty repository.** On a repo with no commits,
+  `git/trees/<branch>` answers HTTP 409 `Git Repository is empty`, and the script aborted — so a
+  freshly created (or freshly cloned) repo could never receive its first push. That one case is
+  now treated as "remote is empty" and the push proceeds; every other failure still aborts, so a
+  transient API or auth error can never be mistaken for "the remote has nothing" and trigger a
+  full re-push.
+
 ## 0.2.2 — 2026-09-16
 
 ### Studio fixes
