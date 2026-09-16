@@ -2,6 +2,45 @@
 
 All notable changes to OmniFlow are documented here. Formats: Keep a Changelog, SemVer.
 
+## 0.2.4 — 2026-09-17
+
+### Fixed
+- **Bare boolean CLI flags now work.** `opt()` reads `args[index + 1]`, so a flag written at the
+  end of a line returned `null` and silently did nothing: `of delete <id> --yes` — exactly the
+  usage `of help` prints — always refused, and `export --format html --no-embed` was ignored
+  while still reporting success. Boolean flags are now read by presence.
+- **`lang` is persisted.** `normalizeGraph` dropped it, so the `lang` accepted by
+  `of create --lang`, `of import-doc`, `of_import_mermaid` and the MCP tools never reached
+  `graph.json` and never came back — the documented "follows the graph's own `lang`" was untrue.
+  It is now stored (`zh` | `en`; anything else normalises to `en`).
+- **An unsupported export format is refused instead of silently returning Mermaid.**
+  `of_export { "format": "html" }` — advertised by the tool's own description — fell through to
+  Mermaid and reported success, and the HTTP route did the same for `?format=html`. The MCP tool
+  now really returns the standalone HTML canvas (and lists `txt` in its enum for the first time);
+  the HTTP endpoint answers 400 and names the CLI, which is where the offline canvas belongs
+  because it has to write a file.
+
+### Docs
+- **The skill no longer documents tools that do not exist.** `of_latex_check` — referenced 12
+  times, including as a hard *"MUST call this before writing any formula"* rule — and
+  `of_latex_normalize` were never implemented. The formula gate lives inside every write and
+  returns `code: LATEX_INVALID` with a per-fragment `hint`; R1 now describes that real loop and
+  gives local agents a one-line offline pre-check running the identical gate.
+- **`of_import_mermaid` is no longer recommended for bulk creation without stating its cost.**
+  Every card lands as `process` (one colour), Mermaid edge labels stay labels rather than types,
+  and all `classDef` / `class` / `style` / `subgraph` lines are dropped. `of_import_json` — the
+  typed, lossless route — was not mentioned anywhere; SOP-B now leads with it, and a tool index
+  covers the 18 tools that were previously undocumented.
+- Corrected the CLI reference (4 layout modes, 6 export formats, `of tree` is an MCP tool rather
+  than a CLI command) and `docs/API.md` (phantom formula tools, HTTP export format list).
+
+### Tests
+- Six new smoke checks that fail when the docs drift from the implementation again: every MCP
+  tool must be named in SKILL.md; no document may present a non-existent tool as usable; the CLI
+  reference must list the layout modes and export formats that exist; `lang` must survive
+  `normalizeGraph`; an unknown export format must be refused; and the bare CLI flags must take
+  effect. Proven by injecting a phantom tool — the guard fails and names the file and line.
+
 ## 0.2.3 — 2026-09-17
 
 ### Tooling
