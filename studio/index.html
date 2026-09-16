@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OmniFlow Studio</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230F172A'/%3E%3Cg fill='none' stroke='%2338BDF8' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M9 22V10h6a4 4 0 0 1 0 8H9'/%3E%3C/g%3E%3C/svg%3E">
+<!-- KaTeX 0.18.7（离线本地资源，零联网）：含 mhchem 化学扩展 / copy-tex / auto-render -->
+<link rel="stylesheet" href="/vendor/katex/katex.min.css">
+<script src="/vendor/katex/katex.min.js" defer></script>
+<script src="/vendor/katex/contrib/mhchem.min.js" defer></script>
+<script src="/vendor/katex/contrib/auto-render.min.js" defer></script>
+<script src="/vendor/katex/contrib/copy-tex.min.js" defer></script>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <div id="reader" hidden>
+    <div class="rd-bar">
+      <h2>📖 <span data-i18n="reader">阅读模式</span></h2>
+      <span class="grow"></span>
+      <input id="rd-search" data-ph="readerSearch">
+      <button id="rd-expand" data-i18n="readerExpandAll"></button>
+      <button id="rd-collapse" data-i18n="readerCollapseAll"></button>
+      <button id="rd-close" data-i18n="readerClose"></button>
+    </div>
+    <div class="rd-body" id="rd-body"></div>
+  </div>
+  <header class="topbar">
+    <span class="logo"><span class="spark">◈</span>OmniFlow <span class="sub" id="ui-tag">万用流程图</span></span>
+    <span class="gs-wrap">
+      <input id="globalSearch" data-ph="globalSearchPh" autocomplete="off" />
+      <div id="gsResults" class="gs-results"></div>
+    </span>
+    <span class="badge" id="gstat" role="button" tabindex="0" data-i18n-title="gstatTip">–</span>
+    <span class="sep"></span>
+    <button class="primary" id="btnNew" data-i18n="newGraph" data-i18n-title="tipNew">＋ 新建</button>
+    <button id="btnImport" data-i18n="import" data-i18n-title="tipImport">导入</button>
+    <button id="btnExport" data-i18n="share" data-i18n-title="tipExport">📤 分享</button>
+    <span class="sep"></span>
+    <button id="btnDep" aria-pressed="true" data-i18n="depToggle" data-i18n-title="depToggleTip"></button>
+    <button id="btnFxHelp" data-i18n="fxHelp" data-i18n-title="fxHelpTip"></button>
+    <button id="btnCanvas" aria-pressed="false" data-i18n="canvasMode" data-i18n-title="canvasModeTip"></button>
+    <button id="btnThumbs" aria-pressed="false" hidden data-i18n="thumbsToggle" data-i18n-title="thumbsToggleTip"></button>
+    <button id="btnReader" data-i18n="readerOpen" data-i18n-title="readerTip"></button>
+    <button id="btnAnalyze" data-i18n="analyze" data-i18n-title="tipAnalyze">分析</button>
+    <button id="btnLayout" data-i18n="layout" data-i18n-title="tipLayout">布局</button>
+    <span class="spacer"></span>
+    <button id="btnTheme" class="mini" data-i18n-title="tipTheme">🌓</button>
+    <button id="btnLang" class="mini" data-i18n-title="tipLang">EN</button>
+  </header>
+
+  <main>
+    <aside class="docrail" id="docrail">
+      <div class="docrail-head">
+        <span class="docrail-title" data-i18n="vaultTitle">文件树</span>
+        <span style="display:flex;gap:4px;align-items:center">
+          <button class="docrail-toggle" id="btnNewFolder" data-i18n-title="newFolder" title="新建文件夹">＋</button>
+          <button class="docrail-toggle" id="btnToggleDocrail" data-i18n-title="tipDocrail">‹</button>
+        </span>
+      </div>
+      <div class="docrail-search" style="padding:8px 9px 4px"><input id="treeSearch" data-ph="treeSearchPh" /></div>
+      <div id="vaultTree"></div>
+      <div id="railSplitter" data-i18n-title="splitterTip"></div>
+      <div class="docrail-head" style="border-top:1px solid var(--border); min-height:40px">
+        <span class="docrail-title" data-i18n="docTitle">当前图节点</span>
+      </div>
+      <div class="docrail-search"><input id="nodeSearch" data-ph="searchNodes" /></div>
+      <section id="convoPanel" class="convo-panel" hidden>
+        <div class="convo-head-row">
+          <span class="convo-title">💬 <span data-i18n="convoTitle"></span></span>
+          <span class="convo-stats" id="convoStats"></span>
+        </div>
+        <div class="convo-headline" id="convoHeadLine"></div>
+        <div class="convo-grid">
+          <button id="convoHead" data-i18n="convoSetHead" data-i18n-title="convoSetHeadTip"></button>
+          <button id="convoMerge" data-i18n="convoMerge" data-i18n-title="convoMergeTip"></button>
+          <button id="convoThreads" data-i18n="convoThreads" data-i18n-title="convoThreadsTip"></button>
+          <button id="convoNext" data-i18n="convoNext" data-i18n-title="convoNextTip"></button>
+          <button id="convoPending" data-i18n="convoPending" data-i18n-title="convoPendingTip"></button>
+          <button id="convoLinear" data-i18n="convoLinear" data-i18n-title="convoLinearTip"></button>
+        </div>
+        <div class="convo-actions-row">
+          <button id="convoSayBtn" class="full" data-i18n="convoSay"></button>
+        </div>
+      </section>
+      <div id="typeFilterBar" class="typefilter"></div>
+      <div class="docrail-list lane-list" id="docList"></div>
+    </aside>
+    <div class="splitter" id="leftSplitter"></div>
+
+    <div id="canvasWrap">
+      <div id="depBar"></div>
+      <div id="marquee"></div>
+      <div class="multi-hint" id="multiHint"></div>
+      <div id="viewport">
+        <canvas id="scene"></canvas>
+        <div id="world">
+          <svg id="edgeLayer"></svg>
+          <div id="groupsLayer"></div>
+          <div id="nodesLayer"></div>
+        </div>
+      </div>
+      <button class="edge-tab left" id="edgeTabLeft" data-i18n-title="expandTree">»</button>
+      <button class="edge-tab right" id="edgeTabRight" data-i18n-title="expandInspector">«</button>
+      <div class="controls">
+        <button id="cvZoomIn" title="+">+</button>
+        <button id="cvZoomOut" title="−">−</button>
+        <button id="cvFit" title="⊙">⊙</button>
+      </div>
+      <div class="add-wrap">
+        <button id="catNode" class="addcat" data-needs-graph data-i18n="catNode">□ 流程框 ▾</button>
+        <div id="addPopup" class="add-popup"></div>
+      </div>
+    </div>
+
+    <div class="splitter" id="rightSplitter"></div>
+    <aside id="inspector">
+      <div class="ins-head">
+        <span class="docrail-title" data-i18n="inspector">检查器</span>
+        <button class="docrail-toggle" id="btnToggleInspector" data-i18n-title="collapseInspector" title="收起/展开">›</button>
+      </div>
+      <div class="scroll">
+        <div id="insp-empty">
+          <h3 data-i18n="inspector">检查器</h3>
+          <div class="hint" data-i18n="hintEmpty">选中节点或连线后在此编辑一切：文字、类型、颜色（填充/边框/文字）、图标、状态；连线可改标签、颜色、线型、箭头。</div>
+          <div class="hint" data-i18n="hintKeys">拖拽画布平移 · ⌘/Ctrl+滚轮缩放 · 滚轮平移 · 从节点右侧圆点拖出连线 · Delete 删除选中</div>
+        </div>
+        <div id="insp-node" style="display:none">
+          <div class="card-head">
+            <span class="badge" id="n-typeBadge">节点</span>
+            <span class="card-title" id="n-titleText"></span>
+          </div>
+
+          <div id="convoActions" hidden>
+            <div class="convo-meta" id="convoMeta"></div>
+            <div class="convo-actions" id="convoActionsRow"></div>
+          </div>
+
+          <div class="insp-sec-head">
+            <label data-i18n="note">详情（只读 · 渲染公式）</label>
+            <button class="mini" id="noteCopy" data-i18n-title="noteCopy">⧉</button>
+            <button class="mini" id="attachAdd" data-i18n="attachAdd" data-i18n-title="attachAddTip"></button>
+          </div>
+          <div id="n-preview" class="note-preview" aria-live="polite"></div>
+          <div id="npResize" data-i18n-title="resizeNote" title="拖动调整详情高度"></div>
+          <textarea id="n-note" aria-hidden="true" tabindex="-1" style="display:none"></textarea>
+
+          <div id="attachBox"></div>
+
+          <h3 data-i18n="nodeProps">节点属性</h3>
+          <label data-i18n="label">文字</label><input id="n-label" />
+          <label data-i18n="type">类型</label><select id="n-type"></select>
+          <label data-i18n="icon">图标</label><input id="n-icon" maxlength="4" />
+          <div class="row2">
+            <div><label data-i18n="fill">填充色</label><input type="color" id="n-fill" /></div>
+            <div><label data-i18n="border">边框色</label><input type="color" id="n-border" /></div>
+          </div>
+          <div class="row2">
+            <div><label data-i18n="textColor">文字色</label><input type="color" id="n-text" /></div>
+            <div><label>状态</label><select id="n-status">
+              <option value="">无</option><option value="todo">待办</option><option value="doing">进行中</option><option value="done">完成</option><option value="blocked">阻塞</option>
+            </select></div>
+          </div>
+
+          <div id="xlinkBox" hidden></div>
+          <div id="depBox" hidden></div>
+
+          <div class="btnrow">
+            <button id="n-save" class="primary" data-i18n="save">保存</button>
+            <button id="n-note-full" data-i18n="noteMd" data-i18n="noteFull"></button>
+            <button id="n-trace" data-i18n="traceBtn"></button>
+            <button id="n-group" data-i18n="makeGroup" data-i18n="makeGroupBtn"></button>
+            <button id="n-delete" class="danger" data-i18n="delete">删除</button>
+          </div>
+        </div>
+
+        <div id="insp-edge" style="display:none">
+          <h3 data-i18n="edgeProps">连线属性</h3>
+          <label data-i18n="edgeLabel">标签（箭头命名）</label><input id="e-label" />
+          <label data-i18n="type">语义类型</label><select id="e-type"></select>
+          <div class="row2">
+            <div><label data-i18n="color">颜色</label><input type="color" id="e-color" /></div>
+            <div><label data-i18n="width">粗细</label><select id="e-width"><option>1</option><option>2</option><option>3</option><option>4</option><option>6</option></select></div>
+          </div>
+          <div class="row2">
+            <div><label data-i18n="style">线型</label><select id="e-style">
+              <option value="solid">实线</option><option value="dashed">虚线</option><option value="dotted">点线</option>
+            </select></div>
+            <div><label data-i18n="arrow">箭头</label><select id="e-arrow">
+              <option value="one">单向</option><option value="both">双向</option><option value="none">无</option>
+            </select></div>
+          </div>
+          <div class="btnrow">
+            <button id="e-save" class="primary" data-i18n="save">保存</button>
+            <button id="e-flip" data-i18n="flip">反转方向</button>
+            <button id="e-delete" class="danger" data-i18n="delete">删除</button>
+          </div>
+        </div>
+        <div id="insp-meta" style="display:none">
+          <h3 data-i18n="graphProps">图属性</h3>
+          <label data-i18n="name">名称</label><input id="m-name" />
+          <label data-i18n="desc">描述</label><textarea id="m-desc" rows="2"></textarea>
+          <label data-i18n="direction">方向</label><select id="m-direction"><option value="TD">自上而下 TD</option><option value="LR">自左向右 LR</option></select>
+          <div class="btnrow"><button id="m-save" class="primary" data-i18n="save">保存</button>
+          <button id="m-delete" class="danger" data-i18n="deleteGraph">删除图</button></div>
+          <label data-i18n="groupsTitle">分组</label><div id="groupList"></div>
+        </div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<div id="toast"></div>
+<div class="modal-bg" id="modal-bg"><div class="modal" id="modal-body"></div></div>
+
+<script src="app.js"></script>
+</body>
+</html>
