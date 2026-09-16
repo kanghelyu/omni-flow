@@ -1,0 +1,40 @@
+{
+  "name": "omni-flow",
+  "version": "0.2.2",
+  "description": "OmniFlow (of) — universal flow map plugin: theorem dependencies, paper relations, task RACI, org structure, conversation maps. Zero-dep CLI + visual Studio canvas.",
+  "license": "CC-BY-NC-4.0",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kanghelyu/omni-flow.git"
+  },
+  "bin": {
+    "of": "bin/of.mjs"
+  },
+  "keywords": [
+    "flowchart",
+    "diagram",
+    "graph",
+    "dependency-analysis",
+    "theorem-graph",
+    "citation-graph",
+    "raci",
+    "org-chart",
+    "knowledge-graph",
+    "mermaid",
+    "cli-tool",
+    "visualization",
+    "omniflow"
+  ],
+  "files": [
+    "bin",
+    "lib",
+    "studio",
+    "skills",
+    "docs",
+    "install.sh",
+    "install.ps1",
+    "README.md",
+    "LICENSE"
+  ]
+}
