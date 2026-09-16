@@ -2,6 +2,18 @@
 
 All notable changes to OmniFlow are documented here. Formats: Keep a Changelog, SemVer.
 
+## 0.2.5 — 2026-09-17
+
+### Tooling
+- **`tools/audit-push.py` no longer deletes files it is supposed to ignore.** The skip list was
+  applied only while walking the local tree, so a file that lives *only* on GitHub and matches an
+  ignore rule was classified as "remote-only" and removed by the next sync — which is why
+  `.gitignore` could never survive one. The same rules now filter the remote tree.
+- **Added `.gitignore`** as a second line of defence beside the script guards: `graphs/`,
+  `templates/`, `tree.json`, `crosslinks.json`, `live-conversation.json`, `WORKLOG.txt`, `trash/`
+  and OS noise. It only matters to someone using plain git, but it costs nothing to state that
+  this working data is not repo content.
+
 ## 0.2.4 — 2026-09-17
 
 ### Fixed
