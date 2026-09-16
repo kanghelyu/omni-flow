@@ -76,10 +76,9 @@ Env: `OF_HOME` (storage root, default `~/.omni-flow`), `AF_HOME` (root of a loca
 
 ### Formulas
 
-| Tool | Purpose |
-| --- | --- |
-| `of_latex_check` | Validate every math fragment before writing (returns a per-fragment `hint`) |
-| `of_latex_normalize` | Preview what normalisation would do (macro / shorthand / environment rewriting) |
+There is **no standalone formula tool**: validation is a gate inside every write path (it returns
+`code: LATEX_INVALID` with a per-fragment `hint`). To run the identical check without writing, import
+`lib/latex.js` and call `checkLatex(text)` — see [FORMULAS.md](FORMULAS.md).
 
 ### Non-linear conversation (DAG sessions)
 
@@ -133,7 +132,7 @@ All tools return JSON text; failures set `isError: true` with an actionable mess
 | GET/POST/DELETE | `/api/crosslinks` | Cross-graph link table |
 | GET | `/api/graph/:id` | Full detail |
 | GET | `/api/graph/:id/validate` · `/analyze?trace=` | Validate / analyze |
-| GET | `/api/graph/:id/export?format=html` · `/note/:nodeId` · `/asset/:name` | Export / read note / fetch attachment |
+| GET | `/api/graph/:id/export?format=mermaid\|dot\|md\|txt\|json` · `/note/:nodeId` · `/asset/:name` | Export / read note / fetch attachment. `html` is **not** served here (400) — it needs a file, so use the CLI: `of export <id> --format html --out canvas.html` |
 | POST | `/api/graph/:id/note` · `/meta` · `/node-type-patch` · `/edge-type-patch` | Write note / meta / registries |
 | POST | `/api/graph/:id/node-add` · `node-patch` · `node-delete` | Nodes |
 | POST | `/api/graph/:id/edge-add` · `edge-patch` · `edge-delete` | Edges |
@@ -166,14 +165,14 @@ Node status vocabulary: `pending` · `running` · `waiting-human` · `done` · `
 
 ## III. CLI (20+ subcommands)
 
-`create / templates / template-save / template-delete / list / read / validate / analyze / layout / export / import / import-doc / import-af / meta / trash / restore / delete / studio / mcp / doctor` — plus the `convo` and `live` namespaces. Run `of help`.
+`create / templates / template-save / template-delete / list / read / validate / analyze / layout / export / import / import-doc / import-af / project / xlink / meta / trash / restore / delete / studio / mcp / doctor` — plus the `convo` and `live` namespaces. Run `of help` for the authoritative list.
 
 ---
 
 ## Tips for agents
 
 1. **Mount MCP once**; fall back to HTTP or the CLI when MCP is unavailable — the three layers are equivalent.
-2. **Validate math before writing**: `of_latex_check` (see [FORMULAS.md](FORMULAS.md)).
+2. **Validate math before writing**: there is no separate tool — the gate runs inside every write and returns a per-fragment `hint`; call `checkLatex` from `lib/latex.js` to pre-check (see [FORMULAS.md](FORMULAS.md)).
 3. **Read back after every write**: `of_get_graph` / `of_get_note`. Never trust a bare 200.
-4. **Batch-build**: `of_import_mermaid` in one shot, then `of_patch_node` / `of_patch_edge` to polish styles.
+4. **Batch-build**: `of_import_json` for typed content (types, groups and styles survive); `of_import_mermaid` only for an untyped quick pass — it lands every card as `process` and drops all styling.
 5. **Insight**: `of_analyze` for RACI single-points-of-failure; `trace` for proof chains.
