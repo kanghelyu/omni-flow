@@ -117,6 +117,17 @@ def remote_tree():
     return {item["path"]: item["sha"] for item in data.get("tree", []) if item.get("type") == "blob"}
 
 
+def is_skipped(rel):
+    """local_files() 的忽略规则同样适用于远端。
+    否则"只存在于远端、本地被忽略"的文件（.gitignore 就是典型）会被算成 extra 并删掉 ——
+    这正是 .gitignore 永远活不过一次同步的原因。"""
+    parts = rel.split("/")
+    if any(p in SKIP_DIRS or p.startswith(".") for p in parts[:-1]):
+        return True
+    base = parts[-1]
+    return base in SKIP_FILES or base.endswith(SKIP_SUFFIX)
+
+
 def push(path, msg, remote_sha):
     with open(path, "rb") as fh:
         b64 = base64.b64encode(fh.read()).decode("ascii")
@@ -136,7 +147,7 @@ remote = remote_tree()
 missing = [p for p in local if p not in remote]
 changed = [p for p in local if p in remote and blob_sha(p) != remote[p]]
 
-extra = [p for p in remote if p not in local]
+extra = [p for p in remote if p not in local and not is_skipped(p)]
 
 print(f"local {len(local)} files | remote {len(remote)} blobs")
 print(f"missing {len(missing)} | changed {len(changed)} | remote-only {len(extra)}")
@@ -184,7 +195,7 @@ for p in extra:
 time.sleep(2)
 remote2 = remote_tree()
 still = [p for p in local if p not in remote2 or blob_sha(p) != remote2[p]]
-extra2 = [p for p in remote2 if p not in local]
+extra2 = [p for p in remote2 if p not in local and not is_skipped(p)]
 print("\n=== verify ===")
 print(f"still out of sync: {len(still)}" + ((" → " + ", ".join(still[:10])) if still else " ✅"))
 print(f"remote extras: {len(extra2)}" + ((" → " + ", ".join(extra2[:10])) if extra2 else " ✅"))
