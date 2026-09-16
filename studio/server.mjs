@@ -515,7 +515,10 @@ export async function startStudioServer({ root, host = "127.0.0.1", port = 0 } =
         if (format === "dot") { sendJson(res, 200, { text: toDot(graph) }); return; }
         if (format === "md") { sendJson(res, 200, { text: toMarkdownOutline(graph) }); return; }
         if (format === "txt") { sendJson(res, 200, { text: toPlainText(graph) }); return; }
-        sendJson(res, 200, { text: toMermaid(graph) });
+        if (format === "mermaid") { sendJson(res, 200, { text: toMermaid(graph) }); return; }
+        // An unknown format used to fall through to Mermaid, so `?format=html` answered
+        // 200 with Mermaid text. Refuse instead, and say where html actually lives.
+        sendJson(res, 400, { error: `unsupported export format: ${format} (this endpoint serves mermaid / dot / md / txt / json). For a standalone offline HTML canvas use the CLI: of export <id> --format html --out canvas.html` });
         return;
       }
       if (req.method === "GET" && action === "note" && parts[4]) {
