@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OmniFlow — 一切关系，皆可成图 · Universal Flow Maps</title>
+<meta name="description" content="OmniFlow：定理依赖、论文脉络、任务协作、组织结构与对话，一张可追溯的关系图。零依赖 · 本地优先 · MCP / HTTP / CLI。">
+<link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%23060d14"/><circle cx="18" cy="42" r="7" fill="none" stroke="%23a8e6e6" stroke-width="3.5"/><circle cx="46" cy="22" r="7" fill="none" stroke="%23f4d9a0" stroke-width="3.5"/><path d="M22 38 Q32 24 42 26" fill="none" stroke="%23f4d9a0" stroke-width="3"/></svg>'>
+<style>
+:root{
+  --bg:#060d14; --ink:#f4ead9; --paper:#fff7e8;
+  --cyan:#a8e6e6; --cyan-bright:#d0ffff; --cyan-dim:#5ca8b0;
+  --gold:#f4d9a0; --gold-bright:#ffe4b8; --gold-dim:#b99b61;
+  --muted:#96a9bc; --subtle:#cfc2a4;
+  --line:rgba(168,230,230,.16); --line-soft:rgba(168,230,230,.08);
+  --card:rgba(8,18,27,.56); --panel:rgba(8,18,27,.86);
+  --glass-bg:linear-gradient(120deg,rgba(160,224,244,.09),rgba(160,224,244,.03) 42%,rgba(255,240,214,.06));
+  --glass-border:rgba(220,255,255,.16);
+  --ease:cubic-bezier(.16,1,.3,1);
+  --serif:Georgia,"Times New Roman","Songti SC","SimSun",serif;
+  --mono:"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);line-height:1.6;
+  background-image:
+    radial-gradient(1100px 520px at 82% -8%,rgba(168,230,230,.075),transparent 62%),
+    radial-gradient(900px 560px at -12% 36%,rgba(244,217,160,.055),transparent 60%),
+    radial-gradient(1000px 620px at 68% 108%,rgba(168,230,230,.05),transparent 62%);
+}
+a{color:inherit;text-decoration:none}
+img{max-width:100%;display:block}
+.wrap{max-width:1160px;margin:0 auto;padding:0 28px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.34em;text-transform:uppercase;color:var(--cyan-dim)}
+h1,h2,h3{font-weight:400}
+::selection{background:rgba(244,217,160,.28)}
+
+/* ---------- nav ---------- */
+.nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  background:rgba(6,13,20,.72);border-bottom:1px solid var(--line-soft)}
+.nav-inner{max-width:1160px;margin:auto;padding:0 28px;height:64px;display:flex;align-items:center;gap:26px}
+.brand{display:flex;align-items:center;gap:11px;font-size:19px;letter-spacing:.02em}
+.brand svg{display:block}
+.nav-links{display:flex;gap:24px;margin-left:auto;font-size:14.5px;color:var(--muted)}
+.nav-links a{padding:6px 2px;border-bottom:1px solid transparent;transition:.28s var(--ease)}
+.nav-links a:hover{color:var(--ink);border-bottom-color:var(--gold-dim)}
+.lang-btn{font-family:var(--mono);font-size:12px;color:var(--cyan);border:1px solid rgba(168,230,230,.32);
+  border-radius:999px;padding:5px 13px;background:transparent;cursor:pointer;transition:.28s var(--ease)}
+.lang-btn:hover{border-color:var(--cyan);color:var(--cyan-bright)}
+.gh{font-family:var(--mono);font-size:12.5px;color:var(--muted);transition:.28s var(--ease)}
+.gh:hover{color:var(--gold-bright)}
+
+/* ---------- hero ---------- */
+.hero{display:grid;grid-template-columns:1.04fr .96fr;gap:56px;align-items:center;padding:96px 0 84px}
+.hero h1{font-size:clamp(42px,5.6vw,72px);line-height:1.16;margin:20px 0 18px;letter-spacing:.01em}
+.hero h1 em{font-style:normal;color:var(--gold-bright)}
+.hero .sub{font-size:18.5px;color:var(--muted);max-width:560px;margin:0 0 30px}
+.actions{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:9px;padding:12px 20px;border-radius:12px;font-size:15px;
+  transition:transform .28s var(--ease),box-shadow .28s var(--ease),border-color .28s var(--ease)}
+.btn-primary{background:linear-gradient(135deg,#bfe9e2,#a8e6e6 55%,#f4d9a0 160%);color:#06131c;font-weight:700}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(168,230,230,.16)}
+.btn-ghost{border:1px solid var(--line);color:var(--ink)}
+.btn-ghost:hover{border-color:rgba(244,217,160,.5);color:var(--gold-bright);transform:translateY(-2px)}
+.hero-note{margin-top:20px;font-family:var(--mono);font-size:12px;color:var(--cyan-dim);letter-spacing:.08em}
+.stage{position:relative;border:1px solid var(--glass-border);border-radius:20px;background:var(--glass-bg);
+  box-shadow:0 18px 46px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.1);overflow:hidden}
+.stage-bar{height:44px;display:flex;align-items:center;gap:8px;padding:0 16px;border-bottom:1px solid var(--line-soft)}
+.stage-bar i{width:9px;height:9px;border-radius:50%;background:rgba(168,230,230,.22)}
+.stage-bar span{margin-left:10px;font-family:var(--mono);font-size:11.5px;color:var(--muted);letter-spacing:.06em}
+.stage img{width:100%;height:auto}
+.stage-chip{position:absolute;left:16px;bottom:14px;font-family:var(--mono);font-size:11px;color:var(--subtle);
+  border:1px solid var(--line);border-radius:999px;padding:6px 13px;background:rgba(6,13,20,.72);backdrop-filter:blur(8px)}
+
+/* ---------- stats ---------- */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:8px 0 30px}
+.stat{border:1px solid var(--line-soft);border-radius:16px;padding:20px 22px;background:rgba(8,18,27,.4)}
+.stat b{display:block;font-size:34px;font-weight:400;color:var(--gold-bright);font-family:Georgia,serif}
+.stat span{font-size:13.5px;color:var(--muted);letter-spacing:.06em}
+
+/* ---------- sections ---------- */
+section{padding:74px 0}
+.sec-head{display:flex;align-items:end;justify-content:space-between;gap:30px;margin-bottom:36px}
+.sec-head h2{font-size:clamp(28px,3.4vw,40px);margin:10px 0 0;line-height:1.25}
+.sec-head p{margin:0;color:var(--muted);max-width:420px;font-size:15.5px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{border:1px solid var(--line-soft);border-radius:18px;padding:26px;background:var(--card);position:relative;overflow:hidden;
+  transition:transform .3s var(--ease),border-color .3s var(--ease)}
+.card:hover{transform:translateY(-3px);border-color:rgba(168,230,230,.3)}
+.card .num{font-family:var(--mono);font-size:11.5px;letter-spacing:.3em;color:var(--cyan-dim)}
+.card h3{font-size:20px;margin:34px 0 10px;color:var(--paper)}
+.card p{margin:0;font-size:14.5px;color:var(--muted)}
+.card:after{content:"";position:absolute;inset:0 0 auto;height:1px;background:linear-gradient(90deg,transparent,rgba(244,217,160,.32),transparent);opacity:0;transition:.3s var(--ease)}
+.card:hover:after{opacity:1}
+
+/* ---------- demo videos ---------- */
+.video-grid{display:grid;grid-template-columns:1.06fr .94fr;gap:16px}
+.video-card{border:1px solid var(--glass-border);border-radius:20px;overflow:hidden;background:var(--glass-bg);
+  box-shadow:0 18px 46px rgba(0,0,0,.3)}
+.video-card .vc-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line-soft)}
+.video-card .vc-bar b{font-weight:400;font-size:15px;color:var(--paper)}
+.video-card .vc-bar span{font-family:var(--mono);font-size:11px;color:var(--cyan-dim);letter-spacing:.12em}
+.video-card video{width:100%;display:block;background:#050b12}
+.video-card .vc-cap{padding:12px 18px 16px;font-size:13.5px;color:var(--muted);border-top:1px solid var(--line-soft)}
+
+/* ---------- gallery ---------- */
+.gallery{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.gallery figure{margin:0;border:1px solid var(--line-soft);border-radius:18px;overflow:hidden;background:var(--card);cursor:zoom-in;
+  transition:transform .3s var(--ease),border-color .3s var(--ease)}
+.gallery figure:hover{transform:translateY(-3px);border-color:rgba(168,230,230,.3)}
+.gallery img{width:100%;height:auto}
+.gallery figcaption{padding:12px 18px;font-size:13px;color:var(--muted);border-top:1px solid var(--line-soft);display:flex;justify-content:space-between;gap:12px}
+.gallery figcaption i{font-style:normal;font-family:var(--mono);font-size:10.5px;color:var(--cyan-dim);letter-spacing:.14em;white-space:nowrap;padding-top:2px}
+.lightbox{position:fixed;inset:0;z-index:90;display:none;place-items:center;background:rgba(3,7,12,.86);backdrop-filter:blur(10px);padding:34px}
+.lightbox.open{display:grid}
+.lightbox img{max-width:min(1500px,94vw);max-height:86vh;border-radius:14px;border:1px solid var(--glass-border)}
+.lightbox .lb-x{position:fixed;top:22px;right:30px;font-family:var(--mono);color:var(--muted);font-size:14px;cursor:pointer}
+.lightbox .lb-x:hover{color:var(--gold-bright)}
+
+/* ---------- interfaces ---------- */
+.iface{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.iface .card code{display:block;margin-top:14px;font-family:var(--mono);font-size:12.5px;color:var(--cyan);
+  background:rgba(5,11,18,.7);border:1px solid var(--line-soft);border-radius:10px;padding:11px 13px;line-height:1.7;overflow-x:auto;white-space:nowrap}
+.iface .card .tag{display:inline-block;margin-top:12px;font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;color:var(--gold-dim)}
+
+/* ---------- start ---------- */
+.start-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;align-items:stretch}
+.steps{border:1px solid var(--line-soft);border-radius:18px;background:var(--card);padding:28px 30px}
+.step{display:flex;gap:18px;padding:15px 0;border-bottom:1px solid var(--line-soft)}
+.step:last-child{border-bottom:0}
+.step .no{font-family:Georgia,serif;font-size:22px;color:var(--gold-bright);min-width:34px}
+.step b{display:block;font-weight:400;color:var(--paper);font-size:16.5px;margin-bottom:4px}
+.step p{margin:0;font-size:14px;color:var(--muted)}
+.repo-card{border:1px solid var(--glass-border);border-radius:18px;background:var(--glass-bg);padding:28px 30px;display:flex;flex-direction:column;justify-content:center;gap:16px}
+.repo-card .repo{font-family:var(--mono);font-size:14.5px;color:var(--cyan-bright);border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:rgba(5,11,18,.66);word-break:break-all}
+.repo-card p{margin:0;font-size:13.5px;color:var(--muted)}
+.repo-card .agents{font-family:var(--mono);font-size:11px;color:var(--cyan-dim);letter-spacing:.12em}
+
+/* ---------- footer ---------- */
+footer{border-top:1px solid var(--line-soft);margin-top:40px}
+.foot-inner{max-width:1160px;margin:auto;padding:34px 28px 46px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.foot-inner b{color:var(--subtle);font-weight:400}
+
+/* ---------- reveal ---------- */
+.rv{opacity:0;transform:translateY(18px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.rv.in{opacity:1;transform:none}
+
+@media(max-width:920px){
+  .hero{grid-template-columns:1fr;padding-top:64px;gap:40px}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .grid-3,.iface{grid-template-columns:1fr}
+  .video-grid,.gallery,.start-grid{grid-template-columns:1fr}
+  .nav-links{display:none}
+  .sec-head{flex-direction:column;align-items:flex-start;gap:12px}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="#top" aria-label="OmniFlow">
+      <svg width="30" height="30" viewBox="0 0 64 64" fill="none"><rect width="64" height="64" rx="14" fill="rgba(168,230,230,.08)"/><circle cx="18" cy="42" r="7" stroke="#a8e6e6" stroke-width="3.5"/><circle cx="46" cy="22" r="7" stroke="#f4d9a0" stroke-width="3.5"/><path d="M22 38 Q32 24 42 26" stroke="#f4d9a0" stroke-width="3"/></svg>
+      OmniFlow
+    </a>
+    <div class="nav-links">
+      <a href="#features" data-zh="特性" data-en="Features">特性</a>
+      <a href="#usecases" data-zh="场景" data-en="Use cases">场景</a>
+      <a href="#demo" data-zh="演示" data-en="Demo">演示</a>
+      <a href="#gallery" data-zh="截图" data-en="Gallery">截图</a>
+      <a href="#api" data-zh="接口" data-en="Interfaces">接口</a>
+      <a href="#start" data-zh="开始" data-en="Start">开始</a>
+    </div>
+    <button class="lang-btn" id="langBtn" style="margin-left:auto" onclick="toggleLang()">EN</button>
+    <a class="gh" href="https://github.com/kanghelyu/omni-flow" target="_blank" rel="noopener">GitHub ↗</a>
+  </div>
+</nav>
+
+<main id="top">
+
+  <!-- hero -->
+  <header class="wrap hero">
+    <div class="rv">
+      <div class="eyebrow" data-zh="万用流程图 · 本地优先" data-en="Universal Flow Maps · Local-first">万用流程图 · 本地优先</div>
+      <h1 data-zh="一切关系，<em>皆可成图</em>。" data-en="Everything is <em>a graph</em>.">一切关系，<em>皆可成图</em>。</h1>
+      <p class="sub" data-zh="定理依赖、论文脉络、任务协作、组织结构、研究对话——把散落的关系，放进同一张可追溯的画布。"
+         data-en="Theorem dependencies, paper relations, task RACI, org structure and conversations — one traceable canvas for every relationship.">
+        定理依赖、论文脉络、任务协作、组织结构、研究对话——把散落的关系，放进同一张可追溯的画布。</p>
+      <div class="actions">
+        <a class="btn btn-primary" href="https://github.com/kanghelyu/omni-flow" target="_blank" rel="noopener"
+           data-zh="⌘ 把仓库交给你的 Agent" data-en="⌘ Give this repo to your agent">⌘ 把仓库交给你的 Agent</a>
+        <a class="btn btn-ghost" href="#demo" data-zh="观看 80 秒介绍" data-en="Watch the 80s intro">观看 80 秒介绍</a>
+      </div>
+      <div class="hero-note">ZERO-DEPENDENCY · LOCAL-FIRST · MCP / HTTP / CLI</div>
+    </div>
+    <div class="stage rv">
+      <div class="stage-bar"><i></i><i></i><i></i><span>OmniFlow Studio — 人心脏梗死后心肌细胞有丝分裂 · 证据链</span></div>
+      <img src="assets/shots/01-overview-dark.png" alt="OmniFlow Studio 无限画布：真实的心脏再生证据链图" loading="eager">
+      <div class="stage-chip" data-zh="真实 Studio · 59 节点 / 90 关系 / 8 分组" data-en="Real Studio · 59 nodes / 90 edges / 8 groups">真实 Studio · 59 节点 / 90 关系 / 8 分组</div>
+    </div>
+  </header>
+
+  <!-- stats -->
+  <div class="wrap stats rv">
+    <div class="stat"><b>10</b><span data-zh="内建节点类型 + 自定义" data-en="Node types built-in + custom">内建节点类型 + 自定义</span></div>
+    <div class="stat"><b>18</b><span data-zh="内建边语义" data-en="Built-in edge semantics">内建边语义</span></div>
+    <div class="stat"><b>37</b><span data-zh="MCP 工具，agent 就绪" data-en="MCP tools, agent-ready">MCP 工具，agent 就绪</span></div>
+    <div class="stat"><b>0</b><span data-zh="运行时依赖" data-en="Runtime dependencies">运行时依赖</span></div>
+  </div>
+
+  <!-- features -->
+  <section id="features" class="wrap">
+    <div class="sec-head rv">
+      <div><div class="eyebrow">ONE SYSTEM · MANY MAPS</div>
+        <h2 data-zh="关系本身，就是工作的界面。" data-en="The relationship itself is the interface.">关系本身，就是工作的界面。</h2></div>
+      <p data-zh="少一点孤立的列表，多一点上下文：每个节点都能回到来源、备注与下一步。"
+         data-en="Fewer isolated lists, more context: every node leads back to its sources, notes and next steps.">少一点孤立的列表，多一点上下文：每个节点都能回到来源、备注与下一步。</p>
+    </div>
+    <div class="grid-3">
+      <article class="card rv"><div class="num">01 / STRUCTURE</div><h3 data-zh="从任意关系开始" data-en="Start from any relationship">从任意关系开始</h3>
+        <p data-zh="定理、论文、任务、人员、对话……10 类内建节点与 18 种边语义；自定义类型只是一段 JSON。"
+           data-en="Theorems, papers, tasks, people, conversations… 10 node types, 18 edge semantics — custom types are one JSON block away.">定理、论文、任务、人员、对话……10 类内建节点与 18 种边语义；自定义类型只是一段 JSON。</p></article>
+      <article class="card rv"><div class="num">02 / CLARITY</div><h3 data-zh="让脉络一眼可读" data-en="Make the whole story readable">让脉络一眼可读</h3>
+        <p data-zh="按依赖分层、按分组聚簇，一键整理；全局搜索即时命中并高亮，图例随类型自动生成。"
+           data-en="Layer by dependency or cluster by groups with one key; instant global search with highlight, and a legend generated from your type registry.">按依赖分层、按分组聚簇，一键整理；全局搜索即时命中并高亮，图例随类型自动生成。</p></article>
+      <article class="card rv"><div class="num">03 / SEMANTICS</div><h3 data-zh="每条连线都有语义" data-en="Every edge carries meaning">每条连线都有语义</h3>
+        <p data-zh="连线可命名、可选色、可换线型与箭头方向——支持、矛盾、依赖、取代，关系自己会说话。"
+           data-en="Name, color, restyle and redirect edges — supports / contradicts / requires / replaces: the map speaks for itself.">连线可命名、可选色、可换线型与箭头方向——支持、矛盾、依赖、取代，关系自己会说话。</p></article>
+      <article class="card rv"><div class="num">04 / NOTES</div><h3 data-zh="备注即文档" data-en="Notes are the document">备注即文档</h3>
+        <p data-zh="每个节点自带 Markdown 正文：论文留 DOI 与页码，任务写验收标准，画布是索引，备注是全文。"
+           data-en="Every node owns a Markdown body: DOIs and page numbers for papers, acceptance criteria for tasks. The canvas is the index; the note is the text.">每个节点自带 Markdown 正文：论文留 DOI 与页码，任务写验收标准，画布是索引，备注是全文。</p></article>
+      <article class="card rv"><div class="num">05 / ANALYSIS</div><h3 data-zh="分析，不只是绘图" data-en="Analysis, not just drawing">分析，不只是绘图</h3>
+        <p data-zh="环检测、度中心性瓶颈报告、上下游依赖闭包——找出你 RACI 里的单点故障。"
+           data-en="Cycle detection, degree-centrality bottleneck report, upstream/downstream closure — find the single point of failure.">环检测、度中心性瓶颈报告、上下游依赖闭包——找出你 RACI 里的单点故障。</p></article>
+      <article class="card rv"><div class="num">06 / OPEN</div><h3 data-zh="本地、开放、可带走" data-en="Local, open, portable">本地、开放、可带走</h3>
+        <p data-zh="图数据是纯 JSON，可进 Git、可静默 diff；随时导出 Mermaid / DOT / Markdown / TXT。还能一键把 AgentFlow 工作流变成图。"
+           data-en="graph.json is plain JSON — Git-friendly and diffable. Export Mermaid / DOT / Markdown / TXT anytime, or turn an AgentFlow workflow into a map with one command.">图数据是纯 JSON，可进 Git、可静默 diff；随时导出 Mermaid / DOT / Markdown / TXT。还能一键把 AgentFlow 工作流变成图。</p></article>
+    </div>
+  </section>
+
+  <!-- use cases -->
+  <section id="usecases" class="wrap">
+    <div class="sec-head rv">
+      <div><div class="eyebrow">BUILT-IN TEMPLATES</div>
+        <h2 data-zh="一张画布，装下所有关系。" data-en="One canvas for every relationship.">一张画布，装下所有关系。</h2></div>
+      <p data-zh="六种内置模板都是完整可改的起点——不是示例截图，是能直接开工的图。"
+         data-en="Six built-in templates are fully editable starting points — real maps, not mockups.">六种内置模板都是完整可改的起点——不是示例截图，是能直接开工的图。</p>
+    </div>
+    <div class="grid-3">
+      <article class="card rv"><div class="num">THEOREM</div><h3 data-zh="定理依赖分析" data-en="Theorem dependencies">定理依赖分析</h3>
+        <p data-zh="定理 / 引理 / 命题 / 定义分层展开，谁依赖谁、哪里有环，一眼看穿。"
+           data-en="Theorems, lemmas, propositions and definitions in layers — spot loops and missing links at a glance.">定理 / 引理 / 命题 / 定义分层展开，谁依赖谁、哪里有环，一眼看穿。</p></article>
+      <article class="card rv"><div class="num">PAPERS</div><h3 data-zh="论文关联分析" data-en="Paper relation map">论文关联分析</h3>
+        <p data-zh="论文节点带 DOI 与本地路径，支持 / 矛盾 / 引用关系连成证据网络。"
+           data-en="Papers carry DOIs and local paths; supports / contradicts / cites edges build the evidence web.">论文节点带 DOI 与本地路径，支持 / 矛盾 / 引用关系连成证据网络。</p></article>
+      <article class="card rv"><div class="num">RACI</div><h3 data-zh="项目任务分工（RACI）" data-en="Task RACI map">项目任务分工（RACI）</h3>
+        <p data-zh="R 执行 / A 负责 / C 咨询 / I 知会，连线颜色即职责；度中心性揪出单点故障。"
+           data-en="R / A / C / I encoded as colored edges; degree centrality exposes the bottleneck.">R 执行 / A 负责 / C 咨询 / I 知会，连线颜色即职责；度中心性揪出单点故障。</p></article>
+      <article class="card rv"><div class="num">ORG</div><h3 data-zh="公司运营架构" data-en="Org structure">公司运营架构</h3>
+        <p data-zh="部门 / 人员 / 汇报关系成树成图，跨团队协作路径不再靠猜。"
+           data-en="Departments, people and reporting lines as a living tree — cross-team paths, no guessing.">部门 / 人员 / 汇报关系成树成图，跨团队协作路径不再靠猜。</p></article>
+      <article class="card rv"><div class="num">RESEARCH</div><h3 data-zh="科研项目合作分工" data-en="Research collaboration">科研项目合作分工</h3>
+        <p data-zh="课题、成员、交付物与依赖关系挂在同一张图上，进度与瓶颈同屏。"
+           data-en="Topics, members, deliverables and dependencies on one map — progress and bottlenecks side by side.">课题、成员、交付物与依赖关系挂在同一张图上，进度与瓶颈同屏。</p></article>
+      <article class="card rv"><div class="num">CONVERSATION</div><h3 data-zh="对话关联分析" data-en="Conversation map">对话关联分析</h3>
+        <p data-zh="讨论串 follows / answers / merges 成图，长线程的结论与分叉一目了然。"
+           data-en="Threads follow / answer / merge into a map — conclusions and forks of long discussions, visible.">讨论串 follows / answers / merges 成图，长线程的结论与分叉一目了然。</p></article>
+    </div>
+  </section>
+
+  <!-- demo -->
+  <section id="demo" class="wrap">
+    <div class="sec-head rv">
+      <div><div class="eyebrow">SEE IT MOVE</div>
+        <h2 data-zh="六十秒看懂，二十秒上手。" data-en="Sixty seconds to get it, twenty to try it.">六十秒看懂，二十秒上手。</h2></div>
+      <p data-zh="介绍片与真实操作录屏，都来自同一个正在运行的 OmniFlow Studio。"
+         data-en="The intro film and the hands-on capture both come from one live OmniFlow Studio.">介绍片与真实操作录屏，都来自同一个正在运行的 OmniFlow Studio。</p>
+    </div>
+    <div class="video-grid">
+      <div class="video-card rv">
+        <div class="vc-bar"><b data-zh="产品介绍片 · 80s" data-en="Product intro · 80s">产品介绍片 · 80s</b><span>1080p · 配音 + BGM</span></div>
+        <video controls preload="metadata" src="assets/omniflow_promo.mp4"></video>
+        <div class="vc-cap" data-zh="以真实「人心脏再生证据链」为例：从样本到分子机制，层层可追溯。"
+             data-en="A real evidence chain — heart regeneration after MI — traced from sample to mechanism.">以真实「人心脏再生证据链」为例：从样本到分子机制，层层可追溯。</div>
+      </div>
+      <div class="video-card rv">
+        <div class="vc-bar"><b data-zh="实操录屏 · 23s" data-en="Hands-on capture · 23s">实操录屏 · 23s</b><span>1080p · CRF 17</span></div>
+        <video controls muted loop playsinline poster="assets/demo_poster.jpg" src="assets/demo.mp4"></video>
+        <div class="vc-cap" data-zh="拖拽节点、缩放平移、打开备注、全局搜索、聚簇布局——全部真实操作。"
+             data-en="Drag nodes, zoom & pan, open notes, search, cluster layout — all real interactions.">拖拽节点、缩放平移、打开备注、全局搜索、聚簇布局——全部真实操作。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- gallery -->
+  <section id="gallery" class="wrap">
+    <div class="sec-head rv">
+      <div><div class="eyebrow">A CLOSER LOOK</div>
+        <h2 data-zh="从全局到细节，只需一次点击。" data-en="From overview to detail in one click.">从全局到细节，只需一次点击。</h2></div>
+      <p data-zh="以下截图均取自真实图数据，可直接对照上方录屏。"
+         data-en="All captures come from the same live graph you saw above.">以下截图均取自真实图数据，可直接对照上方录屏。</p>
+    </div>
+    <div class="gallery">
+      <figure class="rv" data-full="assets/shots/01-overview-dark.png"><img src="assets/shots/01-overview-dark.png" alt="" loading="lazy"><figcaption><span data-zh="无限画布 · 分组容器 · 实时检查器" data-en="Infinite canvas · groups · live inspector">无限画布 · 分组容器 · 实时检查器</span><i>OVERVIEW</i></figcaption></figure>
+      <figure class="rv" data-full="assets/shots/02-detail-core.png"><img src="assets/shots/02-detail-core.png" alt="" loading="lazy"><figcaption><span data-zh="语义连线：取材 / 核分裂 → 胞质分裂 / 真凭据" data-en="Semantic edges: sampled / karyokinesis → cytokinesis / evidence">语义连线：取材 / 核分裂 → 胞质分裂 / 真凭据</span><i>DETAIL</i></figcaption></figure>
+      <figure class="rv" data-full="assets/shots/04-fullnote.png"><img src="assets/shots/04-fullnote.png" alt="" loading="lazy"><figcaption><span data-zh="节点 Markdown 备注：论点、依据与页码留痕" data-en="Node Markdown note: claim, evidence, page numbers">节点 Markdown 备注：论点、依据与页码留痕</span><i>NOTE</i></figcaption></figure>
+      <figure class="rv" data-full="assets/shots/05-search.png"><img src="assets/shots/05-search.png" alt="" loading="lazy"><figcaption><span data-zh="全局搜索「有丝分裂」：标题 / 备注 / 标签全文命中" data-en="Global search hits titles, notes and tags">全局搜索「有丝分裂」：标题 / 备注 / 标签全文命中</span><i>SEARCH</i></figcaption></figure>
+      <figure class="rv" data-full="assets/shots/06-export.png"><img src="assets/shots/06-export.png" alt="" loading="lazy"><figcaption><span data-zh="一键导出 Mermaid / Graphviz DOT / Markdown / JSON / TXT" data-en="Export to Mermaid / DOT / Markdown / JSON / TXT">一键导出 Mermaid / Graphviz DOT / Markdown / JSON / TXT</span><i>EXPORT</i></figcaption></figure>
+      <figure class="rv" data-full="assets/shots/08-overview-light.png"><img src="assets/shots/08-overview-light.png" alt="" loading="lazy"><figcaption><span data-zh="同一张图，浅色主题一键切换" data-en="Same map, one-click light theme">同一张图，浅色主题一键切换</span><i>LIGHT</i></figcaption></figure>
+    </div>
+  </section>
+  <div class="lightbox" id="lightbox" onclick="this.classList.remove('open')">
+    <span class="lb-x">ESC / 点击关闭</span>
+    <img id="lbImg" alt="">
+  </div>
+
+  <!-- interfaces -->
+  <section id="api" class="wrap">
+    <div class="sec-head rv">
+      <div><div class="eyebrow">ONE GRAPH · EVERY WORKFLOW</div>
+        <h2 data-zh="三层标准接口，同一份数据。" data-en="Three interfaces, one source of truth.">三层标准接口，同一份数据。</h2></div>
+      <p data-zh="人用画布，脚本用 CLI，AI 智能体走 MCP——读写的是同一个 graph.json。"
+         data-en="Humans get the canvas, scripts get the CLI, agents get MCP — all on the same graph.json.">人用画布，脚本用 CLI，AI 智能体走 MCP——读写的是同一个 graph.json。</p>
+    </div>
+    <div class="iface">
+      <article class="card rv"><div class="num">MCP</div><h3 data-zh="给 AI 智能体" data-en="For AI agents">给 AI 智能体</h3>
+        <p data-zh="61 个工具：建图、改图、布局、搜索、读写备注，即插即用。"
+           data-en="61 tools: create, edit, layout, search, notes — plug and play.">61 个工具：建图、改图、布局、搜索、读写备注，即插即用。</p>
+        <code>of mcp</code><span class="tag">STDIO · JSON-RPC</span></article>
+      <article class="card rv"><div class="num">HTTP</div><h3 data-zh="给浏览器与本机工具" data-en="For browsers & local tools">给浏览器与本机工具</h3>
+        <p data-zh="可视化 Studio 与 REST API，事件流实时同步，仅监听 127.0.0.1。"
+           data-en="Visual Studio and REST API with live SSE — bound to 127.0.0.1 only.">可视化 Studio 与 REST API，事件流实时同步，仅监听 127.0.0.1。</p>
+        <code>of studio --port 4319</code><span class="tag">REST + SSE · LOCAL-ONLY</span></article>
+      <article class="card rv"><div class="num">CLI</div><h3 data-zh="给脚本与流水线" data-en="For scripts & pipelines">给脚本与流水线</h3>
+        <p data-zh="批量建图、模板、导入导出，一行命令进 CI 或笔记工作流。"
+           data-en="Batch-create from templates, import/export — one line into CI or your notes workflow.">批量建图、模板、导入导出，一行命令进 CI 或笔记工作流。</p>
+        <code>of create "证据链" --template research --lang zh</code><span class="tag">ZERO-DEPENDENCY NODE.JS</span></article>
+    </div>
+  </section>
+
+  <!-- start -->
+  <section id="start" class="wrap">
+    <div class="sec-head rv">
+      <div><div class="eyebrow">START WITH THE MAP</div>
+        <h2 data-zh="先把关系看清楚。" data-en="See the relationships first.">先把关系看清楚。</h2></div>
+      <p data-zh="无需注册、无需联网账号——数据始终在你的机器上。"
+         data-en="No sign-up, no cloud account — your data never leaves your machine.">无需注册、无需联网账号——数据始终在你的机器上。</p>
+    </div>
+    <div class="start-grid">
+      <div class="steps rv">
+        <div class="step"><div class="no">1</div><div><b data-zh="把仓库发给你的编码 Agent" data-en="Send the repo to your coding agent">把仓库发给你的编码 Agent</b>
+          <p data-zh="ZCode / Claude Code / Codex / Cursor / Windsurf——任何能跑 shell 的 Agent 都装得动。" data-en="ZCode, Claude Code, Codex, Cursor, Windsurf — any shell-capable agent can install it.">ZCode / Claude Code / Codex / Cursor / Windsurf——任何能跑 shell 的 Agent 都装得动。</p></div></div>
+        <div class="step"><div class="no">2</div><div><b data-zh="Agent 运行安装脚本" data-en="Agent runs the installer">Agent 运行安装脚本</b>
+          <p data-zh="install.sh / install.ps1：装 CLI、挂技能、链接 of 命令，重跑即升级。" data-en="install.sh / install.ps1 installs the CLI, drops agent skills and links `of`. Re-run to upgrade.">install.sh / install.ps1：装 CLI、挂技能、链接 of 命令，重跑即升级。</p></div></div>
+        <div class="step"><div class="no">3</div><div><b data-zh="打开本地画布" data-en="Open the local canvas">打开本地画布</b>
+          <p data-zh="of studio 打开 127.0.0.1:4319；of --version 与 of doctor 随时自检。" data-en="`of studio` serves 127.0.0.1:4319; `of --version` and `of doctor` verify anytime.">of studio 打开 127.0.0.1:4319；of --version 与 of doctor 随时自检。</p></div></div>
+      </div>
+      <div class="repo-card rv">
+        <div class="agents">GITHUB</div>
+        <div class="repo">https://github.com/kanghelyu/omni-flow</div>
+        <p data-zh="把这句话发给你的 Agent：「克隆并安装 https://github.com/kanghelyu/omni-flow，然后运行 of studio。」"
+           data-en="Tell your agent: “Clone & install https://github.com/kanghelyu/omni-flow, then run of studio.”">把这句话发给你的 Agent：「克隆并安装 https://github.com/kanghelyu/omni-flow，然后运行 of studio。」</p>
+        <a class="btn btn-primary" href="https://github.com/kanghelyu/omni-flow" target="_blank" rel="noopener" data-zh="前往仓库 ↗" data-en="Open repository ↗">前往仓库 ↗</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="foot-inner">
+    <div><b>OmniFlow</b> — <span data-zh="万用流程图" data-en="Universal flow maps">万用流程图</span> · CC BY-NC 4.0</div>
+    <div data-zh="零依赖 · 本地优先 · 一切关系皆可成图" data-en="Zero-dependency · Local-first · Everything is a graph">零依赖 · 本地优先 · 一切关系皆可成图</div>
+    <div>© 2026 Kanghe Lyu · <a href="https://kanghelyu.org" style="color:var(--cyan-dim)">kanghelyu.org</a></div>
+  </div>
+</footer>
+
+<script>
+/* ---- 中英切换 ---- */
+let LANG = localStorage.getItem("of-lang") || "zh";
+function applyLang(){
+  document.documentElement.lang = LANG === "zh" ? "zh-CN" : "en";
+  document.querySelectorAll("[data-zh]").forEach(el => {
+    const v = el.getAttribute("data-" + LANG);
+    if (v != null) el.innerHTML = v;
+  });
+  document.getElementById("langBtn").textContent = LANG === "zh" ? "EN" : "中";
+  localStorage.setItem("of-lang", LANG);
+}
+function toggleLang(){ LANG = LANG === "zh" ? "en" : "zh"; applyLang(); }
+applyLang();
+
+/* ---- 滚动浮现 ---- */
+const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting){ e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: .12 });
+document.querySelectorAll(".rv").forEach(el => io.observe(el));
+
+/* ---- 画廊灯箱 ---- */
+const lb = document.getElementById("lightbox"), lbImg = document.getElementById("lbImg");
+document.querySelectorAll(".gallery figure").forEach(f => f.addEventListener("click", () => { lbImg.src = f.dataset.full; lb.classList.add("open"); }));
+document.addEventListener("keydown", e => { if (e.key === "Escape") lb.classList.remove("open"); });
+</script>
+</body>
+</html>
