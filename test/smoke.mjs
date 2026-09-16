@@ -426,6 +426,98 @@ await test("computeLayout: every mode is overlap-free and bounded 6:1 on a shall
     assert.ok(aspect <= 6, `${mode}: span aspect must be ≤ 6, got ${aspect.toFixed(2)} (${Math.round(maxX - minX)}x${Math.round(maxY - minY)})`);
   }
 });
+// ---- 99. 文档与实现一致性（skill 曾与插件脱节：幽灵工具、漏写的模式与格式） ----
+await test("MCP 工具数为 61，且每个工具都在 SKILL.md 中出现", async () => {
+  const { readFileSync } = await import("node:fs");
+  const mcp = readFileSync(new URL("../lib/mcp-server.mjs", import.meta.url), "utf8");
+  const real = new Set([...mcp.matchAll(/name: "(of_[a-z_]+)"/g)].map((m) => m[1]));
+  assert.equal(real.size, 61, `expected 61 MCP tools, got ${real.size}`);
+  const skill = readFileSync(new URL("../skills/omni-flow/SKILL.md", import.meta.url), "utf8");
+  const missing = [...real].filter((t) => !skill.includes(t));
+  assert.deepEqual(missing, [], `SKILL.md never mentions: ${missing.join(", ")}`);
+});
+await test("文档不得把不存在的 MCP 工具写成可用", async () => {
+  const { readFileSync } = await import("node:fs");
+  const mcp = readFileSync(new URL("../lib/mcp-server.mjs", import.meta.url), "utf8");
+  const real = new Set([...mcp.matchAll(/name: "(of_[a-z_]+)"/g)].map((m) => m[1]));
+  // 明确写出"某工具不存在"是刻意的——它能阻止 agent 浪费一次调用去试。只有
+  // 把幽灵工具当成可用能力介绍才算错。
+  const NEGATED = /does not exist|do not call|no standalone|never existed|was removed/i;
+  const docs = ["skills/omni-flow/SKILL.md", "docs/API.md", "docs/FORMULAS.md", "docs/TUTORIAL.md", "README.md"];
+  const bad = [];
+  for (const rel of docs) {
+    readFileSync(new URL(`../${rel}`, import.meta.url), "utf8").split("\n").forEach((line, i) => {
+      for (const m of line.matchAll(/\bof_[a-z_]{3,}/g)) {
+        if (!real.has(m[0]) && !NEGATED.test(line)) bad.push(`${rel}:${i + 1} → ${m[0]}`);
+      }
+    });
+  }
+  assert.deepEqual(bad, [], `phantom tools presented as usable: ${bad.join("; ")}`);
+});
+await test("CLI 参考里的布局模式与导出格式跟实现一致", async () => {
+  const { readFileSync } = await import("node:fs");
+  const skill = readFileSync(new URL("../skills/omni-flow/SKILL.md", import.meta.url), "utf8");
+  const cli = readFileSync(new URL("../bin/of.mjs", import.meta.url), "utf8");
+  const layout = /of layout <id> \[--mode ([^\]]*)\]/.exec(skill);
+  assert.ok(layout, "SKILL.md no longer documents `of layout <id> [--mode …]`");
+  for (const mode of ["layered", "clusters", "force", "grid"]) {
+    assert.ok(layout[1].includes(mode), `SKILL.md layout block is missing '${mode}'`);
+  }
+  const exp = /of export <id> --format ([^\s\]]+)/.exec(skill);
+  assert.ok(exp, "SKILL.md no longer documents `of export <id> --format …`");
+  for (const fmt of ["mermaid", "dot", "md", "txt", "json", "html"]) {
+    assert.ok(exp[1].includes(fmt), `SKILL.md export block is missing '${fmt}'`);
+    if (fmt === "html" || fmt === "txt") {
+      assert.ok(cli.includes(`format === "${fmt}"`), `the CLI does not actually implement '${fmt}'`);
+    }
+  }
+});
+await test("lang 能落库（此前被 normalizeGraph 静默丢弃）", () => {
+  assert.equal(normalizeGraph({ name: "zh", lang: "zh" }).lang, "zh");
+  assert.equal(normalizeGraph({ name: "en", lang: "en" }).lang, "en");
+  assert.equal(normalizeGraph({ name: "junk", lang: "fr" }).lang, "en", "unknown lang falls back to en");
+  assert.equal(normalizeGraph({ name: "default" }).lang, "en");
+});
+await test("未知导出格式被拒绝，而不是静默返回 Mermaid", async () => {
+  const root = await mkdtemp(join(tmpdir(), "omniflow-export-"));
+  const studio = await startStudioServer({ root, port: 0 });
+  const base = `http://127.0.0.1:${studio.port}`;
+  try {
+    const created = await (await fetch(`${base}/api/graphs`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "export probe", template: "blank" }),
+    })).json();
+    for (const fmt of ["mermaid", "md", "txt", "dot", "json"]) {
+      const res = await fetch(`${base}/api/graph/${created.id}/export?format=${fmt}`);
+      assert.equal(res.status, 200, `format=${fmt} should be served`);
+    }
+    const html = await fetch(`${base}/api/graph/${created.id}/export?format=html`);
+    assert.equal(html.status, 400, "html is not an HTTP export format and must be refused, not served as Mermaid");
+    assert.match((await html.json()).error, /of export .*--format html/, "the 400 should point at the CLI");
+  } finally {
+    await studio.stop();
+  }
+});
+await test("CLI 裸布尔参数生效（--yes / --no-embed 曾经被忽略）", async () => {
+  const { spawnSync } = await import("node:child_process");
+  const root = await mkdtemp(join(tmpdir(), "omniflow-cli-"));
+  const of = new URL("../bin/of.mjs", import.meta.url).pathname;
+  const run = (...a) => spawnSync(process.execPath, [of, ...a], { env: { ...process.env, OF_HOME: root }, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+  const created = run("create", "flag probe", "--template", "blank");
+  assert.equal(created.status, 0, created.stderr);
+  const id = /id:\s*(\S+)/.exec(created.stdout)?.[1];
+  assert.ok(id, `could not read the new graph id from: ${created.stdout}`);
+  // export first — `delete --yes` really does move the graph into the trash
+  const withEmbed = run("export", id, "--format", "html");
+  const noEmbed = run("export", id, "--format", "html", "--no-embed");
+  assert.equal(withEmbed.status, 0, withEmbed.stderr);
+  assert.equal(noEmbed.status, 0, noEmbed.stderr);
+  assert.notEqual(withEmbed.stdout.length, noEmbed.stdout.length, "--no-embed must change the document (light file referencing vendor/)");
+  const del = run("delete", id, "--yes");
+  assert.equal(del.status, 0, `\`of delete <id> --yes\` must work: ${(del.stderr || del.stdout).trim()}`);
+  assert.equal(run("read", id).status, 1, "the deleted graph must no longer be readable");
+});
+
 console.log(results.join("\n"));
 
 
