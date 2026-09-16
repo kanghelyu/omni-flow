@@ -1,0 +1,23 @@
+# OmniFlow — things that live in a local install but are NOT repo content.
+#
+# `tools/audit-push.py` publishes the repository by diffing a checkout against
+# GitHub. It has its own skip list and a guard that refuses to run outside a real
+# checkout (running it from ~/.omni-flow once published this exact working data —
+# see CHANGELOG 0.2.2). This file is the second line of defence, for anyone using
+# plain git instead.
+
+# —— Local working data: your maps and the vault state ——
+graphs/
+templates/
+tree.json
+crosslinks.json
+live-conversation.json
+WORKLOG.txt
+trash/
+.bak/
+
+# —— OS / editor noise ——
+.DS_Store
+*.log
+*.tmp
+*.swp
