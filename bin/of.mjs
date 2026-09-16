@@ -29,6 +29,13 @@ function opt(name, fallback = null) {
   const index = args.indexOf(name);
   return index !== -1 && args[index + 1] !== undefined ? args[index + 1] : fallback;
 }
+/** Bare boolean flags (`--yes`, `--no-embed`, `--no-open`): presence IS the value.
+ *  Do not use opt() for these — it reads args[index + 1], so a flag written at the
+ *  end of the line returns null and silently does nothing (`of delete <id> --yes`
+ *  used to always refuse, `--no-embed` was ignored while still reporting success). */
+function flag(name) {
+  return args.includes(name);
+}
 function fail(message, issues) {
   console.error(`✗ ${message}`);
   if (issues?.length) for (const issue of issues) console.error(`  · ${issue}`);
@@ -132,7 +139,7 @@ async function cmdExport() {
     for (const n of graph.nodes){
       try { const r = await readNodeNote(root, id, n.id); if (r?.exists) notes[n.id] = { content: r.content }; } catch { /* no note */ }
     }
-    text = await toStandaloneHtml(graph, notes, { embed: opt("--no-embed") ? false : true });
+    text = await toStandaloneHtml(graph, notes, { embed: flag("--no-embed") ? false : true });
   }
   else if (format === "json") text = JSON.stringify(graph, null, 2);
   else if (format === "dot") text = toDot(graph);
@@ -243,7 +250,7 @@ async function cmdRestore() {
 
 async function cmdDelete() {
   const id = args[1];
-  if (opt("--yes") === null) fail("Deletion moves the graph into trash (recoverable). Add --yes to confirm.");
+  if (!flag("--yes")) fail("Deletion moves the graph into trash (recoverable). Add --yes to confirm.");
   const trashDir = await deleteGraph(rootHome(), id);
   console.log(`✓ Moved into ${trashDir}`);
 }
@@ -251,7 +258,7 @@ async function cmdDelete() {
 async function cmdStudio() {
   const { startStudioServer, openInBrowser } = await import("../studio/server.mjs");
   const port = Number(opt("--port", process.env.OF_STUDIO_PORT ?? 4319));
-  const noOpen = args.includes("--no-open");
+  const noOpen = flag("--no-open");
   const studio = await startStudioServer({ root: rootHome(), port });
   const url = `http://127.0.0.1:${studio.port}`;
   console.log(`✓ OmniFlow Studio: ${url}  (root: ${studio.root})`);
@@ -290,16 +297,24 @@ function cmdHelp() {
 
 usage: of <command> [args]
 
-  create <name> [--template id] [--desc text]   build from a template (default: blank)
+  create <name> [--template id] [--desc text] [--lang zh|en]   build from a template (default: blank)
   templates                                    list all templates
   list / read <id>                             list graphs / show one graph
   validate <id>                                structure validation (hard errors + soft warnings)
   analyze <id> [--trace nodeId]                cycles / bottlenecks / orphans / dependency trace
-  layout <id> [--mode layered|clusters]        layout: layered / grouped clusters
+  layout <id> [--mode layered|clusters|force|grid]   relayout and re-fit every group box
   export <id> --format mermaid|dot|md|txt|json|html [--out FILE] [--no-embed]
+                                               html = standalone offline canvas (one double-clickable file)
   import <file> [--format mermaid|json] [--name NEW-NAME]
-  import-doc <content_list.json|.md|build_data.py> [--name NAME] [--pages PAGE-IMG-DIR] [--folder PATH]  # MinerU / Markdown / card table → graph
+  import-doc <content_list.json|.md|build_data.py> [--name NAME] [--pages PAGE-IMG-DIR] [--folder PATH] [--lang zh|en]
+                                               MinerU / Markdown / card table → graph
   import-af <agent-flow-id>                    import an agent-flow workflow as a graph
+  project overview|sections <id> [--min N] [--only SECTION] [--folder PATH]
+                                               hierarchical projection: 1 overview, or one graph per section
+  xlink list [graphId] | add --from G:N --to G:N --why "…" | rm <id> | import <file> | prune
+                                               cross-graph links between cards in different maps
+  convo new|say|branch|merge|path|open <id> [--text …]    non-linear conversation (DAG) sessions
+  live start|log|status|stop [--topic …] [--role agent|user] [--text …]   record a live session
   studio [--port N] [--no-open]                local canvas (default 127.0.0.1:4319)
   mcp                                          MCP standard server (stdio, all 61 tools)
   template-save <graphId> [--id --name --desc]  distil a graph into a custom template
@@ -308,6 +323,7 @@ usage: of <command> [args]
   trash / restore <trashName>                   list the trash / restore
   delete <id> --yes                             move into trash (recoverable)
   doctor                                        environment self-check
+  help / --version                              this text / print the version
 
 Every node/edge style (color, shape, arrow, label) is edited in the Studio, or by editing graph.json directly.`);
 }
