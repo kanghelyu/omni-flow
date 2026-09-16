@@ -12,14 +12,19 @@ description: Use OmniFlow (of CLI) to create and edit universal flow maps — th
 Before touching anything, state the following in your first reply:
 
 1. **You have read R0–R9 and the 📕 Failure library** (read, not "about to read").
-2. **How you will verify**: which `of_*` tools you will use (e.g. `of_latex_check` → write → `of_get_graph` for counts → `of_get_note` for read-back → `of_validate`).
+2. **How you will verify**: which `of_*` tools you will use (e.g. `of_create_graph` → `of_add_node` / `of_add_edge` → `of_get_graph` for counts → `of_get_note` for read-back → `of_validate`), and that math is checked by the gate inside the write itself (R1).
 3. **If a rule cannot be satisfied** (e.g. the user explicitly asks to skip validation) → **MUST** stop and surface the conflict for the user to decide; **MUST NOT** silently downgrade, and **MUST NOT** "do it first and patch later".
 
 > **On violation**: revert the artefact, state which rule was broken and why, then redo it correctly. **MUST NOT** present a violating artefact as "done".
 
 ## R1. Formulas: KaTeX standard commands only, always self-check before writing
 
-- **MUST** call **`of_latex_check`** before writing anything that contains math (note body, card title, edge label). A non-empty `failed` means **you must not commit** — fix per `hint` and re-check.
+- **There is no standalone "check my LaTeX" tool** — `of_latex_check` does not exist, so do not call it or wait for it. The gate runs **inside every write**: an unacceptable fragment is rejected with `code: LATEX_INVALID` plus a per-fragment `hint`. The self-check loop is therefore **write → if rejected, fix exactly per `hint` → write again**. Treating a rejection as success, or committing "now" and repairing later, is a violation.
+- **MUST** get the formulas right *before* writing, by following the rules below. If you have shell + node access you can run the **identical gate** without writing anything:
+  ```bash
+  node -e 'import(process.env.HOME+"/.omni-flow/lib/latex.js").then(m=>console.log(JSON.stringify(m.checkLatex(process.argv[1]),null,2)))' 'The operator $C_i$ satisfies $[C_1,C_2]=0$.'
+  ```
+  `"failed": []` means clean; anything listed in `failed` carries the same `hint` the write would have returned. Agents that only have MCP do not have this — for them the write gate *is* the check.
 - **MUST NOT** define macros with `\newcommand`. The legal set is KaTeX built-ins plus official `mhchem` `\ce{}`.
 - **Custom symbol macros are rejected by the gate, not just discouraged**: `\newcommand`, `\renewcommand`,
   `\providecommand`, `\DeclareMathOperator`, `\def`, `\gdef`, `\edef`, `\xdef`, `\let` fail validation outright.
@@ -43,7 +48,7 @@ Before touching anything, state the following in your first reply:
 
 ## R3. Three checks before every write
 
-1. `of_latex_check` is all green (see R1).
+1. Math-bearing content satisfies R1 before it is sent; a rejected write is fixed per `hint` and retried.
 2. **Never overwrite existing content with empty or degenerate data**: a whole-graph write must not put an empty graph over a non-empty one.
 3. After structural changes, `of_validate` passes (cycles are warnings, not errors — they are allowed).
 
@@ -132,6 +137,29 @@ Pass it explicitly: `of_create_graph { "name": "...", "template": "theorem-deps"
 2. **HTTP JSON API**: `of studio --no-open` then call `http://127.0.0.1:4319/api/...` (50+ endpoints + SSE).
 3. **CLI**: see "Core Commands" section.
 
+### Which tool to reach for (all 61, grouped)
+
+| Area | Tools |
+| --- | --- |
+| Graphs | `of_create_graph` `of_list_graphs` `of_get_graph` `of_patch_graph_meta` `of_delete_graph` `of_restore_graph` `of_list_trash` |
+| Cards | `of_add_node` `of_patch_node` `of_move_node` `of_delete_node` |
+| Edges | `of_add_edge` `of_patch_edge` `of_delete_edge` |
+| Groups | `of_add_group` `of_delete_group` |
+| Type registries | `of_node_types` `of_edge_types` `of_patch_node_type` `of_patch_edge_type` |
+| Notes | `of_get_note` `of_set_note` |
+| Structure | `of_validate` `of_analyze` `of_layout` |
+| Import | `of_import_json` (typed, lossless) `of_import_mermaid` (quick pass) `of_import_doc` `of_import_agentflow` |
+| Export | `of_export` (mermaid / dot / md / txt / json / html) |
+| Find | `of_search` — full text across graphs and notes |
+| Folders | `of_tree` `of_create_folder` `of_move_graph` |
+| Cross-graph links | `of_xlink_list` `of_xlink_add` `of_xlink_rm` `of_xlink_import` |
+| Conversation (DAG) | `of_convo_new` `of_convo_say` `of_convo_branch` `of_convo_merge` `of_convo_open` `of_convo_path` `of_convo_pending` `of_convo_vote` `of_convo_scaffold` `of_convo_linearize` |
+| Multi-agent runtime | `of_agent_next` `of_agent_record` `of_agent_done` |
+| Live capture | `of_live_start` `of_live_log` `of_live_status` `of_live_stop` |
+| Sections | `of_project_overview` `of_project_sections` |
+| Templates | `of_templates` `of_save_template` `of_delete_template` |
+| Studio | `of_start_studio` |
+
 > This skill and the plugin are one unit: installing the plugin auto-deploys this skill; invoking this skill IS using OmniFlow.
 
 ---
@@ -172,7 +200,7 @@ of_add_node { "id": "<graph-id>", "label": "Lemma 3.6 quotient algebra represent
 
 **Step 5 · Fill node notes** (every node must have one; one call per node)
 
-> **MUST** first run `of_latex_check` on the note body if it contains any math (R1) — notes with a failed fragment will be **rejected** by the server (`code: LATEX_INVALID`), returning per-fragment `hint`s. Do not skip the check and "hope it renders".
+> **MUST** get the math right before sending (R1) — a note containing an unacceptable fragment is **rejected** by the server (`code: LATEX_INVALID`) with per-fragment `hint`s. Local agents can pre-check with the command in R1 (identical gate); MCP-only agents treat the rejection itself as the check and re-send after fixing per `hint`. Never "hope it renders".
 > `content` is full Markdown (first line = card summary; papers must include DOI/arXiv + local path):
 ```json
 of_set_note { "id": "<graph-id>", "nodeId": "def-sub", "content": "Def 2.1 (Center Z(G) of group G)\nZ(G) = { z ∈ G | ∀g∈G, zg=gz }\n- Notation: all central elements as z_i\n- Intuition: elements commuting with everything" }
@@ -209,26 +237,61 @@ Report using the template at the bottom. **Missing any step's verification recor
 
 ---
 
-# SOP-B: Bulk graph creation (Mermaid import route, prefer for >8 nodes)
+# SOP-B: Bulk graph creation (>8 nodes)
 
-**Step 1** · Write Mermaid with OmniFlow edge types (labels in `-->|uses|` must be registered types):
+Two routes, and they are **not** interchangeable. Pick by whether the cards need **types** and **groups**.
+
+| Route | Keeps | Loses |
+| --- | --- | --- |
+| `of_import_json` | node types, edge types, custom type registries (`nodeTypes`/`edgeTypes`), shapes, colours, groups, direction | nothing |
+| `of_import_mermaid` | card ids, labels, shapes | **every node type** (all cards become `process`, one colour), edge types (Mermaid labels stay labels), and all `classDef` / `class` / `style` / `subgraph` / `direction` lines |
+
+## B-1 · Typed bulk creation — `of_import_json` (the default)
+
+**Step 1** · Build the object (same shape as `graph.json`) and import it:
+```json
+of_import_json { "name": "Paper theorem deps", "data": {
+  "direction": "TD",
+  "nodes": [
+    { "id": "def-2.1", "type": "definition", "label": "Def 2.1 Center Z(G)",            "x": 0,   "y": 0 },
+    { "id": "lem-3.2", "type": "lemma",      "label": "Lemma 3.2 Conjugation invariant", "x": 320, "y": 0 },
+    { "id": "thm-4.1", "type": "theorem",    "label": "Theorem 4.1 Classification",     "x": 640, "y": 0 }
+  ],
+  "edges": [
+    { "source": "def-2.1", "target": "lem-3.2", "type": "uses" },
+    { "source": "lem-3.2", "target": "thm-4.1", "type": "uses" }
+  ],
+  "groups": [ { "id": "g-core", "label": "Theory core", "color": "#2563EB", "members": ["def-2.1", "lem-3.2"] } ]
+} }
+```
+- `type` values must be registered — check `of_node_types` / `of_edge_types` first if the colour matters.
+- The `x`/`y` above are placeholders; `of_layout` in Step 2 places them properly. Semantic ids (`def-2.1`) are preserved, which is what cross-graph links need (R2).
+- ✅ Record the returned `id`.
+
+**Step 2** · `of_layout { "id": "<id>", "mode": "layered" }` — modes: `layered` (default) · `clusters` · `force` · `grid`.
+
+**Step 3** · File it: `of_move_graph { "graphId": "<id>", "folder": "Math/paper-notes" }` (`of_create_folder { "path": "Math/paper-notes" }` first if the folder is new).
+
+**Step 4** · `of_get_graph` — verify the node count and **edge directions** (source → result, always).
+
+**Step 5** · Per-node `of_set_note` (same as SOP-A Step 5, don't skip). Math-bearing notes are gated on write (R1).
+
+**Step 6** · `of_validate` → `of_analyze` → Report.
+
+## B-2 · Quick untyped pass — `of_import_mermaid`
+
+Use it when the cards need no types and no groups; it is a fast way to get ids and labels on the canvas.
+
 ```mermaid
 flowchart TD
-  A["Def 2.1 Center Z(G)"] -->|"uses"| B["Lemma 3.2 Conjugation invariant"]
-  B -->|"uses"| C["Theorem 4.1 Classification"]
+  def-2.1["Def 2.1 Center Z(G)"] -->|"uses"| lem-3.2["Lemma 3.2 Conjugation invariant"]
 ```
-
-**Step 2**:
 ```json
-of_import_mermaid { "text": "<full mermaid above>", "name": "Paper theorem deps", "folder": "Math/paper-notes" }
+of_import_mermaid { "text": "<full mermaid above>", "name": "Paper theorem deps" }
 ```
-✅ Record returned `id` and `storage.graph`.
+There is **no `folder` argument** on this tool — file it afterwards with `of_move_graph`. A Mermaid edge label (`-->|"uses"|`) becomes an edge **label**, not a type.
 
-**Step 3** · `of_get_graph` to verify node count and edge directions.
-
-**Step 4** · Per-node `of_set_note` (same as SOP-A Step 5, don't skip). **Notes containing formulas MUST pass `of_latex_check` first** (R1).
-
-**Step 5** · `of_validate` → `of_analyze` → Report.
+Then set what you need: `of_patch_node { "id": "<id>", "nodeId": "def-2.1", "patch": { "type": "definition" } }` (patchable: `label` `type` `note` `x` `y` `w` `h` `shape` `fill` `border` `textColor` `icon` `status` `tags`), optionally `of_patch_node_type` to register a new type first. Continue with B-1 Step 3 → Step 6.
 
 ---
 
@@ -424,7 +487,7 @@ Nilpotent Orbits in Semisimple Lie Algebras
 ```
 
 **Completeness self-check (mandatory — all four are required, in order)**:
-0. **Before writing**: run `of_latex_check` on the note body when it contains math (R1) — `failed` must be empty. This is a hard gate, not optional.
+0. **Before writing**: the math in the note body must satisfy R1 — pre-check offline where you can, otherwise let the write's own gate reject it and re-send after fixing per `hint`. This is a hard gate, not optional.
 1. `of_get_note` readback full text;
 2. Check: line count ≥ 8; **theorem/model/formula nodes must contain text math formula body**; paper nodes have DOI/arXiv + local path;
 3. Any criterion unmet → rewrite → re-verify. **Cannot proceed until readback passes**.
@@ -558,7 +621,7 @@ Produces a **single self-contained HTML file** (≈0.6–0.8 MB): fully offline 
 
 # Formula rendering (KaTeX 0.18.7, offline) — MUST read before writing any math
 
-**Mandatory flow (R1)**: `of_latex_check` → fix until `failed` is empty → only then `of_set_note` / create the card. On every write OmniFlow normalises and hard-validates; content that fails is **rejected** with a per-fragment `hint`.
+**Mandatory flow (R1)**: get the math right → write → if the write is **rejected**, fix exactly per fragment `hint` and write again. Every write normalises and hard-validates, so unacceptable content never lands; where you have shell access the R1 pre-check runs the identical gate beforehand.
 
 | Category | Allowed (will compile) | Forbidden / must be rewritten |
 | --- | --- | --- |
@@ -573,7 +636,7 @@ Produces a **single self-contained HTML file** (≈0.6–0.8 MB): fully offline 
 
 **Command patterns**: write `\operatorname{Tr}`, not `\Tr`; write `\mathbb{R}`, not `\RR` (common shorthands like `\RR` are auto-rewritten, but write the standard form directly). **MUST NOT** depend on any custom macro definition.
 
-**English summary**: allowed = `$…$` · `$$…$$` · `\(…\)` · `\[…\]` · bare LaTeX paragraphs · inline commands in mixed text (e.g. `\ce{2H2 + O2 -> 2H2O}`). Auto-normalised = `\bm`→`\boldsymbol`, `\SI{}{}`→text units, `align`/`gather`→`aligned`/`gathered`, `\tag` inline→text number, preamble/`\label`/`\cite`/`\ref` stripped. **Rejected** = self-defined macros, unknown control sequences, unbalanced braces/`\left`/`\right`, nested `$`. Unsupported constructs (TikZ, `\includegraphics`) degrade to a visible placeholder — **never an error, never lost content**. Run `of_latex_check` before writing.
+**English summary**: allowed = `$…$` · `$$…$$` · `\(…\)` · `\[…\]` · bare LaTeX paragraphs · inline commands in mixed text (e.g. `\ce{2H2 + O2 -> 2H2O}`). Auto-normalised = `\bm`→`\boldsymbol`, `\SI{}{}`→text units, `align`/`gather`→`aligned`/`gathered`, `\tag` inline→text number, preamble/`\label`/`\cite`/`\ref` stripped. **Rejected** = self-defined macros, unknown control sequences, unbalanced braces/`\left`/`\right`, nested `$`. Unsupported constructs (TikZ, `\includegraphics`) degrade to a visible placeholder — **never an error, never lost content**. Get the math right before writing (R1: offline pre-check where available, otherwise the write's own gate).
 
 
 # 📕 Failure library (symptom → root cause → mandatory action)
@@ -585,7 +648,7 @@ Produces a **single self-contained HTML file** (≈0.6–0.8 MB): fully offline 
 | Symptom | Root cause | Mandatory action |
 | --- | --- | --- |
 | Many formulas shown as raw source, with `⚠ LaTeX not rendered (source kept)` | `\tag{}` was rendered inline (KaTeX allows `\tag` only in display mode) | Already auto-converted to a text number; for new content wrap the formula in `$$…$$` |
-| One formula fails as a whole | Unbalanced braces, or unpaired `\left`/`\right` | Get the `hint` from `of_latex_check`, fix it, re-check |
+| One formula fails as a whole | Unbalanced braces, or unpaired `\left`/`\right` | Take the `hint` from the rejection, fix it, re-send (R1) |
 | `Undefined control sequence: \xxx` | Self-defined macro or misspelled command | Switch to a standard command; pattern: `\operatorname{Tr}`, not `\Tr` |
 | Chemistry fails | mhchem not applied, or `$\ce{...}$` mixed with prose | Use official `\ce{}` and move prose outside the formula |
 | English prose rendered as a formula | A bare inline formula misdetected as prose | A guard exists (≥3 English words is not treated as a formula); when in doubt use explicit `$…$` |
@@ -611,7 +674,7 @@ Produces a **single self-contained HTML file** (≈0.6–0.8 MB): fully offline 
 
 Before finishing any graph task, do all of the following in order and put the results in your report:
 
-1. **Formulas** — see R1 (`of_latex_check` green before every write).
+1. **Formulas** — see R1 (math correct before every write; a rejected write is fixed per `hint`, not ignored).
 2. **Read back every write** — see R6.
 3. **Structure** — `of_validate` reports no hard errors (cycles and orphan nodes are warnings and are allowed).
 4. **Scale and location** — path and counts come from the **actual return value** of `of_get_graph` / `of_tree` (see R9).
@@ -642,12 +705,16 @@ of create "Paper theorem deps" --template theorem-deps
 of list && of read <id>               # graph.json is single source of truth
 of validate <id>                      # hard errors block; cycles/orphans are warnings
 of analyze <id> [--trace <nodeId>]    # cycles + degree centrality + up/downstream closure
-of layout <id> [--mode layered|clusters]
-of export <id> --format mermaid|dot|md|json --out file
+of layout <id> [--mode layered|clusters|force|grid]
+of export <id> --format mermaid|dot|md|txt|json|html [--out file] [--no-embed]
 of import file.mmd                    # Mermaid / JSON
 of import-af <agent-flow-id>          # agent-flow workflows
+of project overview|sections <id>     # hierarchical projection
+of xlink list|add|rm|import|prune     # cross-graph links
+of convo new|say|branch|merge|path|open <id>
+of live start|log|status|stop
 of studio [--no-open]                 # canvas http://127.0.0.1:4319
-of tree                               # folder tree
+of doctor                             # environment self-check
 ```
 
 ---
