@@ -2,6 +2,29 @@
 
 All notable changes to OmniFlow are documented here. Formats: Keep a Changelog, SemVer.
 
+## 0.2.7 — 2026-09-17
+
+### Studio fixes
+- **Two-finger pinch to zoom and pan on touch screens.** `#canvasWrap` is
+  `touch-action: none`, so the browser never zoomed for us — and pinch was simply not
+  implemented: zoom existed only on the wheel, the ± buttons and Fit, which leaves a tablet
+  unable to zoom at all. Two fingers now scale about their midpoint *and* pan in the same
+  gesture. Starting a pinch dispatches a marked synthetic `pointercancel` so an in-flight
+  pan/drag aborts through its existing restore path (no half-applied movement).
+- **A second finger no longer drives two gestures at once.** Five handlers listened for
+  `pointermove` on `window` without filtering by `pointerId`, so two fingers ran two pans
+  concurrently, both writing `view`. Each gesture now claims the pointer it started with, and
+  yields while a pinch is in progress.
+
+### Fixed (release correction)
+- **The `0.2.6` edge-legibility fix and the edge-layer hardening were never in the repository.**
+  They had been edited in the *installed* copy (`~/.omni-flow`) instead of a checkout, and
+  `install.sh` copies checkout → install, so the next install reverted them; only the
+  already-deployed site asset still had them. They are recovered byte-exactly and now live in
+  the repo, which is what `0.2.6` claimed in the first place: edge colours pass a theme-aware
+  4.5:1 legibility floor (`flow` → `#7c8592` on the dark canvas), and `#edgeLayer` has a real
+  viewport with its content in a translated `<g>` and no self-promoting `will-change`.
+
 ## 0.2.6 — 2026-09-17
 
 ### Studio fixes
