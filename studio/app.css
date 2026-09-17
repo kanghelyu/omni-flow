@@ -302,7 +302,10 @@ body.lean .card > u.thumbs { display: none; }
 .node { contain: layout style paint; }
 .group-box { contain: layout style; }   /* 不能用 paint：会裁剪浮在框上方的标签 */
 #world { will-change: transform; }
-#edgeLayer { will-change: transform; }
+/* No will-change here on purpose: #edgeLayer is never transformed (only #world is),
+ * so the only thing a compositing hint could do is give a 1px element its own layer
+ * that an engine may snap independently of the cards beside it — which is one way
+ * cards and lines end up at a constant offset on some devices. */
 /* 交互期（平移/缩放/拖拽）：关掉阴影、过渡、类型色条——它们是最贵的合成操作 */
 body.interacting .card { box-shadow: none !important; transition: none !important; }
 body.interacting .node,
@@ -501,7 +504,11 @@ body.lean .group-box { opacity: .6; }
 #viewport { position: absolute; inset: 0; }
 #world { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
 
-#edgeLayer { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
+/* A real viewport, not 1px x 1px. Edges are drawn inside it (in #edgeRoot, offset by
+   EDGE_ORIGIN — see app.js), so showing a line no longer depends on the engine
+   honouring `overflow: visible` on a 1px box. overflow stays as the fallback for
+   content beyond ±10000. */
+#edgeLayer { position: absolute; left: -10000px; top: -10000px; width: 20000px; height: 20000px; overflow: visible; pointer-events: none; }
 .edge-hit { fill: none; stroke: transparent; stroke-width: 18; vector-effect: non-scaling-stroke; pointer-events: stroke; cursor: pointer; }
 .edge-line { fill: none; stroke-width: 2.6; stroke-linecap: round; vector-effect: non-scaling-stroke; pointer-events: none;
   filter: drop-shadow(0 0 2px color-mix(in srgb, currentColor 36%, transparent)); }
