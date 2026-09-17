@@ -2,6 +2,26 @@
 
 All notable changes to OmniFlow are documented here. Formats: Keep a Changelog, SemVer.
 
+## 0.2.6 — 2026-09-17
+
+### Studio fixes
+- **Edges are legible on the dark canvas — they used to look like missing connections.**
+  Edge colours come from the type registry, which is a light-background palette: `flow` is
+  `#334155`, only **1.85:1** against the dark canvas (`--canvas: #0B1120`). Nothing is
+  geometrically wrong, so the map measures perfectly and still reads as "the cards are not
+  connected" — half of a typical map's edges simply are not visible, and on a phone or tablet
+  (different gamma, brightness and ambient light) they disappear completely. Edge colours now
+  pass a **theme-aware legibility floor**: a colour below 4.5:1 against the canvas is lifted
+  towards the theme's ink until it clears, hue preserved; colours that were already legible are
+  left exactly as the user set them. On the dark canvas `flow` becomes `#7c8592` (5.05:1) while
+  `uses` / `cites` / `extends` / `raci-c` are untouched; on the light canvas nothing changes.
+- **`#edgeLayer` can no longer end up on its own compositing layer.** It carried
+  `will-change: transform` although it is never transformed (only `#world` is), which is how a
+  1px element gets promoted to a layer that an engine may snap to device pixels independently of
+  the cards beside it. The hint is gone, and the SVG now has a real viewport with every edge in a
+  translated `<g>` — so painting a line no longer depends on the engine honouring
+  `overflow: visible` on a 1px box (which some engines clip, losing the lines entirely).
+
 ## 0.2.5 — 2026-09-17
 
 ### Tooling
